@@ -1,21 +1,20 @@
-// fetchValorAtual.tsx
+// fetchValorAtual.ts
 import yahooFinance from 'yahoo-finance2';
 
-const fetchValorAtual = async (ticker: string) => {
+const fetchValorAtual = async (ticker: string): Promise<string> => {
   try {
-    // Obtendo os dados do Yahoo Finance para o ticker
     const result = await yahooFinance.quote(ticker);
 
-    // Pegando o preço atual do ativo
     const valorAtual = result.regularMarketPrice;
 
-    if (valorAtual) {
-      return valorAtual.toFixed(2);
+    if (typeof valorAtual === 'number') {
+      return `R$ ${valorAtual.toFixed(2)}`;
     } else {
-      throw new Error('Valor atual não disponível');
+      console.warn(`Valor de mercado inválido para o ticker: ${ticker}`);
+      return 'Valor indisponível';
     }
   } catch (error) {
-    console.error('Erro ao buscar valor do ativo:', error);
+    console.error(`Erro ao buscar o valor do ativo (${ticker}):`, error);
     return 'Erro ao carregar';
   }
 };
