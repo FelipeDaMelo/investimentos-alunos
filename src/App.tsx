@@ -1,92 +1,76 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import yf from 'yahoo-finance2';
+import { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import fetchValorAtual from './fetchValorAtual';
 
-// Função para verificar se o ativo é brasileiro (com sufixo '.SA')
-const adicionarSufixoBR = (symbol: string) => {
-  // Verifica se o ativo já contém o sufixo '.SA' ou se é um ativo brasileiro
-  if (!symbol.includes('.SA')) {
-    return symbol + '.SA'; // Adiciona o sufixo '.SA' para ativos brasileiros
-  }
-  return symbol; // Retorna o ativo sem mudanças se já tiver o sufixo
-};
-
-const fetchValorAtual = async (symbol: string) => {
-  try {
-    const simboloComSufixo = adicionarSufixoBR(symbol);
-
-    // Requisição para o Yahoo Finance 2
-    const resultado = await yf.quote(symbol = simboloComSufixo);
-
-    // Verifica se conseguimos obter o preço do ativo
-    if (resultado.regularMarketPrice) {
-      return { price: resultado.regularMarketPrice };
-    } else {
-      throw new Error("Dados não encontrados.");
-    }
-  } catch (error) {
-    console.error("Erro ao buscar valor do ativo:", error);
-    return null;
-  }
-};
+interface Ativo {
+  id: string;
+  nome: string;
+  valorInvestido: number;
+  dataInvestimento: string;
+  valorAtual: string | number; // Corrigido aqui
+}
 
 const App = () => {
-  const [ativos, setAtivos] = useState([
-    { nome: 'PETR3', investido: 10, dataInvestimento: '2025-04-12', valorAtual: 'Erro ao carregar' },
-    { nome: 'GOOGL', investido: 20, dataInvestimento: '2025-04-12', valorAtual: 'Erro ao carregar' }
-  ]);
+  const [ativos, setAtivos] = useState<Ativo[]>([]);
+  const [novoAtivo, setNovoAtivo] = useState({
+    nome: '',
+    valorInvestido: 0,
+    dataInvestimento: '',
+  });
 
-  const atualizarValor = async (index: number) => {
-    const ativo = ativos[index];
-    const simboloComSufixo = adicionarSufixoBR(ativo.nome);
-
-    // Log para depuração: verificar como o símbolo está sendo montado
-    console.log("Buscando valor para o símbolo:", simboloComSufixo);
-
-    const dadosAtivo = await fetchValorAtual(simboloComSufixo);
-
-    if (dadosAtivo) {
-      const valorAtual = dadosAtivo.price ? dadosAtivo.price : 'Erro ao carregar';
-      const novosAtivos = [...ativos];
-      novosAtivos[index] = { ...ativos[index], valorAtual };
-      setAtivos(novosAtivos);
-    } else {
-      alert("Erro ao atualizar o valor do ativo.");
-    }
+  const handleAddAtivo = async () => {
+    const valorAtual = await fetchValorAtual(novoAtivo.nome);
+    setAtivos([
+      ...ativos,
+      {
+        id: uuidv4(),
+        nome: novoAtivo.nome,
+        valorInvestido: novoAtivo.valorInvestido,
+        dataInvestimento: novoAtivo.dataInvestimento,
+        valorAtual: String(valorAtual), // Forçando string
+      },
+    ]);
+    setNovoAtivo({ nome: '', valorInvestido: 0, dataInvestimento: '' });
   };
 
-  const excluirAtivo = (index: number) => {
-    const novosAtivos = ativos.filter((_, i) => i !== index);
-    setAtivos(novosAtivos);
+  const handleDeleteAtivo = (id: string) => {
+    setAtivos(ativos.filter((ativo) => ativo.id !== id));
   };
 
   return (
     <div>
       <h1>Monitoramento de Ativos</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Nome do Ativo</th>
-            <th>Valor Investido</th>
-            <th>Data do Investimento</th>
-            <th>Valor Atual</th>
-            <th>Atualizar</th>
-            <th>Excluir</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ativos.map((ativo, index) => (
-            <tr key={index}>
-              <td>{ativo.nome}</td>
-              <td>{ativo.investido}</td>
-              <td>{ativo.dataInvestimento}</td>
-              <td>{ativo.valorAtual}</td>
-              <td><button onClick={() => atualizarValor(index)}>Atualizar Valor</button></td>
-              <td><button onClick={() => excluirAtivo(index)}>Excluir</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      <input
+        type="text"
+        placeholder="Nome do Ativo"
+        value={novoAtivo.nome}
+        onChange={(e) => setNovoAtivo({ ...novoAtivo, nome: e.target.value })}
+      />
+      <input
+        type="number"
+        placeholder="Valor Investido"
+        value={novoAtivo.valorInvestido}
+        onChange={(e) => setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })}
+      />
+      <input
+        type="date"
+        value={novoAtivo.dataInvestimento}
+        onChange={(e) => setNovoAtivo({ ...novoAtivo, dataInvestimento: e.target.value })}
+      />
+      <button onClick={handleAddAtivo}>Adicionar Ativo</button>
+
+      <div>
+        {ativos.map((ativo) => (
+          <div key={ativo.id}>
+            <h3>{ativo.nome}</h3>
+            <p>Investido: {ativo.valorInvestido}</p>
+            <p>Data do Investimento: {ativo.dataInvestimento}</p>
+            <p>Valor Atual: {ativo.valorAtual}</p>
+            <button onClick={() => handleDeleteAtivo(ativo.id)}>Excluir</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
