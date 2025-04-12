@@ -1,4 +1,4 @@
-// api/fetch-valor.ts
+// api/fetch-valor.cjs
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import yahooFinance from 'yahoo-finance2';
 
