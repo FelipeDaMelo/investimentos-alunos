@@ -1,21 +1,23 @@
-import axios from 'axios';
+// fetchValorAtual.tsx
+import yahooFinance from 'yahoo-finance2';
 
-const API_KEY = 'cvt62nhr01qhup0ug76gcvt62nhr01qhup0ug770'; // Sua chave da API Finnhub
-
-export const fetchValorAtual = async (ticker: string) => {
-  const url = `https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${API_KEY}`;
-
+const fetchValorAtual = async (ticker: string) => {
   try {
-    const response = await axios.get(url);
-    const data = response.data;
+    // Obtendo os dados do Yahoo Finance para o ticker
+    const result = await yahooFinance.quote(ticker);
 
-    if (data) {
-      return `US$ ${data.c.toFixed(2)}`; // Retorna o preço atual
+    // Pegando o preço atual do ativo
+    const valorAtual = result.regularMarketPrice;
+
+    if (valorAtual) {
+      return valorAtual.toFixed(2);
     } else {
-      throw new Error('Dados não encontrados.');
+      throw new Error('Valor atual não disponível');
     }
   } catch (error) {
     console.error('Erro ao buscar valor do ativo:', error);
     return 'Erro ao carregar';
   }
 };
+
+export default fetchValorAtual;
