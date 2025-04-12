@@ -1,7 +1,10 @@
+// src/fetchValorAtual.ts
 const fetchValorAtual = async (ticker: string) => {
   try {
+    // Adiciona .SA se for PETR3, VALE3 etc
     const tickerCorrigido = /^[A-Z]{4}\d$/.test(ticker) ? `${ticker}.SA` : ticker;
-    const res = await fetch(`/api/fetchValorAtual?ticker=${tickerCorrigido}`);
+
+    const res = await fetch(`/api/fetch-valor?ticker=${tickerCorrigido}`);
     const data = await res.json();
     return data.valorAtual;
   } catch (error) {
@@ -9,4 +12,5 @@ const fetchValorAtual = async (ticker: string) => {
     return 'Erro ao carregar';
   }
 };
+
 export default fetchValorAtual;
