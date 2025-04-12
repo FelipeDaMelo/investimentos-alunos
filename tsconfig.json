@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "module": "ESNext",  // Ou ES6, dependendo da sua necessidade
+    "module": "ESNext",
     "target": "ESNext",
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx"
   }
 }
