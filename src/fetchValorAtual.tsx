@@ -1,18 +1,13 @@
-// fetchValorAtual.ts
-const fetchValorAtual = async (ticker: string): Promise<string> => {
+const fetchValorAtual = async (ticker: string) => {
   try {
-    const res = await fetch(`/api/fetch-valor?ticker=${ticker}`);
+    // Adiciona .SA se for PETR3, VALE3 etc
+    const tickerCorrigido = /^[A-Z]{4}\d$/.test(ticker) ? `${ticker}.SA` : ticker;
+
+    const res = await fetch(`/api/fetchValorAtual?ticker=${tickerCorrigido}`);
     const data = await res.json();
-
-    if (res.ok && data.valorAtual) {
-      return `R$ ${data.valorAtual}`;
-    }
-
-    return 'Valor indisponível';
+    return data.valorAtual;
   } catch (error) {
-    console.error('Erro ao buscar valor:', error);
+    console.error('Erro ao buscar valor do ativo:', error);
     return 'Erro ao carregar';
   }
 };
-
-export default fetchValorAtual;
