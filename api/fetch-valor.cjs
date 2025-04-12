@@ -5,8 +5,9 @@ import yahooFinance from 'yahoo-finance2';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { ticker } = req.query;
 
-  if (typeof ticker !== 'string') {
-    return res.status(400).json({ error: 'Ticker inválido' });
+  // Validação do ticker
+  if (!ticker || typeof ticker !== 'string' || ticker.trim() === '') {
+    return res.status(400).json({ error: 'Ticker inválido ou vazio' });
   }
 
   try {
