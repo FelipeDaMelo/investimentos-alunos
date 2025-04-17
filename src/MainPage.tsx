@@ -8,7 +8,6 @@ import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
-// Exportando o tipo Ativo para ser utilizado em outros componentes
 export interface Ativo {
   id: string;
   nome: string;
@@ -53,15 +52,26 @@ const MainPage = ({ login }: { login: string }) => {
     if (ativos.length === 0) return;
     const saveData = async () => {
       const docRef = doc(db, 'usuarios', login);
-      await setDoc(docRef, { ativos });
+      try {
+        await setDoc(docRef, { ativos });
+      } catch (error) {
+        console.error("Erro ao salvar dados no Firebase:", error);
+      }
     };
     saveData();
   }, [ativos, login]);
 
+  // Chama a função de atualização de ativos
   useAtualizarAtivos(ativos, setAtivos);
 
   const handleAddAtivo = (ativo: Ativo) => {
-    setAtivos([...ativos, ativo]);
+    // Verifica se a adição do ativo é bem-sucedida
+    if (!ativo || !ativo.id || !ativo.nome) {
+      console.log("Erro: Dados do ativo incompletos");
+      return;
+    }
+    setAtivos((prevAtivos) => [...prevAtivos, ativo]);
+    setLoading(false);  // Define o carregamento como falso quando a operação for concluída
   };
 
   const handleDeleteAtivo = (id: string) => {

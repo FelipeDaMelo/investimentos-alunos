@@ -79,7 +79,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading }: Props) => {
           {categoriaFixa === 'prefixada' && (
             <input
               type="number"
-              placeholder="Taxa Prefixada (a.a)"
+              placeholder="Taxa Prefixada (% a.a)"
               onChange={(e) => setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })}
             />
           )}
