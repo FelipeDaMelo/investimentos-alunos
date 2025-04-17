@@ -1,32 +1,19 @@
-// src/components/AtivoCard.tsx
-import { FC } from 'react';
+import React from 'react';
+import { Ativo } from '../MainPage'; // Importe o tipo 'Ativo' da MainPage
 
 interface AtivoCardProps {
-  id: string;
-  nome: string;
-  valorInvestido: number;
-  dataInvestimento: string;
-  valorAtual: string | number;
+  ativo: Ativo;  // Corrija aqui a tipagem da propriedade
   onDelete: (id: string) => void;
-  formatarData: (dataISO: string) => string;
 }
 
-const AtivoCard: FC<AtivoCardProps> = ({
-  id,
-  nome,
-  valorInvestido,
-  dataInvestimento,
-  valorAtual,
-  onDelete,
-  formatarData,
-}) => {
+const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete }) => {
   return (
     <div>
-      <h3>{nome}</h3>
-      <p>Investido: {valorInvestido}</p>
-      <p>Data do Investimento: {formatarData(dataInvestimento)}</p>
-      <p>Valor Atual: {valorAtual}</p>
-      <button onClick={() => onDelete(id)}>Excluir</button>
+      <h3>{ativo.nome}</h3>
+      <p>Investido: {ativo.valorInvestido}</p>
+      <p>Data do Investimento: {ativo.dataInvestimento}</p>
+      <p>Valor Atual: {ativo.valorAtual}</p>
+      <button onClick={() => onDelete(ativo.id)}>Excluir</button>
     </div>
   );
 };
