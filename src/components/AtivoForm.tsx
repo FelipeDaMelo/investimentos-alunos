@@ -18,8 +18,11 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     dataInvestimento: '',
   });
 
+  // Ajustando a tipagem para garantir compatibilidade com os valores possíveis
   const [categoriaFixa, setCategoriaFixa] = useState<'prefixada' | 'posFixada' | 'hibrida'>('prefixada');
-  const [parametrosFixa, setParametrosFixa] = useState<Ativo['parametrosFixa']>({});
+  
+  // Declarando corretamente o tipo de parametrosFixa como um objeto genérico
+  const [parametrosFixa, setParametrosFixa] = useState<{ taxaPrefixada?: number; percentualSobreCDI?: number }>({});
 
   const handleAddAtivo = async () => {
     setLoading(true);
@@ -28,6 +31,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       let valorAtual = '1';
       let patrimonioInicial = novoAtivo.valorInvestido;
 
+      // Lógica para buscar o valor atual do ativo
       if (tipoAtivo === 'rendaVariavel' || tipoAtivo === 'cripto') {
         valorAtual = await fetchValorAtual(novoAtivo.nome);
         if (valorAtual === 'Erro ao carregar') {
@@ -36,6 +40,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         }
       }
 
+      // Lógica de renda variável: calcular quantidade de ações
       if (tipoAtivo === 'rendaVariavel') {
         const quantidade = Math.floor(novoAtivo.valorInvestido / parseFloat(valorAtual));
         if (quantidade < 1) {
@@ -45,6 +50,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         patrimonioInicial = quantidade * parseFloat(valorAtual);
       }
 
+      // Criando o objeto do ativo
       const novoAtivoObj: Ativo = {
         id: uuidv4(),
         nome: novoAtivo.nome,
@@ -57,6 +63,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         tipo: tipoAtivo,
       };
 
+      // Definindo dados específicos para cada tipo de ativo
       if (tipoAtivo === 'rendaFixa') {
         novoAtivoObj.categoriaFixa = categoriaFixa;
         novoAtivoObj.parametrosFixa = parametrosFixa;
@@ -67,6 +74,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         (novoAtivoObj as any).fraçãoAdquirida = fraçãoAdquirida;
       }
 
+      // Chamando a função para adicionar o ativo
       onAddAtivo(novoAtivoObj);
     } catch (error) {
       console.error('Erro ao adicionar ativo:', error);
@@ -77,9 +85,10 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
 
   return (
     <div>
+      {/* Renderização específica para renda fixa */}
       {tipoAtivo === 'rendaFixa' && (
         <>
-          <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as any)}>
+          <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as 'prefixada' | 'posFixada' | 'hibrida')}>
             <option value="prefixada">Prefixada</option>
             <option value="posFixada">Pós-fixada</option>
             <option value="hibrida">Híbrida</option>
@@ -120,6 +129,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         </>
       )}
 
+      {/* Campos comuns a todos os tipos de ativos */}
       <input
         type="text"
         placeholder="Nome do Ativo"

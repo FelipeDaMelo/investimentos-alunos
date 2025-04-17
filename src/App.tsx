@@ -4,18 +4,25 @@ import Login from './Login';
 import MainPage from './MainPage';
 
 const App = () => {
-  const [login, setLogin] = useState<string | null>(null);
+  // Estado para armazenar os valores numéricos
+  const [valorInvestido, setValorInvestido] = useState<number>(0);
+  const [fixo, setFixo] = useState<number>(0);
+  const [variavel, setVariavel] = useState<number>(0);
 
-  const handleLogin = (login: string) => {
-    setLogin(login);
+  // Função para lidar com o login e os valores financeiros
+  const handleLogin = (valorInvestido: number, fixo: number, variavel: number) => {
+    setValorInvestido(valorInvestido);
+    setFixo(fixo);
+    setVariavel(variavel);
   };
 
   return (
     <div>
-      {!login ? (
+      {/* Se não tiver login, exibe o formulário de login */}
+      {!valorInvestido ? (
         <Login onLogin={handleLogin} />
       ) : (
-        <MainPage login={login} />
+        <MainPage valorInvestido={valorInvestido} fixo={fixo} variavel={variavel} />
       )}
     </div>
   );
