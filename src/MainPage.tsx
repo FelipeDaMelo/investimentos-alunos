@@ -1,4 +1,3 @@
-// src/MainPage.tsx
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import Chart from 'chart.js/auto';
@@ -9,7 +8,8 @@ import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
-interface Ativo {
+// Exportando o tipo Ativo para ser utilizado em outros componentes
+export interface Ativo {
   id: string;
   nome: string;
   valorInvestido: number;
