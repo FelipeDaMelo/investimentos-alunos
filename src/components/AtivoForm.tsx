@@ -2,12 +2,13 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
+import { Ativo } from '../MainPage';
 
 interface Props {
-  onAddAtivo: (ativo: any) => void;
+  onAddAtivo: (ativo: Ativo) => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
-  tipoAtivo: 'rendaVariavel' | 'rendaFixa' | 'cripto'; // Três tipos agora
+  tipoAtivo: 'rendaVariavel' | 'rendaFixa' | 'cripto';
 }
 
 const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
@@ -18,72 +19,53 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
   });
 
   const [categoriaFixa, setCategoriaFixa] = useState<'prefixada' | 'posFixada' | 'hibrida'>('prefixada');
-  const [parametrosFixa, setParametrosFixa] = useState<any>({});
+  const [parametrosFixa, setParametrosFixa] = useState<Ativo['parametrosFixa']>({});
 
-  // Função para adicionar Ativo de Renda Fixa
-  const handleAddAtivoRendaFixa = async () => {
+  const handleAddAtivo = async () => {
     setLoading(true);
     try {
+      const hoje = new Date().toISOString().split('T')[0];
       let valorAtual = '1';
-      if (tipoAtivo === 'rendaVariavel') {
+      let patrimonioInicial = novoAtivo.valorInvestido;
+
+      if (tipoAtivo === 'rendaVariavel' || tipoAtivo === 'cripto') {
         valorAtual = await fetchValorAtual(novoAtivo.nome);
+        if (valorAtual === 'Erro ao carregar') {
+          alert('Erro ao buscar o valor do ativo');
+          return;
+        }
       }
 
-      const patrimonioInicial = novoAtivo.valorInvestido; // Aqui para renda fixa, podemos usar o valor investido diretamente.
-
-      const novoAtivoObj = {
-        id: uuidv4(),
-        nome: novoAtivo.nome,
-        valorInvestido: novoAtivo.valorInvestido,
-        dataInvestimento: novoAtivo.dataInvestimento,
-        valorAtual,
-        patrimonioPorDia: {
-          [new Date().toISOString().split('T')[0]]: patrimonioInicial,
-        },
-        tipo: tipoAtivo,
-        categoriaFixa: tipoAtivo === 'rendaFixa' ? categoriaFixa : undefined,
-        parametrosFixa: tipoAtivo === 'rendaFixa' ? parametrosFixa : undefined,
-      };
-
-      onAddAtivo(novoAtivoObj);
-    } catch (error) {
-      console.error('Erro ao adicionar ativo:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Função para adicionar Ativo de Renda Variável
-  const handleAddAtivoRendaVariavel = async () => {
-    setLoading(true);
-    try {
-      const valorAtual = await fetchValorAtual(novoAtivo.nome);
-      if (valorAtual === 'Erro ao carregar') {
-        alert('Erro ao buscar o valor do ativo');
-        setLoading(false);
-        return;
+      if (tipoAtivo === 'rendaVariavel') {
+        const quantidade = Math.floor(novoAtivo.valorInvestido / parseFloat(valorAtual));
+        if (quantidade < 1) {
+          alert('Não é possível comprar menos de 1 ação.');
+          return;
+        }
+        patrimonioInicial = quantidade * parseFloat(valorAtual);
       }
 
-      const quantidadeAcoes = Math.floor(novoAtivo.valorInvestido / parseFloat(valorAtual));
-      if (quantidadeAcoes < 1) {
-        alert('Não é possível comprar menos de 1 ação.');
-        setLoading(false);
-        return;
-      }
-
-      const patrimonioInicial = quantidadeAcoes * parseFloat(valorAtual);
-
-      const novoAtivoObj = {
+      const novoAtivoObj: Ativo = {
         id: uuidv4(),
         nome: novoAtivo.nome,
         valorInvestido: patrimonioInicial,
         dataInvestimento: novoAtivo.dataInvestimento,
         valorAtual,
         patrimonioPorDia: {
-          [new Date().toISOString().split('T')[0]]: patrimonioInicial,
+          [hoje]: patrimonioInicial,
         },
-        tipo: 'rendaVariavel',
+        tipo: tipoAtivo,
       };
+
+      if (tipoAtivo === 'rendaFixa') {
+        novoAtivoObj.categoriaFixa = categoriaFixa;
+        novoAtivoObj.parametrosFixa = parametrosFixa;
+      }
+
+      if (tipoAtivo === 'cripto') {
+        const fraçãoAdquirida = novoAtivo.valorInvestido / parseFloat(valorAtual);
+        (novoAtivoObj as any).fraçãoAdquirida = fraçãoAdquirida;
+      }
 
       onAddAtivo(novoAtivoObj);
     } catch (error) {
@@ -93,77 +75,48 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     }
   };
 
-  // Função para adicionar Criptomoeda
-  const handleAddAtivoCripto = async () => {
-    setLoading(true);
-    try {
-      const valorAtual = await fetchValorAtual(novoAtivo.nome);
-      if (valorAtual === 'Erro ao carregar') {
-        alert('Erro ao buscar o valor da criptomoeda');
-        setLoading(false);
-        return;
-      }
-
-      const fraçãoAdquirida = novoAtivo.valorInvestido / parseFloat(valorAtual);
-
-      const novoAtivoObj = {
-        id: uuidv4(),
-        nome: novoAtivo.nome,
-        valorInvestido: novoAtivo.valorInvestido,
-        dataInvestimento: novoAtivo.dataInvestimento,
-        valorAtual,
-        patrimonioPorDia: {
-          [new Date().toISOString().split('T')[0]]: novoAtivo.valorInvestido,
-        },
-        tipo: 'cripto',
-        fraçãoAdquirida,
-      };
-
-      onAddAtivo(novoAtivoObj);
-    } catch (error) {
-      console.error('Erro ao adicionar criptoativo:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Função para selecionar a lógica a ser utilizada
-  const handleAddAtivo = () => {
-    if (tipoAtivo === 'rendaFixa') {
-      handleAddAtivoRendaFixa();
-    } else if (tipoAtivo === 'rendaVariavel') {
-      handleAddAtivoRendaVariavel();
-    } else if (tipoAtivo === 'cripto') {
-      handleAddAtivoCripto();
-    }
-  };
-
   return (
     <div>
-      <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as any)}>
-        <option value="prefixada">Prefixada</option>
-        <option value="posFixada">Pós-fixada</option>
-        <option value="hibrida">Híbrida</option>
-      </select>
-
-      {categoriaFixa !== 'hibrida' ? (
-        <input
-          type="number"
-          placeholder="Taxa Prefixada ou Pós-fixada (% a.a)"
-          onChange={(e) => setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })}
-        />
-      ) : (
+      {tipoAtivo === 'rendaFixa' && (
         <>
-          <input
-            type="number"
-            placeholder="Taxa Prefixada (% a.a)"
-            onChange={(e) => setParametrosFixa({ ...parametrosFixa, taxaPrefixada: parseFloat(e.target.value) })}
-          />
-          <input
-            type="number"
-            placeholder="Taxa Pós-fixada (% a.a)"
-            onChange={(e) => setParametrosFixa({ ...parametrosFixa, taxaPosFixada: parseFloat(e.target.value) })}
-          />
+          <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as any)}>
+            <option value="prefixada">Prefixada</option>
+            <option value="posFixada">Pós-fixada</option>
+            <option value="hibrida">Híbrida</option>
+          </select>
+
+          {categoriaFixa !== 'hibrida' ? (
+            <input
+              type="number"
+              placeholder="Taxa (% a.a)"
+              onChange={(e) =>
+                setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })
+              }
+            />
+          ) : (
+            <>
+              <input
+                type="number"
+                placeholder="Taxa Prefixada (% a.a)"
+                onChange={(e) =>
+                  setParametrosFixa((prev) => ({
+                    ...prev,
+                    taxaPrefixada: parseFloat(e.target.value),
+                  }))
+                }
+              />
+              <input
+                type="number"
+                placeholder="Taxa Pós-fixada (% a.a)"
+                onChange={(e) =>
+                  setParametrosFixa((prev) => ({
+                    ...prev,
+                    percentualSobreCDI: parseFloat(e.target.value),
+                  }))
+                }
+              />
+            </>
+          )}
         </>
       )}
 
@@ -177,7 +130,9 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         type="number"
         placeholder="Valor Investido"
         value={novoAtivo.valorInvestido}
-        onChange={(e) => setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })}
+        onChange={(e) =>
+          setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
+        }
       />
       <input
         type="date"

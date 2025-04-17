@@ -20,7 +20,7 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-interface Ativo {
+export interface Ativo {
   id: string;
   nome: string;
   valorInvestido: number;
@@ -139,7 +139,7 @@ const MainPage = ({ login }: { login: string }) => {
       <h1>Monitoramento de Ativos - Usuário: {login}</h1>
       <p>Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
       <p>Renda Variável disponível: R$ {valorVariavelDisponivel.toFixed(2)}</p>
-      <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} />
+      <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} tipoAtivo="rendaFixa" />
       <div>
         {ativos.map((ativo) => (
           <AtivoCard key={ativo.id} ativo={ativo} onDelete={handleDeleteAtivo} />
