@@ -20,7 +20,6 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-// Tipagem para os parâmetros recebidos
 interface MainPageProps {
   valorInvestido: number;
   fixo: number;
@@ -54,6 +53,7 @@ const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) =
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
+  const [login, setLogin] = useState<string>('userLogin'); // Substitua por como você armazena o login do usuário.
 
   useEffect(() => {
     const fetchData = async () => {

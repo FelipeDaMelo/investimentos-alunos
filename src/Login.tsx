@@ -1,10 +1,11 @@
+// src/Login.tsx
 import React, { useState } from 'react';
 
 const TelaDeLogin = ({ onLogin }: { onLogin: (valorInvestido: number, fixo: number, variavel: number) => void }) => {
-  const [valorInvestido, setValorInvestido] = useState(0);
-  const [porcentagemFixa, setPorcentagemFixa] = useState(0);
-  const [porcentagemVariavel, setPorcentagemVariavel] = useState(0);
-  const [erro, setErro] = useState('');
+  const [valorInvestido, setValorInvestido] = useState<number>(0);
+  const [porcentagemFixa, setPorcentagemFixa] = useState<number>(0);
+  const [porcentagemVariavel, setPorcentagemVariavel] = useState<number>(0);
+  const [erro, setErro] = useState<string>('');
 
   const handleSubmit = () => {
     // Verifica se as porcentagens somam 100%
@@ -39,7 +40,7 @@ const TelaDeLogin = ({ onLogin }: { onLogin: (valorInvestido: number, fixo: numb
         onChange={(e) => setPorcentagemVariavel(Number(e.target.value))}
       />
       <button onClick={handleSubmit}>Login</button>
-      {erro && <p>{erro}</p>}
+      {erro && <p style={{ color: 'red' }}>{erro}</p>}
     </div>
   );
 };
