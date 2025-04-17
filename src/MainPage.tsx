@@ -20,7 +20,7 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-export interface Ativo {  // Agora o tipo Ativo é exportado
+interface Ativo {
   id: string;
   nome: string;
   valorInvestido: number;
@@ -45,13 +45,25 @@ const formatarData = (dataISO: string) => {
 const MainPage = ({ login }: { login: string }) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [valorInvestido, setValorInvestido] = useState(0);
+  const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
+  const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       const docRef = doc(db, 'usuarios', login);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setAtivos(docSnap.data().ativos || []);
+        const data = docSnap.data();
+        const ativos = data.ativos || [];
+        const valorInvestido = data.valorInvestido || 0;
+        const porcentagemFixa = data.porcentagemFixa || 0;
+        const porcentagemVariavel = data.porcentagemVariavel || 0;
+
+        setAtivos(ativos);
+        setValorInvestido(valorInvestido);
+        setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
+        setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
       } else {
         await setDoc(docRef, { ativos: [] });
       }
@@ -63,7 +75,16 @@ const MainPage = ({ login }: { login: string }) => {
     const saveData = async () => {
       const docRef = doc(db, 'usuarios', login);
       try {
-        await setDoc(docRef, { ativos });
+        const ativosSemUndefined = ativos.map((ativo) => {
+          const novoAtivo: any = { ...ativo };
+          if (!novoAtivo.tipo) delete novoAtivo.tipo;
+          if (!novoAtivo.categoriaFixa) delete novoAtivo.categoriaFixa;
+          if (!novoAtivo.parametrosFixa || Object.keys(novoAtivo.parametrosFixa).length === 0) {
+            delete novoAtivo.parametrosFixa;
+          }
+          return novoAtivo;
+        });
+        await setDoc(docRef, { ativos: ativosSemUndefined }, { merge: true });
       } catch (error) {
         console.error('Erro ao salvar dados no Firebase:', error);
       }
@@ -73,11 +94,28 @@ const MainPage = ({ login }: { login: string }) => {
 
   useAtualizarAtivos(ativos, setAtivos);
 
+  const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel') => {
+    return ativos.filter(a => a.tipo === tipo).reduce((total, a) => total + a.valorInvestido, 0);
+  };
+
   const handleAddAtivo = (ativo: Ativo) => {
-    setAtivos([...ativos, ativo]);
+    setAtivos((prev) => [...prev, ativo]);
+    if (ativo.tipo === 'rendaFixa') {
+      setValorFixaDisponivel((prev) => prev - ativo.valorInvestido);
+    } else if (ativo.tipo === 'rendaVariavel') {
+      setValorVariavelDisponivel((prev) => prev - ativo.valorInvestido);
+    }
   };
 
   const handleDeleteAtivo = (id: string) => {
+    const ativoRemovido = ativos.find((ativo) => ativo.id === id);
+    if (ativoRemovido) {
+      if (ativoRemovido.tipo === 'rendaFixa') {
+        setValorFixaDisponivel((prev) => prev + ativoRemovido.valorInvestido);
+      } else if (ativoRemovido.tipo === 'rendaVariavel') {
+        setValorVariavelDisponivel((prev) => prev + ativoRemovido.valorInvestido);
+      }
+    }
     const atualizados = ativos.filter((ativo) => ativo.id !== id);
     setAtivos(atualizados);
   };
@@ -99,6 +137,8 @@ const MainPage = ({ login }: { login: string }) => {
   return (
     <div>
       <h1>Monitoramento de Ativos - Usuário: {login}</h1>
+      <p>Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
+      <p>Renda Variável disponível: R$ {valorVariavelDisponivel.toFixed(2)}</p>
       <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} />
       <div>
         {ativos.map((ativo) => (
