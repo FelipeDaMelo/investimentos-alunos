@@ -20,7 +20,7 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-interface Ativo {
+export interface Ativo {  // Agora o tipo Ativo é exportado
   id: string;
   nome: string;
   valorInvestido: number;
@@ -63,16 +63,7 @@ const MainPage = ({ login }: { login: string }) => {
     const saveData = async () => {
       const docRef = doc(db, 'usuarios', login);
       try {
-        const ativosSemUndefined = ativos.map((ativo) => {
-          const novoAtivo: any = { ...ativo };
-          if (!novoAtivo.tipo) delete novoAtivo.tipo;
-          if (!novoAtivo.categoriaFixa) delete novoAtivo.categoriaFixa;
-          if (!novoAtivo.parametrosFixa || Object.keys(novoAtivo.parametrosFixa).length === 0) {
-            delete novoAtivo.parametrosFixa;
-          }
-          return novoAtivo;
-        });
-        await setDoc(docRef, { ativos: ativosSemUndefined });
+        await setDoc(docRef, { ativos });
       } catch (error) {
         console.error('Erro ao salvar dados no Firebase:', error);
       }
