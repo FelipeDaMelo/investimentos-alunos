@@ -1,6 +1,16 @@
+// src/MainPage.tsx
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-import Chart from 'chart.js/auto';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import { db } from './firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -8,7 +18,9 @@ import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
-export interface Ativo {
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+interface Ativo {
   id: string;
   nome: string;
   valorInvestido: number;
@@ -41,7 +53,6 @@ const MainPage = ({ login }: { login: string }) => {
       if (docSnap.exists()) {
         setAtivos(docSnap.data().ativos || []);
       } else {
-        // Se o grupo não existir, criamos com um array de ativos vazio
         await setDoc(docRef, { ativos: [] });
       }
     };
@@ -49,29 +60,30 @@ const MainPage = ({ login }: { login: string }) => {
   }, [login]);
 
   useEffect(() => {
-    if (ativos.length === 0) return;
     const saveData = async () => {
       const docRef = doc(db, 'usuarios', login);
       try {
-        await setDoc(docRef, { ativos });
+        const ativosSemUndefined = ativos.map((ativo) => {
+          const novoAtivo: any = { ...ativo };
+          if (!novoAtivo.tipo) delete novoAtivo.tipo;
+          if (!novoAtivo.categoriaFixa) delete novoAtivo.categoriaFixa;
+          if (!novoAtivo.parametrosFixa || Object.keys(novoAtivo.parametrosFixa).length === 0) {
+            delete novoAtivo.parametrosFixa;
+          }
+          return novoAtivo;
+        });
+        await setDoc(docRef, { ativos: ativosSemUndefined });
       } catch (error) {
-        console.error("Erro ao salvar dados no Firebase:", error);
+        console.error('Erro ao salvar dados no Firebase:', error);
       }
     };
-    saveData();
+    if (ativos.length > 0) saveData();
   }, [ativos, login]);
 
-  // Chama a função de atualização de ativos
   useAtualizarAtivos(ativos, setAtivos);
 
   const handleAddAtivo = (ativo: Ativo) => {
-    // Verifica se a adição do ativo é bem-sucedida
-    if (!ativo || !ativo.id || !ativo.nome) {
-      console.log("Erro: Dados do ativo incompletos");
-      return;
-    }
-    setAtivos((prevAtivos) => [...prevAtivos, ativo]);
-    setLoading(false);  // Define o carregamento como falso quando a operação for concluída
+    setAtivos([...ativos, ativo]);
   };
 
   const handleDeleteAtivo = (id: string) => {
@@ -95,7 +107,7 @@ const MainPage = ({ login }: { login: string }) => {
 
   return (
     <div>
-      <h1>Monitoramento de Ativos - Grupo: {login}</h1>
+      <h1>Monitoramento de Ativos - Usuário: {login}</h1>
       <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} />
       <div>
         {ativos.map((ativo) => (

@@ -1,4 +1,3 @@
-// src/components/AtivoForm.tsx
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
@@ -20,6 +19,11 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading }: Props) => {
   const [parametrosFixa, setParametrosFixa] = useState<any>({});
 
   const handleAddAtivo = async () => {
+    if (!novoAtivo.nome || !novoAtivo.dataInvestimento || !novoAtivo.valorInvestido) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
     setLoading(true);
     try {
       let valorAtual = tipoAtivo === 'rendaVariavel' ? await fetchValorAtual(novoAtivo.nome) : '1';
@@ -33,12 +37,13 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading }: Props) => {
           return;
         }
       }
+
       const hoje = new Date().toISOString().split('T')[0];
       const patrimonioInicial = tipoAtivo === 'rendaVariavel'
         ? novoAtivo.valorInvestido * parseFloat(valorAtual)
         : novoAtivo.valorInvestido;
 
-      const novoAtivoObj = {
+      const novoAtivoObj: any = {
         id: uuidv4(),
         nome: novoAtivo.nome,
         valorInvestido: novoAtivo.valorInvestido,
@@ -48,17 +53,21 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading }: Props) => {
           [hoje]: patrimonioInicial,
         },
         tipo: tipoAtivo,
-        categoriaFixa: tipoAtivo === 'rendaFixa' ? categoriaFixa : undefined,
-        parametrosFixa: tipoAtivo === 'rendaFixa' ? parametrosFixa : undefined,
       };
+
+      if (tipoAtivo === 'rendaFixa') {
+        novoAtivoObj.categoriaFixa = categoriaFixa;
+        novoAtivoObj.parametrosFixa = parametrosFixa;
+      }
+
       onAddAtivo(novoAtivoObj);
     } catch (error) {
       console.error('Erro ao adicionar ativo:', error);
     } finally {
       setLoading(false);
+      setNovoAtivo({ nome: '', valorInvestido: 0, dataInvestimento: '' });
+      setParametrosFixa({});
     }
-    setNovoAtivo({ nome: '', valorInvestido: 0, dataInvestimento: '' });
-    setParametrosFixa({});
   };
 
   return (
@@ -80,7 +89,9 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading }: Props) => {
             <input
               type="number"
               placeholder="Taxa Prefixada (% a.a)"
-              onChange={(e) => setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })}
+              onChange={(e) =>
+                setParametrosFixa({ ...parametrosFixa, taxaPrefixada: parseFloat(e.target.value) })
+              }
             />
           )}
         </>
