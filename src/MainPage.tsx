@@ -1,5 +1,5 @@
 // src/MainPage.tsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -19,6 +19,13 @@ import AtivoCard from './components/AtivoCard';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+// Tipagem para os parâmetros recebidos
+interface MainPageProps {
+  valorInvestido: number;
+  fixo: number;
+  variavel: number;
+}
 
 export interface Ativo {
   id: string;
@@ -42,10 +49,9 @@ const formatarData = (dataISO: string) => {
   return `${dia}/${mes}/${ano}`;
 };
 
-const MainPage = ({ login }: { login: string }) => {
+const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [valorInvestido, setValorInvestido] = useState(0);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
 
@@ -56,12 +62,10 @@ const MainPage = ({ login }: { login: string }) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const ativos = data.ativos || [];
-        const valorInvestido = data.valorInvestido || 0;
         const porcentagemFixa = data.porcentagemFixa || 0;
         const porcentagemVariavel = data.porcentagemVariavel || 0;
 
         setAtivos(ativos);
-        setValorInvestido(valorInvestido);
         setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
         setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
       } else {
@@ -136,7 +140,8 @@ const MainPage = ({ login }: { login: string }) => {
 
   return (
     <div>
-      <h1>Monitoramento de Ativos - Usuário: {login}</h1>
+      <h1>Monitoramento de Ativos - Usuário</h1>
+      <p>Valor Investido: R$ {valorInvestido}</p>
       <p>Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
       <p>Renda Variável disponível: R$ {valorVariavelDisponivel.toFixed(2)}</p>
       <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} tipoAtivo="rendaFixa" />

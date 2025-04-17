@@ -18,7 +18,7 @@ const App = () => {
 
   return (
     <div>
-      {/* Se não tiver login, exibe o formulário de login */}
+      {/* Se não tiver login ou valorInvestido, exibe o formulário de login */}
       {!valorInvestido ? (
         <Login onLogin={handleLogin} />
       ) : (

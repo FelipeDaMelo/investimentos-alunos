@@ -18,11 +18,8 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     dataInvestimento: '',
   });
 
-  // Ajustando a tipagem para garantir compatibilidade com os valores possíveis
   const [categoriaFixa, setCategoriaFixa] = useState<'prefixada' | 'posFixada' | 'hibrida'>('prefixada');
-  
-  // Declarando corretamente o tipo de parametrosFixa como um objeto genérico
-  const [parametrosFixa, setParametrosFixa] = useState<{ taxaPrefixada?: number; percentualSobreCDI?: number }>({});
+  const [parametrosFixa, setParametrosFixa] = useState<Ativo['parametrosFixa']>({});
 
   const handleAddAtivo = async () => {
     setLoading(true);
@@ -88,7 +85,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       {/* Renderização específica para renda fixa */}
       {tipoAtivo === 'rendaFixa' && (
         <>
-          <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as 'prefixada' | 'posFixada' | 'hibrida')}>
+          <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as any)}>
             <option value="prefixada">Prefixada</option>
             <option value="posFixada">Pós-fixada</option>
             <option value="hibrida">Híbrida</option>
