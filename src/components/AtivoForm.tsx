@@ -99,8 +99,6 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         value={novoAtivo.valorInvestido}
         onChange={(e) =>setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
         placeholder="Valor Investido"
-        required
-        style={{ padding: '8px', width: '100%' }}
         }
       />
 
@@ -111,8 +109,6 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
               onChange={(e) =>
                 setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })
               }
-              required
-              style={{ padding: '8px', width: '100%' }}
             />
           ) : (
             <>
@@ -124,9 +120,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                     ...prev,
                     taxaPrefixada: parseFloat(e.target.value),
                   }))
-                  }
-                  required
-                  style={{ padding: '8px', width: '100%' }}
+                }
               />
               <input
                 type="number"
@@ -137,8 +131,6 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                     percentualSobreCDI: parseFloat(e.target.value),
                   }))
                 }
-                required
-                style={{ padding: '8px', width: '100%' }}
               />
             </>
           )}
