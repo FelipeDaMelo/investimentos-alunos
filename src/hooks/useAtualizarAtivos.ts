@@ -9,7 +9,7 @@ interface Ativo {
   dataInvestimento: string;
   valorAtual: string | number;
   patrimonioPorDia: { [key: string]: number };
-  tipo?: 'rendaVariavel' | 'rendaFixa';
+  tipo?: 'rendaVariavel' | 'rendaFixa' | 'cripto';
   categoriaFixa?: 'prefixada' | 'posFixada' | 'hibrida';
   parametrosFixa?: {
     taxaPrefixada?: number;
@@ -45,7 +45,9 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
             };
           } else {
             const valorAtual = await fetchValorAtual(ativo.nome);
-            const updatedPatrimonio = ativo.valorInvestido * parseFloat(valorAtual);
+            const updatedPatrimonio = ativo.tipo === 'cripto'
+              ? parseFloat(valorAtual) * ativo.valorInvestido // valorAtual é o preço, valorInvestido é o dinheiro aplicado
+              : ativo.valorInvestido * parseFloat(valorAtual); // para ações, valorInvestido representa a quantidade
             return {
               ...ativo,
               valorAtual,
