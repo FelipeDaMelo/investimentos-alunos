@@ -1,4 +1,4 @@
-// src/components/AtivoForm.tsx TESTE1
+// src/components/AtivoForm.tsx
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
@@ -8,7 +8,7 @@ interface Props {
   onAddAtivo: (ativo: Ativo) => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
-  tipoAtivo: 'rendaVariavel' | 'rendaFixa' | 'cripto';
+  tipoAtivo: 'rendaVariavel' | 'rendaFixa' | 'cripto';  // Corrigido para permitir 'cripto'
 }
 
 const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
