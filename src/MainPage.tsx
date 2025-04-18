@@ -42,10 +42,16 @@ const formatarData = (dataISO: string) => {
   return `${dia}/${mes}/${ano}`;
 };
 
-const MainPage = ({ login }: { login: string }) => {
+interface MainPageProps {
+  login: string;
+  valorInvestido: number;
+  fixo: number;
+  variavel: number;
+}
+
+const MainPage = ({ login, valorInvestido, fixo, variavel }: MainPageProps) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [valorInvestido, setValorInvestido] = useState(0);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [valorCriptoDisponivel, setValorCriptoDisponivel] = useState(0);
@@ -57,13 +63,11 @@ const MainPage = ({ login }: { login: string }) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const ativos = data.ativos || [];
-        const valorInvestido = data.valorInvestido || 0;
         const porcentagemFixa = data.porcentagemFixa || 0;
         const porcentagemVariavel = data.porcentagemVariavel || 0;
         const porcentagemCripto = 100 - (porcentagemFixa + porcentagemVariavel);
 
         setAtivos(ativos);
-        setValorInvestido(valorInvestido);
         setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
         setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
         setValorCriptoDisponivel(valorInvestido * (porcentagemCripto / 100) - calcularTotalInvestido(ativos, 'cripto'));
@@ -72,7 +76,7 @@ const MainPage = ({ login }: { login: string }) => {
       }
     };
     fetchData();
-  }, [login]);
+  }, [login, valorInvestido]);
 
   useEffect(() => {
     const saveData = async () => {

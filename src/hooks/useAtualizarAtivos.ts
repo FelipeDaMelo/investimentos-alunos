@@ -31,7 +31,7 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
             const diasPassados = Math.floor(
               (new Date(hoje).getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60 * 60 * 24)
             );
-            let rendimento = 0;
+            let rendimento = ativo.valorInvestido;
             if (ativo.categoriaFixa === 'prefixada' && ativo.parametrosFixa?.taxaPrefixada) {
               const diaria = ativo.parametrosFixa.taxaPrefixada / 100 / 252;
               rendimento = ativo.valorInvestido * Math.pow(1 + diaria, diasPassados);
@@ -46,7 +46,7 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
           } else {
             const valorAtual = await fetchValorAtual(ativo.nome);
             const updatedPatrimonio = ativo.tipo === 'cripto'
-              ? parseFloat(valorAtual) * ativo.valorInvestido // valorAtual é o preço, valorInvestido é o dinheiro aplicado
+              ? ativo.valorInvestido / parseFloat(valorAtual) // para cripto, valorInvestido é o dinheiro aplicado, e queremos saber quanto comprou
               : ativo.valorInvestido * parseFloat(valorAtual); // para ações, valorInvestido representa a quantidade
             return {
               ...ativo,
