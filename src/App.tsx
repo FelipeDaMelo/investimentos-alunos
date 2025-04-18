@@ -7,18 +7,16 @@ const App = () => {
   const [valorInvestido, setValorInvestido] = useState<number>(0);
   const [fixo, setFixo] = useState<number>(0);
   const [variavel, setVariavel] = useState<number>(0);
-  const [login, setLogin] = useState<string | null>(null); // nome do grupo
+  const [nomeGrupo, setNomeGrupo] = useState<string>('');
 
-  const handleLogin = (
-    valorInvestido: number,
-    fixo: number,
-    variavel: number,
-    nomeGrupo: string
-  ) => {
+  const [login, setLogin] = useState<string | null>(null);
+
+  const handleLogin = (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => {
     setValorInvestido(valorInvestido);
-    setFixo(Number(fixo));
-    setVariavel(Number(variavel));
-    setLogin(nomeGrupo); // agora de fato armazena o nome do grupo
+    setFixo(fixo);
+    setVariavel(variavel);
+    setNomeGrupo(nomeGrupo);
+    setLogin(nomeGrupo); // Usa o nome do grupo como login do usuário
   };
 
   return (
@@ -26,11 +24,12 @@ const App = () => {
       {!login ? (
         <Login onLogin={handleLogin} />
       ) : (
-        <MainPage
-          login={login}
-          valorInvestido={valorInvestido}
-          fixo={fixo}
-          variavel={variavel}
+        <MainPage 
+          login={login} 
+          valorInvestido={valorInvestido} 
+          fixo={fixo} 
+          variavel={variavel} 
+          nomeGrupo={nomeGrupo} 
         />
       )}
     </div>

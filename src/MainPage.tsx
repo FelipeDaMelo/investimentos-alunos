@@ -47,9 +47,10 @@ interface MainPageProps {
   valorInvestido: number;
   fixo: number;
   variavel: number;
+  nomeGrupo: string;
 }
 
-const MainPage = ({ login, valorInvestido, fixo, variavel }: MainPageProps) => {
+const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPageProps) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
@@ -63,8 +64,8 @@ const MainPage = ({ login, valorInvestido, fixo, variavel }: MainPageProps) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const ativos = data.ativos || [];
-        const porcentagemFixa = data.porcentagemFixa || 0;
-        const porcentagemVariavel = data.porcentagemVariavel || 0;
+        const porcentagemFixa = data.porcentagemFixa ?? fixo;
+        const porcentagemVariavel = data.porcentagemVariavel ?? variavel;
         const porcentagemCripto = 100 - (porcentagemFixa + porcentagemVariavel);
 
         setAtivos(ativos);
@@ -72,11 +73,15 @@ const MainPage = ({ login, valorInvestido, fixo, variavel }: MainPageProps) => {
         setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
         setValorCriptoDisponivel(valorInvestido * (porcentagemCripto / 100) - calcularTotalInvestido(ativos, 'cripto'));
       } else {
-        await setDoc(docRef, { ativos: [] });
+        await setDoc(docRef, {
+          ativos: [],
+          porcentagemFixa: fixo,
+          porcentagemVariavel: variavel
+        });
       }
     };
     fetchData();
-  }, [login, valorInvestido]);
+  }, [login, valorInvestido, fixo, variavel]);
 
   useEffect(() => {
     const saveData = async () => {
@@ -91,13 +96,17 @@ const MainPage = ({ login, valorInvestido, fixo, variavel }: MainPageProps) => {
           }
           return novoAtivo;
         });
-        await setDoc(docRef, { ativos: ativosSemUndefined }, { merge: true });
+        await setDoc(docRef, {
+          ativos: ativosSemUndefined,
+          porcentagemFixa: fixo,
+          porcentagemVariavel: variavel
+        }, { merge: true });
       } catch (error) {
         console.error('Erro ao salvar dados no Firebase:', error);
       }
     };
     if (ativos.length > 0) saveData();
-  }, [ativos, login]);
+  }, [ativos, login, fixo, variavel]);
 
   useAtualizarAtivos(ativos, setAtivos);
 
