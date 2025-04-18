@@ -23,7 +23,7 @@ type SetAtivos = React.Dispatch<React.SetStateAction<Ativo[]>>;
 
 const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
   useEffect(() => {
-    const intervalId = setInterval(async () => {
+    const atualizar = async () => {
       const hoje = new Date().toISOString().split('T')[0];
       const updatedAtivos = await Promise.all(
         ativos.map(async (ativo) => {
@@ -46,8 +46,8 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
           } else {
             const valorAtual = await fetchValorAtual(ativo.nome);
             const updatedPatrimonio = ativo.tipo === 'cripto'
-              ? ativo.valorInvestido / parseFloat(valorAtual) // para cripto, valorInvestido é o dinheiro aplicado, e queremos saber quanto comprou
-              : ativo.valorInvestido * parseFloat(valorAtual); // para ações, valorInvestido representa a quantidade
+              ? ativo.valorInvestido / parseFloat(valorAtual)
+              : ativo.valorInvestido * parseFloat(valorAtual);
             return {
               ...ativo,
               valorAtual,
@@ -60,10 +60,13 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
         })
       );
       setAtivos(updatedAtivos);
-    }, 86400000); // 24h
+    };
+
+    atualizar();
+    const intervalId = setInterval(atualizar, 86400000);
 
     return () => clearInterval(intervalId);
-  }, [ativos, setAtivos]);
+  }, []);
 };
 
 export default useAtualizarAtivos;

@@ -61,17 +61,16 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     const fetchData = async () => {
       const docRef = doc(db, 'usuarios', login);
       const docSnap = await getDoc(docRef);
+
+      let ativos: Ativo[] = [];
+      let porcentagemFixa = fixo;
+      let porcentagemVariavel = variavel;
+
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const ativos = data.ativos || [];
-        const porcentagemFixa = data.porcentagemFixa ?? fixo;
-        const porcentagemVariavel = data.porcentagemVariavel ?? variavel;
-        const porcentagemCripto = 100 - (porcentagemFixa + porcentagemVariavel);
-
-        setAtivos(ativos);
-        setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
-        setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
-        setValorCriptoDisponivel(valorInvestido * (porcentagemCripto / 100) - calcularTotalInvestido(ativos, 'cripto'));
+        ativos = data.ativos || [];
+        porcentagemFixa = data.porcentagemFixa ?? fixo;
+        porcentagemVariavel = data.porcentagemVariavel ?? variavel;
       } else {
         await setDoc(docRef, {
           ativos: [],
@@ -79,6 +78,12 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
           porcentagemVariavel: variavel
         });
       }
+
+      const porcentagemCripto = 100 - (porcentagemFixa + porcentagemVariavel);
+      setAtivos(ativos);
+      setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
+      setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
+      setValorCriptoDisponivel(valorInvestido * (porcentagemCripto / 100) - calcularTotalInvestido(ativos, 'cripto'));
     };
     fetchData();
   }, [login, valorInvestido, fixo, variavel]);
