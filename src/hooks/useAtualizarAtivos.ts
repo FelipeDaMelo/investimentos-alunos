@@ -2,22 +2,35 @@
 import { useEffect } from 'react';
 import fetchValorAtual from '../fetchValorAtual';
 
-interface Ativo {
+export type Ativo = RendaFixaAtivo | RendaVariavelAtivo | CriptoAtivo;
+
+interface BaseAtivo {
   id: string;
   nome: string;
   valorInvestido: number;
   dataInvestimento: string;
-  valorAtual: string | number;
+  valorAtual: number;
   patrimonioPorDia: { [key: string]: number };
-  tipo?: 'rendaVariavel' | 'rendaFixa' | 'cripto';
-  categoriaFixa?: 'prefixada' | 'posFixada' | 'hibrida';
-  parametrosFixa?: {
+}
+
+export interface RendaFixaAtivo extends BaseAtivo {
+  tipo: 'rendaFixa';
+  categoriaFixa: 'prefixada' | 'posFixada' | 'hibrida';
+  parametrosFixa: {
     taxaPrefixada?: number;
     percentualSobreCDI?: number;
     percentualSobreSELIC?: number;
     ipca?: number;
   };
-  fracaoAdquirida?: number;
+}
+
+export interface RendaVariavelAtivo extends BaseAtivo {
+  tipo: 'rendaVariavel';
+}
+
+export interface CriptoAtivo extends BaseAtivo {
+  tipo: 'cripto';
+  fracaoAdquirida: number;
 }
 
 type SetAtivos = React.Dispatch<React.SetStateAction<Ativo[]>>;
@@ -70,10 +83,10 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
               },
             };
           } else {
-            const valorAtual = await fetchValorAtual(ativo.nome);
+            const valorAtual = parseFloat(await fetchValorAtual(ativo.nome));
             const updatedPatrimonio = ativo.tipo === 'cripto'
-              ? parseFloat(valorAtual) * (ativo.fracaoAdquirida ?? 0)
-              : parseFloat(valorAtual) * (ativo.valorInvestido / parseFloat(valorAtual));
+              ? valorAtual * ativo.fracaoAdquirida
+              : valorAtual * (ativo.valorInvestido / valorAtual);
 
             return {
               ...ativo,
