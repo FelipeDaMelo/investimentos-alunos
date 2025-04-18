@@ -1,48 +1,64 @@
 // src/Login.tsx
 import React, { useState } from 'react';
 
-const TelaDeLogin = ({ onLogin }: { onLogin: (valorInvestido: number, fixo: number, variavel: number) => void }) => {
-  const [valorInvestido, setValorInvestido] = useState<number>(0);
-  const [porcentagemFixa, setPorcentagemFixa] = useState<number>(0);
-  const [porcentagemVariavel, setPorcentagemVariavel] = useState<number>(0);
-  const [erro, setErro] = useState<string>('');
+interface LoginProps {
+  onLogin: (valorInvestido: number, fixo: number, variavel: number) => void;
+}
 
-  const handleSubmit = () => {
-    // Verifica se as porcentagens somam 100%
-    if (porcentagemFixa + porcentagemVariavel !== 100) {
-      setErro('A soma das porcentagens deve ser 100%');
-      return;
-    }
-    
-    // Passa os valores para a próxima tela
-    onLogin(valorInvestido, porcentagemFixa, porcentagemVariavel);
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [valorInvestido, setValorInvestido] = useState<number>(0);
+  const [fixo, setFixo] = useState<number>(0);
+  const [variavel, setVariavel] = useState<number>(0);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onLogin(valorInvestido, fixo, variavel);
   };
 
   return (
     <div>
-      <h1>Login</h1>
-      <input
-        type="number"
-        placeholder="Valor Investido"
-        value={valorInvestido}
-        onChange={(e) => setValorInvestido(Number(e.target.value))}
-      />
-      <input
-        type="number"
-        placeholder="Porcentagem em Renda Fixa"
-        value={porcentagemFixa}
-        onChange={(e) => setPorcentagemFixa(Number(e.target.value))}
-      />
-      <input
-        type="number"
-        placeholder="Porcentagem em Renda Variável"
-        value={porcentagemVariavel}
-        onChange={(e) => setPorcentagemVariavel(Number(e.target.value))}
-      />
-      <button onClick={handleSubmit}>Login</button>
-      {erro && <p style={{ color: 'red' }}>{erro}</p>}
+      <h2>Login de Usuário</h2>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="valorInvestido">Valor a ser investido</label>
+          <input
+            id="valorInvestido"
+            type="number"
+            value={valorInvestido}
+            onChange={(e) => setValorInvestido(Number(e.target.value))}
+            placeholder="Digite o valor a ser investido"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="fixo">Porcentagem em Renda Fixa</label>
+          <input
+            id="fixo"
+            type="number"
+            value={fixo}
+            onChange={(e) => setFixo(Number(e.target.value))}
+            placeholder="Digite a porcentagem em renda fixa"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="variavel">Porcentagem em Renda Variável</label>
+          <input
+            id="variavel"
+            type="number"
+            value={variavel}
+            onChange={(e) => setVariavel(Number(e.target.value))}
+            placeholder="Digite a porcentagem em renda variável"
+            required
+          />
+        </div>
+
+        <button type="submit">Entrar</button>
+      </form>
     </div>
   );
 };
 
-export default TelaDeLogin;
+export default Login;
