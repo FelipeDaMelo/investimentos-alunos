@@ -1,5 +1,5 @@
 // src/MainPage.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -20,12 +20,6 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-interface MainPageProps {
-  valorInvestido: number;
-  fixo: number;
-  variavel: number;
-}
-
 export interface Ativo {
   id: string;
   nome: string;
@@ -33,7 +27,7 @@ export interface Ativo {
   dataInvestimento: string;
   valorAtual: string | number;
   patrimonioPorDia: { [key: string]: number };
-  tipo?: 'rendaVariavel' | 'rendaFixa';
+  tipo?: 'rendaVariavel' | 'rendaFixa' | 'cripto';
   categoriaFixa?: 'prefixada' | 'posFixada' | 'hibrida';
   parametrosFixa?: {
     taxaPrefixada?: number;
@@ -48,12 +42,13 @@ const formatarData = (dataISO: string) => {
   return `${dia}/${mes}/${ano}`;
 };
 
-const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) => {
+const MainPage = ({ login }: { login: string }) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [valorInvestido, setValorInvestido] = useState(0);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
-  const [login, setLogin] = useState<string>('userLogin'); // Substitua por como você armazena o login do usuário.
+  const [valorCriptoDisponivel, setValorCriptoDisponivel] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,12 +57,16 @@ const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) =
       if (docSnap.exists()) {
         const data = docSnap.data();
         const ativos = data.ativos || [];
+        const valorInvestido = data.valorInvestido || 0;
         const porcentagemFixa = data.porcentagemFixa || 0;
         const porcentagemVariavel = data.porcentagemVariavel || 0;
+        const porcentagemCripto = 100 - (porcentagemFixa + porcentagemVariavel);
 
         setAtivos(ativos);
+        setValorInvestido(valorInvestido);
         setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
         setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
+        setValorCriptoDisponivel(valorInvestido * (porcentagemCripto / 100) - calcularTotalInvestido(ativos, 'cripto'));
       } else {
         await setDoc(docRef, { ativos: [] });
       }
@@ -98,7 +97,7 @@ const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) =
 
   useAtualizarAtivos(ativos, setAtivos);
 
-  const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel') => {
+  const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel' | 'cripto') => {
     return ativos.filter(a => a.tipo === tipo).reduce((total, a) => total + a.valorInvestido, 0);
   };
 
@@ -108,6 +107,8 @@ const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) =
       setValorFixaDisponivel((prev) => prev - ativo.valorInvestido);
     } else if (ativo.tipo === 'rendaVariavel') {
       setValorVariavelDisponivel((prev) => prev - ativo.valorInvestido);
+    } else if (ativo.tipo === 'cripto') {
+      setValorCriptoDisponivel((prev) => prev - ativo.valorInvestido);
     }
   };
 
@@ -118,6 +119,8 @@ const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) =
         setValorFixaDisponivel((prev) => prev + ativoRemovido.valorInvestido);
       } else if (ativoRemovido.tipo === 'rendaVariavel') {
         setValorVariavelDisponivel((prev) => prev + ativoRemovido.valorInvestido);
+      } else if (ativoRemovido.tipo === 'cripto') {
+        setValorCriptoDisponivel((prev) => prev + ativoRemovido.valorInvestido);
       }
     }
     const atualizados = ativos.filter((ativo) => ativo.id !== id);
@@ -140,10 +143,10 @@ const MainPage: React.FC<MainPageProps> = ({ valorInvestido, fixo, variavel }) =
 
   return (
     <div>
-      <h1>Monitoramento de Ativos - Usuário</h1>
-      <p>Valor Investido: R$ {valorInvestido}</p>
+      <h1>Monitoramento de Ativos - Usuário: {login}</h1>
       <p>Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
       <p>Renda Variável disponível: R$ {valorVariavelDisponivel.toFixed(2)}</p>
+      <p>Criptomoedas disponível: R$ {valorCriptoDisponivel.toFixed(2)}</p>
       <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} tipoAtivo="rendaFixa" />
       <div>
         {ativos.map((ativo) => (
