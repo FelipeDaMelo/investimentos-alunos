@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
-import { Ativo } from '../MainPage';
+import { Ativo } from '../hooks/useAtualizarAtivos';
+import { Ativo, CriptoAtivo } from '../hooks/useAtualizarAtivos';
+
 
 interface Props {
   onAddAtivo: (ativo: Ativo) => void;
@@ -64,7 +66,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
 
       if (tipoAtivo === 'cripto') {
         const fracaoAdquirida = novoAtivo.valorInvestido / parseFloat(valorAtual);
-        novoAtivoObj.fracaoAdquirida = fracaoAdquirida;
+        (novoAtivoObj as CriptoAtivo).fracaoAdquirida = fracaoAdquirida;
       }
 
       onAddAtivo(novoAtivoObj);

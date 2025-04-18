@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ativo } from '../MainPage'; // Importe o tipo 'Ativo' da MainPage
+import { Ativo } from '../hooks/useAtualizarAtivos';
 
 interface AtivoCardProps {
   ativo: Ativo;  // Corrija aqui a tipagem da propriedade

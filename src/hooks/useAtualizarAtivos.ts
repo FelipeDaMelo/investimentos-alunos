@@ -2,7 +2,8 @@
 import { useEffect } from 'react';
 import fetchValorAtual from '../fetchValorAtual';
 
-export type Ativo = RendaFixaAtivo | RendaVariavelAtivo | CriptoAtivo;
+import { RendaFixaAtivo, RendaVariavelAtivo, CriptoAtivo, Ativo } from '../types/Ativo';
+
 
 interface BaseAtivo {
   id: string;

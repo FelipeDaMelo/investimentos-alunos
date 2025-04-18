@@ -1,4 +1,4 @@
-// src/MainPage.tsx hahahaha
+// src/MainPage.tsx
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
@@ -17,25 +17,9 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
+import { Ativo } from './types/Ativo'; // ✅ Tipo centralizado
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-export interface Ativo {
-  id: string;
-  nome: string;
-  valorInvestido: number;
-  dataInvestimento: string;
-  valorAtual: string | number;
-  patrimonioPorDia: { [key: string]: number };
-  tipo?: 'rendaVariavel' | 'rendaFixa' | 'cripto';
-  categoriaFixa?: 'prefixada' | 'posFixada' | 'hibrida';
-  parametrosFixa?: {
-    taxaPrefixada?: number;
-    percentualSobreCDI?: number;
-    percentualSobreSELIC?: number;
-    ipca?: number;
-  };
-}
 
 const formatarData = (dataISO: string) => {
   const [ano, mes, dia] = dataISO.split('-');
