@@ -83,17 +83,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
   return (
     <div>
      
-      <input
-        id="valorInvestido"
-        type="number"
-        placeholder="Valor Investido"
-        value={novoAtivo.valorInvestido}
-        onChange={(e) =>
-          setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
-        }
-        
-      />
-       {/* Renderização específica para renda fixa */}
+        {/* Renderização específica para renda fixa */}
       {tipoAtivo === 'rendaFixa' && (
         <>
           <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as any)}>
@@ -101,6 +91,18 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
             <option value="posFixada">Pós-fixada</option>
             <option value="hibrida">Híbrida</option>
           </select>
+          
+          <input
+        id="valorInvestido"
+        type="number"
+        placeholder="Valor Investido"
+        value={novoAtivo.valorInvestido}
+        onChange={(e) =>
+          setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
+        }
+
+      />
+
 
           {categoriaFixa !== 'hibrida' ? (
             <input
