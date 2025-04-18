@@ -82,7 +82,17 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
 
   return (
     <div>
-      {/* Renderização específica para renda fixa */}
+     
+      <input
+        id="valorInvestido"
+        type="number"
+        placeholder="Valor Investido"
+        value={novoAtivo.valorInvestido}
+        onChange={(e) =>
+          setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
+        }
+      />
+       {/* Renderização específica para renda fixa */}
       {tipoAtivo === 'rendaFixa' && (
         <>
           <select value={categoriaFixa} onChange={(e) => setCategoriaFixa(e.target.value as any)}>
@@ -113,7 +123,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
               />
               <input
                 type="number"
-                placeholder="Taxa Pós-fixada (% a.a)"
+                placeholder="Taxa Pós-fixada (% CDI ou %SELIC)"
                 onChange={(e) =>
                   setParametrosFixa((prev) => ({
                     ...prev,
@@ -133,15 +143,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         value={novoAtivo.nome}
         onChange={(e) => setNovoAtivo({ ...novoAtivo, nome: e.target.value })}
       />
-      <input
-        type="number"
-        placeholder="Valor Investido"
-        value={novoAtivo.valorInvestido}
-        onChange={(e) =>
-          setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
-        }
-      />
-      <input
+        <input
         type="date"
         value={novoAtivo.dataInvestimento}
         onChange={(e) => setNovoAtivo({ ...novoAtivo, dataInvestimento: e.target.value })}
