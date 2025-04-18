@@ -1,4 +1,4 @@
-// src/MainPage.tsx
+// src/MainPage.tsx hahahaha
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
@@ -163,8 +163,8 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     <div>
       <h1>Monitoramento de Ativos - Usuário: {login}</h1>
       <p>Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
-      <p>Renda Variável disponível: R$ {valorVariavelDisponivel.toFixed(2)}</p>
-      <p>Criptomoedas disponível: R$ {valorCriptoDisponivel.toFixed(2)}</p>
+      <p>Renda Variável / Criptomoedas disponível: R$ {(valorVariavelDisponivel + valorCriptoDisponivel).toFixed(2)}</p>
+
       <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} tipoAtivo="rendaFixa" />
       <div>
         {ativos.map((ativo) => (
