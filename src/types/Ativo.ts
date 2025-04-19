@@ -1,3 +1,4 @@
+// src/types/Ativo.ts
 export type Ativo = RendaFixaAtivo | RendaVariavelAtivo | CriptoAtivo;
 
 interface BaseAtivo {

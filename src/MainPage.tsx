@@ -17,7 +17,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
-import { Ativo } from './types/Ativo'; // ✅ Tipo centralizado
+import { Ativo } from './types/Ativo'; 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -52,7 +52,10 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        ativos = data.ativos || [];
+        ativos = (data.ativos || []).map((a: any) => ({
+          ...a,
+          patrimonioPorDia: a.patrimonioPorDia || {},
+        }));
         porcentagemFixa = data.porcentagemFixa ?? fixo;
         porcentagemVariavel = data.porcentagemVariavel ?? variavel;
       } else {
@@ -76,17 +79,17 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     const saveData = async () => {
       const docRef = doc(db, 'usuarios', login);
       try {
-        const ativosSemUndefined = ativos.map((ativo) => {
+        const ativosLimpos = ativos.map((ativo) => {
           const novoAtivo: any = { ...ativo };
-          if (!novoAtivo.tipo) delete novoAtivo.tipo;
-          if (!novoAtivo.categoriaFixa) delete novoAtivo.categoriaFixa;
-          if (!novoAtivo.parametrosFixa || Object.keys(novoAtivo.parametrosFixa).length === 0) {
-            delete novoAtivo.parametrosFixa;
-          }
+          Object.keys(novoAtivo).forEach((key) => {
+            if (novoAtivo[key] === undefined) {
+              delete novoAtivo[key];
+            }
+          });
           return novoAtivo;
         });
         await setDoc(docRef, {
-          ativos: ativosSemUndefined,
+          ativos: ativosLimpos,
           porcentagemFixa: fixo,
           porcentagemVariavel: variavel
         }, { merge: true });
@@ -133,29 +136,33 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     new Set(ativos.flatMap((ativo) => Object.keys(ativo.patrimonioPorDia)))
   ).sort();
 
+  const cores = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+
   const chartData = {
     labels: allDates.map(formatarData),
-    datasets: ativos.map((ativo) => ({
+    datasets: ativos.map((ativo, i) => ({
       label: ativo.nome,
       data: allDates.map((date) => ativo.patrimonioPorDia[date] || 0),
-      borderColor: 'rgba(75,192,192,1)',
+      borderColor: cores[i % cores.length],
       fill: false,
     })),
   };
 
   return (
-    <div>
-      <h1>Monitoramento de Ativos - Usuário: {login}</h1>
-      <p>Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
-      <p>Renda Variável / Criptomoedas disponível: R$ {(valorVariavelDisponivel + valorCriptoDisponivel).toFixed(2)}</p>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-2">Monitoramento de Ativos - Usuário: {login}</h1>
+      {loading && <p className="text-yellow-600">Salvando...</p>}
+
+      <p className="mb-2">Renda Fixa disponível: R$ {valorFixaDisponivel.toFixed(2)}</p>
+      <p className="mb-4">Renda Variável / Criptomoedas disponível: R$ {(valorVariavelDisponivel + valorCriptoDisponivel).toFixed(2)}</p>
 
       <AtivoForm onAddAtivo={handleAddAtivo} loading={loading} setLoading={setLoading} tipoAtivo="rendaFixa" />
-      <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {ativos.map((ativo) => (
           <AtivoCard key={ativo.id} ativo={ativo} onDelete={handleDeleteAtivo} />
         ))}
       </div>
-      <div>
+      <div className="mt-6">
         <Line data={chartData} />
       </div>
     </div>
