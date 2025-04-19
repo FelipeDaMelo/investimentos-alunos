@@ -41,8 +41,8 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
           if (ativo.tipo === 'rendaFixa') {
             const diasPassados = Math.max(0, Math.floor(
               (new Date(hoje).getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60 * 60 * 24)
-            );
-            const rendimento = calcularRendimentoFixa(ativo, diasPassados);
+            ));
+            const rendimento = calcularRendimentoFixa(ativo as RendaFixaAtivo, diasPassados);
 
             return {
               ...ativo,
@@ -53,8 +53,8 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
               },
             };
           } else {
-            const valorAtual = parseFloat(await fetchValorAtual(ativo.tickerFormatado));
-            const updatedPatrimonio = ativo.quantidade * valorAtual;
+            const valorAtual = parseFloat(await fetchValorAtual((ativo as RendaVariavelAtivo).tickerFormatado));
+            const updatedPatrimonio = (ativo as RendaVariavelAtivo).quantidade * valorAtual;
 
             return {
               ...ativo,
