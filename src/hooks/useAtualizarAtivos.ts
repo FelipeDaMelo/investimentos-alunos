@@ -23,7 +23,9 @@ const calcularRendimentoFixa = (ativo: RendaFixaAtivo, diasPassados: number): nu
     }
   }
 
-  if (ativo.categoriaFixa === 'hibrida' && ativo.parametrosFixa?.taxaPrefixada !== undefined && ativo.parametrosFixa?.ipca !== undefined) {
+  if (ativo.categoriaFixa === 'hibrida' && 
+      ativo.parametrosFixa?.taxaPrefixada !== undefined && 
+      ativo.parametrosFixa?.ipca !== undefined) {
     const diariaPrefixada = ativo.parametrosFixa.taxaPrefixada / 100 / 252;
     const diariaIPCA = ativo.parametrosFixa.ipca / 100 / 252;
     rendimento *= Math.pow(1 + diariaPrefixada + diariaIPCA, diasPassados);
@@ -41,7 +43,7 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
           if (ativo.tipo === 'rendaFixa') {
             const diasPassados = Math.max(0, Math.floor(
               (new Date(hoje).getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60 * 60 * 24)
-            );
+            ));
             const rendimento = calcularRendimentoFixa(ativo, diasPassados);
 
             return {
