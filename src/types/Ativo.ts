@@ -5,7 +5,7 @@ interface BaseAtivo {
   nome: string;
   valorInvestido: number;
   dataInvestimento: string;
-  valorAtual: number;  // Changed from string to number
+  valorAtual: number;
   patrimonioPorDia: { [key: string]: number };
 }
 
@@ -22,9 +22,12 @@ export interface RendaFixaAtivo extends BaseAtivo {
 
 export interface RendaVariavelAtivo extends BaseAtivo {
   tipo: 'rendaVariavel';
+  tickerFormatado: string;
+  quantidade: number;
 }
 
 export interface CriptoAtivo extends BaseAtivo {
   tipo: 'cripto';
+  tickerFormatado: string;
   fracaoAdquirida: number;
 }
