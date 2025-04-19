@@ -10,13 +10,13 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { db } from './firebaseConfig';
+import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
-import useAtualizarAtivos from './hooks/useAtualizarAtivos';
-import { Ativo } from './types/Ativo';
+import useAtualizarAtivos from '../hooks/useAtualizarAtivos';
+import { Ativo } from '../types/Ativo';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -36,50 +36,44 @@ interface MainPageProps {
 const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPageProps) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
-  const [valorCriptoDisponivel, setValorCriptoDisponivel] = useState(0);
+  const [error, setError] = useState<string>('');
 
-  const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel' | 'cripto') => {
-    return ativos.filter(a => a.tipo === tipo).reduce((total, a) => total + a.valorInvestido, 0);
+  const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel') => {
+    return ativos
+      .filter(a => a.tipo === tipo)
+      .reduce((total, a) => total + a.valorInvestido, 0);
   };
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const docRef = doc(db, 'usuarios', login);
-        const docSnap = await getDoc(docRef);
+      const docRef = doc(db, 'usuarios', login);
+      const docSnap = await getDoc(docRef);
 
-        let ativos: Ativo[] = [];
-        let porcentagemFixa = fixo;
-        let porcentagemVariavel = variavel;
+      let ativos: Ativo[] = [];
+      let porcentagemFixa = fixo;
+      let porcentagemVariavel = variavel;
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          ativos = (data.ativos || []).map((a: any) => ({
-            ...a,
-            patrimonioPorDia: a.patrimonioPorDia || {},
-          }));
-          porcentagemFixa = data.porcentagemFixa ?? fixo;
-          porcentagemVariavel = data.porcentagemVariavel ?? variavel;
-        } else {
-          await setDoc(docRef, {
-            ativos: [],
-            porcentagemFixa: fixo,
-            porcentagemVariavel: variavel
-          });
-        }
-
-        const porcentagemCripto = 100 - (porcentagemFixa + porcentagemVariavel);
-        setAtivos(ativos);
-        setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
-        setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
-        setValorCriptoDisponivel(valorInvestido * (porcentagemCripto / 100) - calcularTotalInvestido(ativos, 'cripto'));
-      } catch (error) {
-        setError('Erro ao carregar dados do Firebase');
-        console.error(error);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        ativos = (data.ativos || []).map((a: any) => ({
+          ...a,
+          patrimonioPorDia: a.patrimonioPorDia || {},
+        }));
+        porcentagemFixa = data.porcentagemFixa ?? fixo;
+        porcentagemVariavel = data.porcentagemVariavel ?? variavel;
+      } else {
+        await setDoc(docRef, {
+          ativos: [],
+          porcentagemFixa: fixo,
+          porcentagemVariavel: variavel
+        });
       }
+
+      setAtivos(ativos);
+      setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
+      setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
     };
     fetchData();
   }, [login, valorInvestido, fixo, variavel]);
@@ -116,10 +110,8 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     setAtivos((prev) => [...prev, ativo]);
     if (ativo.tipo === 'rendaFixa') {
       setValorFixaDisponivel((prev) => prev - ativo.valorInvestido);
-    } else if (ativo.tipo === 'rendaVariavel') {
+    } else {
       setValorVariavelDisponivel((prev) => prev - ativo.valorInvestido);
-    } else if (ativo.tipo === 'cripto') {
-      setValorCriptoDisponivel((prev) => prev - ativo.valorInvestido);
     }
   };
 
@@ -128,10 +120,8 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     if (ativoRemovido) {
       if (ativoRemovido.tipo === 'rendaFixa') {
         setValorFixaDisponivel((prev) => prev + ativoRemovido.valorInvestido);
-      } else if (ativoRemovido.tipo === 'rendaVariavel') {
+      } else {
         setValorVariavelDisponivel((prev) => prev + ativoRemovido.valorInvestido);
-      } else if (ativoRemovido.tipo === 'cripto') {
-        setValorCriptoDisponivel((prev) => prev + ativoRemovido.valorInvestido);
       }
     }
     const atualizados = ativos.filter((ativo) => ativo.id !== id);
@@ -162,18 +152,14 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">
         <h2 className="text-xl font-semibold mb-3">Disponível para Investimento</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="border p-3 rounded">
             <h3 className="font-medium">Renda Fixa</h3>
             <p className="text-2xl">R$ {valorFixaDisponivel.toFixed(2)}</p>
           </div>
           <div className="border p-3 rounded">
-            <h3 className="font-medium">Renda Variável</h3>
+            <h3 className="font-medium">Renda Variável / Criptomoedas</h3>
             <p className="text-2xl">R$ {valorVariavelDisponivel.toFixed(2)}</p>
-          </div>
-          <div className="border p-3 rounded">
-            <h3 className="font-medium">Criptomoedas</h3>
-            <p className="text-2xl">R$ {valorCriptoDisponivel.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -185,6 +171,27 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
             loading={loading} 
             setLoading={setLoading} 
             tipoAtivo="rendaFixa" 
+          />
+          <AtivoForm
+            onAddAtivo={handleAddAtivo}
+            loading={loading}
+            setLoading={setLoading}
+            tipoAtivo="rendaVariavel"
+            subtipo="acao"
+          />
+          <AtivoForm
+            onAddAtivo={handleAddAtivo}
+            loading={loading}
+            setLoading={setLoading}
+            tipoAtivo="rendaVariavel"
+            subtipo="fii"
+          />
+          <AtivoForm
+            onAddAtivo={handleAddAtivo}
+            loading={loading}
+            setLoading={setLoading}
+            tipoAtivo="rendaVariavel"
+            subtipo="criptomoeda"
           />
         </div>
         <div className="lg:col-span-2">

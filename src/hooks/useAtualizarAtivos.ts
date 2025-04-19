@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import fetchValorAtual from '../fetchValorAtual';
-import { Ativo, RendaFixaAtivo } from '../types/Ativo';
+import { Ativo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
 
 type SetAtivos = React.Dispatch<React.SetStateAction<Ativo[]>>;
 
@@ -53,8 +53,9 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
               },
             };
           } else {
-            const valorAtual = parseFloat(await fetchValorAtual((ativo as RendaVariavelAtivo).tickerFormatado));
-            const updatedPatrimonio = (ativo as RendaVariavelAtivo).quantidade * valorAtual;
+            const ativoVar = ativo as RendaVariavelAtivo;
+            const valorAtual = parseFloat(await fetchValorAtual(ativoVar.tickerFormatado));
+            const updatedPatrimonio = ativoVar.quantidade * valorAtual;
 
             return {
               ...ativo,
@@ -71,7 +72,7 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
     };
 
     atualizar();
-    const intervalId = setInterval(atualizar, 86400000); // Atualiza a cada 24h
+    const intervalId = setInterval(atualizar, 86400000);
     return () => clearInterval(intervalId);
   }, [ativos, setAtivos]);
 };
