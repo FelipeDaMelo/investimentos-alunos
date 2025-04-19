@@ -5,7 +5,7 @@ interface BaseAtivo {
   nome: string;
   valorInvestido: number;
   dataInvestimento: string;
-  valorAtual: number;
+  valorAtual: number;  // Changed from string to number
   patrimonioPorDia: { [key: string]: number };
 }
 

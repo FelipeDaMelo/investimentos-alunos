@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
-import { Ativo, CriptoAtivo, RendaFixaAtivo } from '../types/Ativo'; // Corrigido import
+import { Ativo, CriptoAtivo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
 
 interface Props {
   onAddAtivo: (ativo: Ativo) => void;
@@ -18,7 +18,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
   });
 
   const [categoriaFixa, setCategoriaFixa] = useState<'prefixada' | 'posFixada' | 'hibrida'>('prefixada');
-  const [parametrosFixa, setParametrosFixa] = useState<RendaFixaAtivo['parametrosFixa']>({}); // Corrigido tipo
+  const [parametrosFixa, setParametrosFixa] = useState<RendaFixaAtivo['parametrosFixa']>({});
   const [erro, setErro] = useState<string>('');
   const [sucesso, setSucesso] = useState<string>('');
 
@@ -34,7 +34,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     setLoading(true);
     try {
       const hoje = new Date().toISOString().split('T')[0];
-      let valorAtual = 1; // Corrigido para number
+      let valorAtual = 1;
       let patrimonioInicial = novoAtivo.valorInvestido;
 
       if (tipoAtivo === 'rendaVariavel' || tipoAtivo === 'cripto') {
@@ -43,7 +43,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
           setErro('Erro ao buscar o valor do ativo');
           return;
         }
-        valorAtual = parseFloat(valor); // Convertendo para number
+        valorAtual = parseFloat(valor);
       }
 
       if (tipoAtivo === 'rendaVariavel') {
@@ -55,26 +55,39 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         patrimonioInicial = quantidade * valorAtual;
       }
 
-      const novoAtivoObj: Ativo = {
+      // Create base ativo object
+      const baseAtivo = {
         id: uuidv4(),
         nome: novoAtivo.nome,
         valorInvestido: patrimonioInicial,
         dataInvestimento: novoAtivo.dataInvestimento,
-        valorAtual: valorAtual.toString(), // Mantido como string para compatibilidade
+        valorAtual: valorAtual,
         patrimonioPorDia: {
           [hoje]: patrimonioInicial,
         },
-        tipo: tipoAtivo,
       };
 
-      if (tipoAtivo === 'rendaFixa') {
-        (novoAtivoObj as RendaFixaAtivo).categoriaFixa = categoriaFixa;
-        (novoAtivoObj as RendaFixaAtivo).parametrosFixa = parametrosFixa;
-      }
+      let novoAtivoObj: Ativo;
 
-      if (tipoAtivo === 'cripto') {
+      if (tipoAtivo === 'rendaFixa') {
+        novoAtivoObj = {
+          ...baseAtivo,
+          tipo: 'rendaFixa',
+          categoriaFixa,
+          parametrosFixa,
+        } as RendaFixaAtivo;
+      } else if (tipoAtivo === 'cripto') {
         const fracaoAdquirida = novoAtivo.valorInvestido / valorAtual;
-        (novoAtivoObj as CriptoAtivo).fracaoAdquirida = fracaoAdquirida;
+        novoAtivoObj = {
+          ...baseAtivo,
+          tipo: 'cripto',
+          fracaoAdquirida,
+        } as CriptoAtivo;
+      } else {
+        novoAtivoObj = {
+          ...baseAtivo,
+          tipo: 'rendaVariavel',
+        } as RendaVariavelAtivo;
       }
 
       onAddAtivo(novoAtivoObj);
@@ -92,13 +105,16 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     }
   };
 
-  const handleParametrosChange = (prev: RendaFixaAtivo['parametrosFixa'], updates: Partial<RendaFixaAtivo['parametrosFixa']>) => {
-    return { ...prev, ...updates };
+  const handleParametrosChange = (updates: Partial<RendaFixaAtivo['parametrosFixa']>) => {
+    setParametrosFixa(prev => ({ ...prev, ...updates }));
   };
 
   return (
     <div className="border p-4 rounded-lg mb-6">
-      <h2 className="text-xl font-bold mb-4">Adicionar {tipoAtivo === 'rendaFixa' ? 'Renda Fixa' : tipoAtivo === 'rendaVariavel' ? 'Renda Variável' : 'Criptomoeda'}</h2>
+      <h2 className="text-xl font-bold mb-4">
+        Adicionar {tipoAtivo === 'rendaFixa' ? 'Renda Fixa' : 
+                  tipoAtivo === 'rendaVariavel' ? 'Renda Variável' : 'Criptomoeda'}
+      </h2>
 
       {tipoAtivo === 'rendaFixa' && (
         <div className="space-y-4 mb-4">
@@ -107,7 +123,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
             <select
               value={categoriaFixa}
               onChange={(e) => {
-                setCategoriaFixa(e.target.value as any);
+                setCategoriaFixa(e.target.value as 'prefixada' | 'posFixada' | 'hibrida');
                 setParametrosFixa({});
               }}
               className="w-full p-2 border rounded"
@@ -124,9 +140,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
               <input
                 type="number"
                 placeholder="Ex: 10.5"
-                onChange={(e) =>
-                  setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })
-                }
+                onChange={(e) => handleParametrosChange({ taxaPrefixada: parseFloat(e.target.value) })}
                 className="w-full p-2 border rounded"
               />
             </div>
@@ -140,9 +154,9 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                   const indicador = e.target.value;
                   const valor = parseFloat(prompt(`Informe o percentual de ${indicador} (%):`) || '0');
                   if (indicador === 'CDI') {
-                    setParametrosFixa({ percentualSobreCDI: valor });
+                    handleParametrosChange({ percentualSobreCDI: valor });
                   } else if (indicador === 'SELIC') {
-                    setParametrosFixa({ percentualSobreSELIC: valor });
+                    handleParametrosChange({ percentualSobreSELIC: valor });
                   }
                 }}
                 className="w-full p-2 border rounded"
@@ -161,12 +175,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                 <input
                   type="number"
                   placeholder="Ex: 5.0"
-                  onChange={(e) =>
-                    setParametrosFixa((prev) => ({
-                      ...prev,
-                      taxaPrefixada: parseFloat(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => handleParametrosChange({ taxaPrefixada: parseFloat(e.target.value) })}
                   className="w-full p-2 border rounded"
                 />
               </div>
@@ -175,12 +184,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                 <input
                   type="number"
                   placeholder="Ex: 3.5"
-                  onChange={(e) =>
-                    setParametrosFixa((prev) => ({
-                      ...prev,
-                      ipca: parseFloat(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => handleParametrosChange({ ipca: parseFloat(e.target.value) })}
                   className="w-full p-2 border rounded"
                 />
               </div>
