@@ -1,7 +1,8 @@
+// src/components/AtivoForm.tsx
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
-import { Ativo, CriptoAtivo } from '../types/Ativo';
+import { Ativo, CriptoAtivo, RendaFixaAtivo } from '../types/Ativo';
 
 interface Props {
   onAddAtivo: (ativo: Ativo) => void;
@@ -18,7 +19,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
   });
 
   const [categoriaFixa, setCategoriaFixa] = useState<'prefixada' | 'posFixada' | 'hibrida'>('prefixada');
-  const [parametrosFixa, setParametrosFixa] = useState<Ativo['parametrosFixa']>({});
+  const [parametrosFixa, setParametrosFixa] = useState<RendaFixaAtivo['parametrosFixa']>({});
   const [erro, setErro] = useState<string>('');
   const [sucesso, setSucesso] = useState<string>('');
 
@@ -34,24 +35,25 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     setLoading(true);
     try {
       const hoje = new Date().toISOString().split('T')[0];
-      let valorAtual = '1';
+      let valorAtual = 1;
       let patrimonioInicial = novoAtivo.valorInvestido;
 
       if (tipoAtivo === 'rendaVariavel' || tipoAtivo === 'cripto') {
-        valorAtual = await fetchValorAtual(novoAtivo.nome);
-        if (valorAtual === 'Erro ao carregar') {
+        const valor = await fetchValorAtual(novoAtivo.nome);
+        if (valor === 'Erro ao carregar') {
           setErro('Erro ao buscar o valor do ativo');
           return;
         }
+        valorAtual = parseFloat(valor);
       }
 
       if (tipoAtivo === 'rendaVariavel') {
-        const quantidade = Math.floor(novoAtivo.valorInvestido / parseFloat(valorAtual));
+        const quantidade = Math.floor(novoAtivo.valorInvestido / valorAtual);
         if (quantidade < 1) {
           setErro('Não é possível comprar menos de 1 ação');
           return;
         }
-        patrimonioInicial = quantidade * parseFloat(valorAtual);
+        patrimonioInicial = quantidade * valorAtual;
       }
 
       const novoAtivoObj: Ativo = {
@@ -59,12 +61,12 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
         nome: novoAtivo.nome,
         valorInvestido: patrimonioInicial,
         dataInvestimento: novoAtivo.dataInvestimento,
-        valorAtual,
+        valorAtual: valorAtual.toString(),
         patrimonioPorDia: {
           [hoje]: patrimonioInicial,
         },
         tipo: tipoAtivo,
-      };
+      } as Ativo;
 
       if (tipoAtivo === 'rendaFixa') {
         (novoAtivoObj as RendaFixaAtivo).categoriaFixa = categoriaFixa;
@@ -72,7 +74,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       }
 
       if (tipoAtivo === 'cripto') {
-        const fracaoAdquirida = novoAtivo.valorInvestido / parseFloat(valorAtual);
+        const fracaoAdquirida = novoAtivo.valorInvestido / valorAtual;
         (novoAtivoObj as CriptoAtivo).fracaoAdquirida = fracaoAdquirida;
       }
 
@@ -91,9 +93,16 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
     }
   };
 
+  const handleParametrosChange = (updates: Partial<RendaFixaAtivo['parametrosFixa']>) => {
+    setParametrosFixa(prev => ({ ...prev, ...updates }));
+  };
+
   return (
     <div className="border p-4 rounded-lg mb-6">
-      <h2 className="text-xl font-bold mb-4">Adicionar {tipoAtivo === 'rendaFixa' ? 'Renda Fixa' : tipoAtivo === 'rendaVariavel' ? 'Renda Variável' : 'Criptomoeda'}</h2>
+      <h2 className="text-xl font-bold mb-4">
+        Adicionar {tipoAtivo === 'rendaFixa' ? 'Renda Fixa' : 
+                  tipoAtivo === 'rendaVariavel' ? 'Renda Variável' : 'Criptomoeda'}
+      </h2>
 
       {tipoAtivo === 'rendaFixa' && (
         <div className="space-y-4 mb-4">
@@ -119,9 +128,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
               <input
                 type="number"
                 placeholder="Ex: 10.5"
-                onChange={(e) =>
-                  setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })
-                }
+                onChange={(e) => handleParametrosChange({ taxaPrefixada: parseFloat(e.target.value) })}
                 className="w-full p-2 border rounded"
               />
             </div>
@@ -135,9 +142,9 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                   const indicador = e.target.value;
                   const valor = parseFloat(prompt(`Informe o percentual de ${indicador} (%):`) || '0');
                   if (indicador === 'CDI') {
-                    setParametrosFixa({ percentualSobreCDI: valor });
+                    handleParametrosChange({ percentualSobreCDI: valor });
                   } else if (indicador === 'SELIC') {
-                    setParametrosFixa({ percentualSobreSELIC: valor });
+                    handleParametrosChange({ percentualSobreSELIC: valor });
                   }
                 }}
                 className="w-full p-2 border rounded"
@@ -156,12 +163,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                 <input
                   type="number"
                   placeholder="Ex: 5.0"
-                  onChange={(e) =>
-                    setParametrosFixa((prev) => ({
-                      ...prev,
-                      taxaPrefixada: parseFloat(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => handleParametrosChange({ taxaPrefixada: parseFloat(e.target.value) })}
                   className="w-full p-2 border rounded"
                 />
               </div>
@@ -170,12 +172,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                 <input
                   type="number"
                   placeholder="Ex: 3.5"
-                  onChange={(e) =>
-                    setParametrosFixa((prev) => ({
-                      ...prev,
-                      ipca: parseFloat(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => handleParametrosChange({ ipca: parseFloat(e.target.value) })}
                   className="w-full p-2 border rounded"
                 />
               </div>
