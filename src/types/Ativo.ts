@@ -1,4 +1,4 @@
-export type Ativo = RendaFixaAtivo | RendaVariavelAtivo | CriptoAtivo;
+export type Ativo = RendaFixaAtivo | RendaVariavelAtivo;
 
 interface BaseAtivo {
   id: string;
@@ -14,20 +14,15 @@ export interface RendaFixaAtivo extends BaseAtivo {
   categoriaFixa: 'prefixada' | 'posFixada' | 'hibrida';
   parametrosFixa: {
     taxaPrefixada?: number;
-    percentualSobreCDI?: number;
-    percentualSobreSELIC?: number;
+    percentualCDI?: number;
+    percentualSELIC?: number;
     ipca?: number;
   };
 }
 
 export interface RendaVariavelAtivo extends BaseAtivo {
   tipo: 'rendaVariavel';
+  subtipo: 'acao' | 'fii' | 'cripto';
   tickerFormatado: string;
   quantidade: number;
-}
-
-export interface CriptoAtivo extends BaseAtivo {
-  tipo: 'cripto';
-  tickerFormatado: string;
-  fracaoAdquirida: number;
 }
