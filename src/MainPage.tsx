@@ -10,19 +10,13 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { db } from './firebaseConfig';
+import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
-import useAtualizarAtivos from './hooks/useAtualizarAtivos';
-import { Ativo } from './types/Ativo';
+import AddAtivoWizard from './components/AddAtivoWizard';
+import { Ativo } from '../types/Ativo';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-const formatarData = (dataISO: string) => {
-  const [ano, mes, dia] = dataISO.split('-');
-  return `${dia}/${mes}/${ano}`;
-};
 
 interface MainPageProps {
   login: string;
@@ -38,6 +32,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState<string>('');
+  const [showWizard, setShowWizard] = useState(false);
 
   const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel') => {
     return ativos
@@ -103,8 +98,6 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     if (ativos.length > 0) saveData();
   }, [ativos, login, fixo, variavel]);
 
-  useAtualizarAtivos(ativos, setAtivos);
-
   const handleAddAtivo = (ativo: Ativo) => {
     setAtivos((prev) => [...prev, ativo]);
     if (ativo.tipo === 'rendaFixa') {
@@ -134,7 +127,10 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const cores = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
 
   const chartData = {
-    labels: allDates.map(formatarData),
+    labels: allDates.map(date => {
+      const [ano, mes, dia] = date.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }),
     datasets: ativos.map((ativo, i) => ({
       label: ativo.nome,
       data: allDates.map((date) => ativo.patrimonioPorDia[date] || 0),
@@ -163,43 +159,17 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <AtivoForm 
-            onAddAtivo={handleAddAtivo} 
-            loading={loading} 
-            setLoading={setLoading} 
-            tipoAtivo="rendaFixa" 
-          />
-          <AtivoForm
-            onAddAtivo={handleAddAtivo}
-            loading={loading}
-            setLoading={setLoading}
-            tipoAtivo="rendaVariavel"
-            subtipo="acao"
-          />
-          <AtivoForm
-            onAddAtivo={handleAddAtivo}
-            loading={loading}
-            setLoading={setLoading}
-            tipoAtivo="rendaVariavel"
-            subtipo="fii"
-          />
-          <AtivoForm
-            onAddAtivo={handleAddAtivo}
-            loading={loading}
-            setLoading={setLoading}
-            tipoAtivo="rendaVariavel"
-            subtipo="criptomoeda"
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {ativos.map((ativo) => (
-              <AtivoCard key={ativo.id} ativo={ativo} onDelete={handleDeleteAtivo} />
-            ))}
-          </div>
-        </div>
+      <button
+        onClick={() => setShowWizard(true)}
+        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+      >
+        + Adicionar Ativo
+      </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {ativos.map((ativo) => (
+          <AtivoCard key={ativo.id} ativo={ativo} onDelete={handleDeleteAtivo} />
+        ))}
       </div>
 
       <div className="mt-8 bg-white p-4 rounded-lg shadow">
@@ -219,6 +189,18 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
           />
         </div>
       </div>
+
+      {/* Wizard Modal */}
+      {showWizard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <AddAtivoWizard
+            onClose={() => setShowWizard(false)}
+            onAddAtivo={handleAddAtivo}
+            valorFixaDisponivel={valorFixaDisponivel}
+            valorVariavelDisponivel={valorVariavelDisponivel}
+          />
+        </div>
+      )}
     </div>
   );
 };

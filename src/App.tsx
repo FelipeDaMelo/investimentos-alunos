@@ -1,3 +1,4 @@
+//src/App.tsx
 import React, { useState, useCallback } from 'react';
 import Login from './Login';
 import MainPage from './MainPage';
