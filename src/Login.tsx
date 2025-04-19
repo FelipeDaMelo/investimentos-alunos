@@ -1,4 +1,3 @@
-// src/Login.tsx
 import React, { useState } from 'react';
 
 interface LoginProps {
@@ -19,7 +18,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const variavelNum = Number(variavel);
 
     if (fixoNum + variavelNum !== 100) {
-      setErro('A soma das porcentagens de renda fixa e variável deve ser 100%.');
+      setErro('A soma das porcentagens deve ser 100%');
+      return;
+    }
+
+    if (!nomeGrupo.trim()) {
+      setErro('Nome do grupo é obrigatório');
+      return;
+    }
+
+    if (!valorInvestido || Number(valorInvestido) <= 0) {
+      setErro('Valor investido deve ser positivo');
       return;
     }
 
@@ -28,77 +37,87 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
-      <h2 style={{ marginBottom: '1.5rem' }}>Login de Usuário</h2>
-      <form onSubmit={handleSubmit}>
-
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="nomeGrupo" style={{ display: 'block', marginBottom: '8px' }}>Nome do Grupo</label>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-center">Configuração Inicial</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="nomeGrupo" className="block text-sm font-medium text-gray-700 mb-1">
+            Nome do Grupo
+          </label>
           <input
             id="nomeGrupo"
             type="text"
             value={nomeGrupo}
             onChange={(e) => setNomeGrupo(e.target.value)}
-            placeholder="Digite o nome do grupo"
+            placeholder="Ex: Grupo de Investimentos"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            style={{ padding: '8px', width: '100%' }}
           />
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="valorInvestido" style={{ display: 'block', marginBottom: '8px' }}>Valor a ser investido</label>
+        <div>
+          <label htmlFor="valorInvestido" className="block text-sm font-medium text-gray-700 mb-1">
+            Valor Total para Investir (R$)
+          </label>
           <input
             id="valorInvestido"
             type="number"
             value={valorInvestido}
             onChange={(e) => setValorInvestido(e.target.value)}
-            placeholder="Digite o valor a ser investido"
+            placeholder="Ex: 10000"
+            min="0"
+            step="0.01"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            style={{ padding: '8px', width: '100%' }}
           />
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="fixo" style={{ display: 'block', marginBottom: '8px' }}>Porcentagem em Renda Fixa</label>
-          <input
-            id="fixo"
-            type="number"
-            value={fixo}
-            onChange={(e) => setFixo(e.target.value)}
-            placeholder="Ex: 60"
-            required
-            style={{ padding: '8px', width: '100%' }}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="fixo" className="block text-sm font-medium text-gray-700 mb-1">
+              % Renda Fixa
+            </label>
+            <input
+              id="fixo"
+              type="number"
+              value={fixo}
+              onChange={(e) => setFixo(e.target.value)}
+              placeholder="Ex: 60"
+              min="0"
+              max="100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="variavel" className="block text-sm font-medium text-gray-700 mb-1">
+              % Renda Variável
+            </label>
+            <input
+              id="variavel"
+              type="number"
+              value={variavel}
+              onChange={(e) => setVariavel(e.target.value)}
+              placeholder="Ex: 40"
+              min="0"
+              max="100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="variavel" style={{ display: 'block', marginBottom: '8px' }}>Porcentagem em Renda Variável</label>
-          <input
-            id="variavel"
-            type="number"
-            value={variavel}
-            onChange={(e) => setVariavel(e.target.value)}
-            placeholder="Ex: 40"
-            required
-            style={{ padding: '8px', width: '100%' }}
-          />
-        </div>
-
-        <p style={{ fontSize: '0.9em', color: 'gray', marginBottom: '1rem' }}>
-          OBS: Não é necessário digitar o símbolo "%" ao preencher as porcentagens.
+        <p className="text-sm text-gray-500">
+          Obs: Não inclua o símbolo "%" - apenas números (a soma deve ser 100)
         </p>
 
-        {erro && <p style={{ color: 'red', marginBottom: '1rem' }}>{erro}</p>}
+        {erro && <p className="text-red-500 text-sm">{erro}</p>}
 
-        <button type="submit" style={{
-          padding: '10px 20px',
-          backgroundColor: '#007BFF',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}>
-          Entrar
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Iniciar Simulação
         </button>
       </form>
     </div>

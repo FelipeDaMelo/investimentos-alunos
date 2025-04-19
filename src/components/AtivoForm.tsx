@@ -1,10 +1,7 @@
-// src/components/AtivoForm.tsx
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import fetchValorAtual from '../fetchValorAtual';
-import { Ativo } from '../hooks/useAtualizarAtivos';
-import { Ativo, CriptoAtivo } from '../hooks/useAtualizarAtivos';
-
+import { Ativo, CriptoAtivo } from '../types/Ativo';
 
 interface Props {
   onAddAtivo: (ativo: Ativo) => void;
@@ -17,13 +14,23 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
   const [novoAtivo, setNovoAtivo] = useState({
     nome: '',
     valorInvestido: 0,
-    dataInvestimento: '',
+    dataInvestimento: new Date().toISOString().split('T')[0],
   });
 
   const [categoriaFixa, setCategoriaFixa] = useState<'prefixada' | 'posFixada' | 'hibrida'>('prefixada');
   const [parametrosFixa, setParametrosFixa] = useState<Ativo['parametrosFixa']>({});
+  const [erro, setErro] = useState<string>('');
+  const [sucesso, setSucesso] = useState<string>('');
 
   const handleAddAtivo = async () => {
+    setErro('');
+    setSucesso('');
+
+    if (new Date(novoAtivo.dataInvestimento) > new Date()) {
+      setErro('Data não pode ser futura');
+      return;
+    }
+
     setLoading(true);
     try {
       const hoje = new Date().toISOString().split('T')[0];
@@ -33,7 +40,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       if (tipoAtivo === 'rendaVariavel' || tipoAtivo === 'cripto') {
         valorAtual = await fetchValorAtual(novoAtivo.nome);
         if (valorAtual === 'Erro ao carregar') {
-          alert('Erro ao buscar o valor do ativo');
+          setErro('Erro ao buscar o valor do ativo');
           return;
         }
       }
@@ -41,7 +48,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       if (tipoAtivo === 'rendaVariavel') {
         const quantidade = Math.floor(novoAtivo.valorInvestido / parseFloat(valorAtual));
         if (quantidade < 1) {
-          alert('Não é possível comprar menos de 1 ação.');
+          setErro('Não é possível comprar menos de 1 ação');
           return;
         }
         patrimonioInicial = quantidade * parseFloat(valorAtual);
@@ -60,8 +67,8 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       };
 
       if (tipoAtivo === 'rendaFixa') {
-        novoAtivoObj.categoriaFixa = categoriaFixa;
-        novoAtivoObj.parametrosFixa = parametrosFixa;
+        (novoAtivoObj as RendaFixaAtivo).categoriaFixa = categoriaFixa;
+        (novoAtivoObj as RendaFixaAtivo).parametrosFixa = parametrosFixa;
       }
 
       if (tipoAtivo === 'cripto') {
@@ -70,38 +77,59 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
       }
 
       onAddAtivo(novoAtivoObj);
+      setSucesso('Ativo adicionado com sucesso!');
+      setNovoAtivo({
+        nome: '',
+        valorInvestido: 0,
+        dataInvestimento: new Date().toISOString().split('T')[0],
+      });
     } catch (error) {
-      console.error('Erro ao adicionar ativo:', error);
+      setErro('Erro ao adicionar ativo');
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
+    <div className="border p-4 rounded-lg mb-6">
+      <h2 className="text-xl font-bold mb-4">Adicionar {tipoAtivo === 'rendaFixa' ? 'Renda Fixa' : tipoAtivo === 'rendaVariavel' ? 'Renda Variável' : 'Criptomoeda'}</h2>
+
       {tipoAtivo === 'rendaFixa' && (
-        <>
-          <select value={categoriaFixa} onChange={(e) => {
-            setCategoriaFixa(e.target.value as any);
-            setParametrosFixa({});
-          }}>
-            <option value="prefixada">Prefixada</option>
-            <option value="posFixada">Pós-fixada</option>
-            <option value="hibrida">Híbrida</option>
-          </select>
+        <div className="space-y-4 mb-4">
+          <div>
+            <label className="block mb-1">Categoria:</label>
+            <select
+              value={categoriaFixa}
+              onChange={(e) => {
+                setCategoriaFixa(e.target.value as any);
+                setParametrosFixa({});
+              }}
+              className="w-full p-2 border rounded"
+            >
+              <option value="prefixada">Prefixada</option>
+              <option value="posFixada">Pós-fixada</option>
+              <option value="hibrida">Híbrida</option>
+            </select>
+          </div>
 
           {categoriaFixa === 'prefixada' && (
-            <input
-              type="number"
-              placeholder="Taxa Prefixada (% a.a)"
-              onChange={(e) =>
-                setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })
-              }
-            />
+            <div>
+              <label className="block mb-1">Taxa Prefixada (% a.a):</label>
+              <input
+                type="number"
+                placeholder="Ex: 10.5"
+                onChange={(e) =>
+                  setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })
+                }
+                className="w-full p-2 border rounded"
+              />
+            </div>
           )}
 
           {categoriaFixa === 'posFixada' && (
-            <>
+            <div>
+              <label className="block mb-1">Índice:</label>
               <select
                 onChange={(e) => {
                   const indicador = e.target.value;
@@ -112,64 +140,99 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo }: Props) => {
                     setParametrosFixa({ percentualSobreSELIC: valor });
                   }
                 }}
+                className="w-full p-2 border rounded"
               >
                 <option value="">Selecione o índice</option>
                 <option value="CDI">% CDI</option>
                 <option value="SELIC">% SELIC</option>
               </select>
-            </>
+            </div>
           )}
 
           {categoriaFixa === 'hibrida' && (
-            <>
-              <input
-                type="number"
-                placeholder="Taxa Prefixada (% a.a)"
-                onChange={(e) =>
-                  setParametrosFixa((prev) => ({
-                    ...prev,
-                    taxaPrefixada: parseFloat(e.target.value),
-                  }))
-                }
-              />
-              <input
-                type="number"
-                placeholder="IPCA estimado (% a.a)"
-                onChange={(e) =>
-                  setParametrosFixa((prev) => ({
-                    ...prev,
-                    ipca: parseFloat(e.target.value),
-                  }))
-                }
-              />
-            </>
+            <div className="space-y-2">
+              <div>
+                <label className="block mb-1">Taxa Prefixada (% a.a):</label>
+                <input
+                  type="number"
+                  placeholder="Ex: 5.0"
+                  onChange={(e) =>
+                    setParametrosFixa((prev) => ({
+                      ...prev,
+                      taxaPrefixada: parseFloat(e.target.value),
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">IPCA estimado (% a.a):</label>
+                <input
+                  type="number"
+                  placeholder="Ex: 3.5"
+                  onChange={(e) =>
+                    setParametrosFixa((prev) => ({
+                      ...prev,
+                      ipca: parseFloat(e.target.value),
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* Campos comuns a todos os tipos */}
-      <input
-        type="text"
-        placeholder="Nome do Ativo"
-        value={novoAtivo.nome}
-        onChange={(e) => setNovoAtivo({ ...novoAtivo, nome: e.target.value })}
-      />
-      <input
-        type="number"
-        placeholder="Valor Investido"
-        value={novoAtivo.valorInvestido}
-        onChange={(e) =>
-          setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) })
-        }
-      />
-      <input
-        type="date"
-        value={novoAtivo.dataInvestimento}
-        onChange={(e) => setNovoAtivo({ ...novoAtivo, dataInvestimento: e.target.value })}
-      />
-      <button onClick={handleAddAtivo} disabled={loading}>
-        {loading ? 'Carregando...' : 'Adicionar Ativo'}
-      </button>
+      <div className="space-y-4">
+        <div>
+          <label className="block mb-1">Nome do Ativo:</label>
+          <input
+            type="text"
+            placeholder="Ex: PETR4 ou BTC"
+            value={novoAtivo.nome}
+            onChange={(e) => setNovoAtivo({ ...novoAtivo, nome: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1">Valor Investido (R$):</label>
+          <input
+            type="number"
+            placeholder="Ex: 1000"
+            value={novoAtivo.valorInvestido || ''}
+            onChange={(e) =>
+              setNovoAtivo({ ...novoAtivo, valorInvestido: parseFloat(e.target.value) || 0 })
+            }
+            className="w-full p-2 border rounded"
+            min="0"
+            step="0.01"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1">Data do Investimento:</label>
+          <input
+            type="date"
+            value={novoAtivo.dataInvestimento}
+            onChange={(e) => setNovoAtivo({ ...novoAtivo, dataInvestimento: e.target.value })}
+            className="w-full p-2 border rounded"
+            max={new Date().toISOString().split('T')[0]}
+          />
+        </div>
+
+        {erro && <p className="text-red-500">{erro}</p>}
+        {sucesso && <p className="text-green-500">{sucesso}</p>}
+
+        <button
+          onClick={handleAddAtivo}
+          disabled={loading}
+          className={`w-full py-2 px-4 rounded ${loading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+        >
+          {loading ? 'Processando...' : 'Adicionar Ativo'}
+        </button>
+      </div>
     </div>
   );
 };

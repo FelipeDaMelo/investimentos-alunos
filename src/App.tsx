@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useState } from 'react';
 import Login from './Login';
 import MainPage from './MainPage';
@@ -8,7 +7,6 @@ const App = () => {
   const [fixo, setFixo] = useState<number>(0);
   const [variavel, setVariavel] = useState<number>(0);
   const [nomeGrupo, setNomeGrupo] = useState<string>('');
-
   const [login, setLogin] = useState<string | null>(null);
 
   const handleLogin = (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => {
@@ -16,11 +14,11 @@ const App = () => {
     setFixo(fixo);
     setVariavel(variavel);
     setNomeGrupo(nomeGrupo);
-    setLogin(nomeGrupo); // Usa o nome do grupo como login do usuário
+    setLogin(nomeGrupo);
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-100">
       {!login ? (
         <Login onLogin={handleLogin} />
       ) : (

@@ -1,14 +1,17 @@
-// src/fetchValorAtual.ts
+const cache = new Map<string, string>();
+
 const fetchValorAtual = async (ticker: string) => {
   try {
+    if (cache.has(ticker)) {
+      return cache.get(ticker)!;
+    }
+
     let tickerCorrigido = ticker.trim().toUpperCase();
 
-    // Se for formato de ação brasileira tipo PETR4, adiciona .SA
     if (/^[A-Z]{4}\d$/.test(tickerCorrigido)) {
       tickerCorrigido += '.SA';
     }
 
-    // Se for uma possível criptomoeda, adiciona -USD
     if (!tickerCorrigido.includes('.') && !tickerCorrigido.includes('-')) {
       tickerCorrigido += '-USD';
     }
@@ -16,6 +19,7 @@ const fetchValorAtual = async (ticker: string) => {
     const res = await fetch(`/api/fetch-valor?ticker=${tickerCorrigido}`);
     const data = await res.json();
 
+    cache.set(ticker, data.valorAtual);
     return data.valorAtual;
   } catch (error) {
     console.error('Erro ao buscar valor do ativo:', error);
