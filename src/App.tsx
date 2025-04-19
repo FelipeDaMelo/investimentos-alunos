@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Login from './Login';
 import MainPage from './MainPage';
 
@@ -9,13 +9,16 @@ const App = () => {
   const [nomeGrupo, setNomeGrupo] = useState<string>('');
   const [login, setLogin] = useState<string | null>(null);
 
-  const handleLogin = (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => {
-    setValorInvestido(valorInvestido);
-    setFixo(fixo);
-    setVariavel(variavel);
-    setNomeGrupo(nomeGrupo);
-    setLogin(nomeGrupo);
-  };
+  const handleLogin = useCallback(
+    (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => {
+      setValorInvestido(valorInvestido);
+      setFixo(fixo);
+      setVariavel(variavel);
+      setNomeGrupo(nomeGrupo);
+      setLogin(nomeGrupo);
+    },
+    []
+  );
 
   return (
     <div className="min-h-screen bg-gray-100">
