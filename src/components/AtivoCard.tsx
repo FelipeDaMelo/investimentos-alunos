@@ -1,4 +1,3 @@
-import React from 'react';
 import { Ativo } from '../types/Ativo';
 
 interface AtivoCardProps {
@@ -8,35 +7,50 @@ interface AtivoCardProps {
 
 const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete }) => {
   return (
-    <div className="border p-4 rounded-lg shadow-md">
-      <h3 className="font-bold text-lg">{ativo.nome}</h3>
-      <p>Investido: R$ {ativo.valorInvestido.toFixed(2)}</p>
-      <p>Data: {new Date(ativo.dataInvestimento).toLocaleDateString()}</p>
-      <p>Valor Atual: R$ {ativo.valorAtual.toFixed(2)}</p>
+    <div className="border p-4 rounded-lg shadow-sm bg-white">
+      <div className="flex justify-between items-start">
+        <h3 className="font-bold text-lg">{ativo.nome}</h3>
+        <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+          {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' : 
+           ativo.subtipo === 'acao' ? 'Ação' :
+           ativo.subtipo === 'fii' ? 'FII' : 'Criptomoeda'}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+        <div>Investido:</div>
+        <div className="font-medium">R$ {ativo.valorInvestido.toFixed(2)}</div>
+        
+        <div>Valor Atual:</div>
+        <div className="font-medium">R$ {ativo.valorAtual.toFixed(2)}</div>
+        
+        <div>Data:</div>
+        <div>{new Date(ativo.dataInvestimento).toLocaleDateString()}</div>
+      </div>
 
       {ativo.tipo === 'rendaFixa' && (
-        <>
-          <p>Categoria: {ativo.categoriaFixa}</p>
+        <div className="mt-3 text-sm">
+          <div>Categoria: {ativo.categoriaFixa}</div>
           {ativo.parametrosFixa && (
-            <div className="mt-2">
-              <p className="font-semibold">Parâmetros:</p>
-              <pre className="text-sm bg-gray-100 p-2 rounded">
-                {JSON.stringify(ativo.parametrosFixa, null, 2)}
-              </pre>
+            <div className="mt-1 text-xs bg-gray-50 p-2 rounded">
+              <pre>{JSON.stringify(ativo.parametrosFixa, null, 2)}</pre>
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {ativo.tipo === 'cripto' && (
-        <p>Fração: {ativo.fracaoAdquirida.toFixed(6)}</p>
+      {ativo.tipo === 'rendaVariavel' && (
+        <div className="mt-3 text-sm">
+          <div>Ticker: {ativo.tickerFormatado}</div>
+          <div>Quantidade: {ativo.quantidade.toFixed(2)}</div>
+        </div>
       )}
 
-      <button
+      <button 
         onClick={() => onDelete(ativo.id)}
-        className="mt-3 bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600"
+        className="mt-3 text-red-600 hover:text-red-800 text-sm"
       >
-        Excluir
+        Remover Ativo
       </button>
     </div>
   );

@@ -8,7 +8,7 @@ interface Props {
   loading: boolean;
   setLoading: (value: boolean) => void;
   tipoAtivo: 'rendaVariavel' | 'rendaFixa';
-  subtipo?: 'acao' | 'fii' | 'cripto';
+  subtipo?: 'acao' | 'fii' | 'criptomoeda';
 }
 
 const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Props) => {
@@ -28,7 +28,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
     
     if (subtipo === 'acao' && /^[A-Z]{4}\d$/.test(tickerFormatado)) {
       tickerFormatado += '.SA';
-    } else if (subtipo === 'cripto' && !tickerFormatado.includes('-')) {
+    } else if (subtipo === 'criptomoeda' && !tickerFormatado.includes('-')) {
       tickerFormatado += '-USD';
     }
     
@@ -39,8 +39,16 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
     setErro('');
     setSucesso('');
 
-    // Validações...
-    
+    if (!formData.nome.trim()) {
+      setErro('Informe o código do ativo');
+      return;
+    }
+
+    if (formData.valorInvestido <= 0) {
+      setErro('Valor investido deve ser positivo');
+      return;
+    }
+
     setLoading(true);
     try {
       const hoje = new Date().toISOString().split('T')[0];
@@ -52,12 +60,16 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
       if (tipoAtivo === 'rendaVariavel') {
         tickerFormatado = formatarTicker(formData.nome);
         const valor = await fetchValorAtual(tickerFormatado);
+        if (valor === 'Erro ao carregar') {
+          setErro('Erro ao buscar cotação. Verifique o ticker.');
+          return;
+        }
         valorAtual = parseFloat(valor);
         quantidade = Math.floor(patrimonioInicial / valorAtual);
         patrimonioInicial = quantidade * valorAtual;
       }
 
-      const novoAtivo = tipoAtivo === 'rendaFixa' ? {
+      const novoAtivo: Ativo = tipoAtivo === 'rendaFixa' ? {
         id: uuidv4(),
         nome: formData.nome,
         valorInvestido: patrimonioInicial,
@@ -83,13 +95,17 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
       onAddAtivo(novoAtivo);
       setSucesso(
         tipoAtivo === 'rendaFixa' ? 'Ativo de Renda Fixa adicionado!' :
-        `Ativo de Renda Variável (${subtipo === 'cripto' ? 'Criptomoeda' : subtipo === 'fii' ? 'FII' : 'Ação'}) adicionado!`
+        `Ativo de Renda Variável (${
+          subtipo === 'criptomoeda' ? 'Criptomoeda' : 
+          subtipo === 'fii' ? 'FII' : 'Ação'
+        }) adicionado!`
       );
 
       setFormData(prev => ({ ...prev, nome: '', valorInvestido: 0 }));
 
     } catch (error) {
-      setErro('Erro ao adicionar ativo');
+      console.error('Erro:', error);
+      setErro('Erro ao adicionar ativo. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -129,6 +145,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
                 step="0.01"
                 onChange={(e) => setParametrosFixa({ taxaPrefixada: parseFloat(e.target.value) })}
                 className="w-full p-2 border rounded text-sm"
+                placeholder="Ex: 10.5"
               />
             </div>
           )}
@@ -172,6 +189,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
                     taxaPrefixada: parseFloat(e.target.value)
                   }))}
                   className="w-full p-2 border rounded text-sm"
+                  placeholder="Ex: 4.5"
                 />
               </div>
               <div>
@@ -203,6 +221,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
                     ipca: parseFloat(e.target.value)
                   }))}
                   className="w-full p-2 border rounded text-sm"
+                  placeholder="Ex: 3.2"
                 />
               </div>
             </div>
@@ -214,8 +233,8 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
         <div>
           <label className="block mb-1 text-sm font-medium">
             {tipoAtivo === 'rendaFixa' ? 'Nome do Ativo' : 
-             subtipo === 'cripto' ? 'Código da Criptomoeda (ex: BTC)' :
-             subtipo === 'fii' ? 'Código do FII (ex: MXRF11)' : 'Código da Ação (ex: PETR4)'}
+             subtipo === 'criptomoeda' ? 'Código da Criptomoeda' :
+             subtipo === 'fii' ? 'Código do FII' : 'Código da Ação'}
           </label>
           <input
             type="text"
@@ -224,7 +243,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
             className="w-full p-2 border rounded text-sm"
             placeholder={
               tipoAtivo === 'rendaFixa' ? 'CDB Banco XYZ' : 
-              subtipo === 'cripto' ? 'BTC, ETH, etc' :
+              subtipo === 'criptomoeda' ? 'BTC, ETH, etc' :
               subtipo === 'fii' ? 'MXRF11, HGLG11, etc' : 'PETR4, VALE3, etc'
             }
           />
@@ -239,6 +258,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
             className="w-full p-2 border rounded text-sm"
             min="0.01"
             step="0.01"
+            placeholder="Ex: 1000.00"
           />
         </div>
 
@@ -261,7 +281,7 @@ const AtivoForm = ({ onAddAtivo, loading, setLoading, tipoAtivo, subtipo }: Prop
         onClick={handleAddAtivo}
         disabled={loading}
         className={`mt-4 w-full py-2 px-4 rounded text-sm font-medium ${
-          loading ? 'bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'
+          loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
         }`}
       >
         {loading ? 'Processando...' : 'Adicionar Ativo'}

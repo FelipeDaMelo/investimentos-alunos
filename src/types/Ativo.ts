@@ -7,6 +7,7 @@ interface BaseAtivo {
   dataInvestimento: string;
   valorAtual: number;
   patrimonioPorDia: { [key: string]: number };
+  tipo: 'rendaFixa' | 'rendaVariavel';
 }
 
 export interface RendaFixaAtivo extends BaseAtivo {
@@ -22,7 +23,7 @@ export interface RendaFixaAtivo extends BaseAtivo {
 
 export interface RendaVariavelAtivo extends BaseAtivo {
   tipo: 'rendaVariavel';
-  subtipo: 'acao' | 'fii' | 'cripto';
+  subtipo: 'acao' | 'fii' | 'criptomoeda';
   tickerFormatado: string;
   quantidade: number;
 }
