@@ -10,13 +10,12 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { db } from '../firebaseConfig';
+import { db } from './firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-
 import AtivoForm from './components/AtivoForm';
 import AtivoCard from './components/AtivoCard';
-import useAtualizarAtivos from '../hooks/useAtualizarAtivos';
-import { Ativo } from '../types/Ativo';
+import useAtualizarAtivos from './hooks/useAtualizarAtivos';
+import { Ativo } from './types/Ativo';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
