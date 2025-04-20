@@ -21,19 +21,19 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
-    subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda',
+    subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
     quantidade: 0,
     precoAtual: 0,
     loadingPreco: false,
     errorPreco: ''
   });
 
-  // Calculate total value in real-time
   const valorTotal = form.quantidade * form.precoAtual;
 
+  // Busca o preço quando o ticker ou tipo muda
   useEffect(() => {
     const buscarPrecoComDebounce = setTimeout(() => {
-      if (form.nome.trim().length >= 3) {
+      if (form.nome.trim().length >= 2) { // Reduzido para 2 caracteres para ações internacionais
         buscarPreco();
       }
     }, 800);
@@ -69,6 +69,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     }
   };
 
+  // Formata o ticker para busca na API
   const formatarTicker = (ticker: string, tipo: string) => {
     const tickerLimpo = ticker.toUpperCase().trim();
     
@@ -76,14 +77,53 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       return tickerLimpo.includes('-') ? tickerLimpo : `${tickerLimpo}-USD`;
     }
     
+    if (tipo === 'acao_internacional') {
+      return tickerLimpo; // Mantém o ticker original para ações internacionais
+    }
+    
+    // Para ações/FIIs brasileiros (padrão .SA)
     return tickerLimpo.endsWith('.SA') ? tickerLimpo : `${tickerLimpo}.SA`;
   };
 
+  // Formata o ticker para exibição (remove sufixos)
   const formatarTickerParaExibicao = (ticker: string, tipo: string) => {
     if (tipo === 'criptomoeda') {
       return ticker.replace('-USD', '');
     }
+    if (tipo === 'acao_internacional') {
+      return ticker; // Mantém o ticker original
+    }
     return ticker.replace('.SA', '');
+  };
+
+  // Valida entrada de quantidade por tipo de ativo
+  const validateQuantidadeInput = (value: string, tipo: string) => {
+    if (tipo === 'criptomoeda' || tipo === 'acao_internacional') {
+      // Permite decimais para criptomoedas e ações internacionais
+      return value === '' || /^[0-9]*[,.]?[0-9]*$/.test(value);
+    } else {
+      // Apenas inteiros para ações brasileiras e FIIs
+      return value === '' || /^[1-9][0-9]*$/.test(value);
+    }
+  };
+
+  const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(',', '.'); // Converte vírgula para ponto
+    if (validateQuantidadeInput(value, form.subtipo)) {
+      setForm(prev => ({
+        ...prev,
+        quantidade: value === '' ? 0 : parseFloat(value)
+      }));
+    }
+  };
+
+  // Formata o valor para exibição
+  const formatQuantidadeValue = (value: number, tipo: string) => {
+    if (value === 0) return '';
+    if (tipo === 'criptomoeda' || tipo === 'acao_internacional') {
+      return value.toString().replace('.', ','); // Mostra vírgula para decimais
+    }
+    return value.toString().split('.')[0]; // Apenas inteiros para outros tipos
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -108,21 +148,12 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     onSubmit(criarAtivoVariavel(ativoCompleto as RendaVariavelAtivoCompleto));
   };
 
-  const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Allow decimal values and empty input
-    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-      setForm(prev => ({
-        ...prev,
-        quantidade: value === '' ? 0 : parseFloat(value)
-      }));
-    }
-  };
-
+  // Exemplos para cada tipo de ativo
   const exemplosTicker = {
     acao: ['PETR4', 'VALE3', 'ITUB4'],
     fii: ['MXRF11', 'HGLG11', 'KNRI11'],
-    criptomoeda: ['BTC', 'ETH', 'SOL']
+    criptomoeda: ['BTC', 'ETH', 'SOL'],
+    acao_internacional: ['AAPL', 'GOOGL', 'TSLA']
   };
 
   return (
@@ -133,7 +164,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           value={form.subtipo}
           onChange={(e) => setForm({
             ...form,
-            subtipo: e.target.value as 'acao' | 'fii' | 'criptomoeda',
+            subtipo: e.target.value as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
             nome: '',
             precoAtual: 0,
             quantidade: 0
@@ -141,7 +172,8 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
           required
         >
-          <option value="acao">Ação</option>
+          <option value="acao">Ação Brasileira</option>
+          <option value="acao_internacional">Ação Internacional</option>
           <option value="fii">FII</option>
           <option value="criptomoeda">Criptomoeda</option>
         </select>
@@ -149,7 +181,8 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
 
       <div>
         <label className="block mb-2 font-medium text-gray-700">
-          {form.subtipo === 'acao' ? 'Código da Ação' : 
+          {form.subtipo === 'acao' ? 'Código da Ação (Brasileira)' : 
+           form.subtipo === 'acao_internacional' ? 'Código da Ação (Internacional)' :
            form.subtipo === 'fii' ? 'Código do FII' : 'Código da Criptomoeda'}
           <span className="ml-2 text-sm text-gray-500">
             Exemplos: {exemplosTicker[form.subtipo].join(', ')}
@@ -184,14 +217,22 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
         <div>
           <label className="block mb-2 font-medium text-gray-700">Quantidade</label>
           <input
-            type="text" // Changed to text to allow better input control
-            value={form.quantidade === 0 ? '' : form.quantidade}
+            type="text"
+            value={formatQuantidadeValue(form.quantidade, form.subtipo)}
             onChange={handleQuantidadeChange}
             className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
             inputMode="decimal"
             disabled={form.precoAtual <= 0}
             required
+            placeholder={
+              form.subtipo === 'acao' ? 'Ex: 100' :
+              form.subtipo === 'fii' ? 'Ex: 10' :
+              'Ex: 0,5'
+            }
           />
+          {(form.subtipo === 'criptomoeda' || form.subtipo === 'acao_internacional') && (
+            <p className="mt-1 text-sm text-gray-500">Digite a quantidade em frações (ex: 0,01)</p>
+          )}
         </div>
         
         <div>
