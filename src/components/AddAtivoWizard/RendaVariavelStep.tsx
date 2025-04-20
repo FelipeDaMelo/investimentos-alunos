@@ -22,13 +22,13 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
     subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
-    quantidade: 0,
+    quantidade: 0 as number | string, // Alterado para aceitar number ou string
     precoAtual: 0,
     loadingPreco: false,
     errorPreco: ''
   });
 
-  const valorTotal = form.quantidade * form.precoAtual;
+  const valorTotal = (typeof form.quantidade === 'number' ? form.quantidade : parseFloat(form.quantidade.replace(',', '.'))) * form.precoAtual;
 
   useEffect(() => {
     const buscarPrecoComDebounce = setTimeout(() => {
@@ -92,41 +92,40 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const validateQuantidadeInput = (value: string, tipo: string) => {
     if (value === '') return true;
     
-    // Permite "0," ou "0." apenas para criptomoedas
-    if (tipo === 'criptomoeda' && (value === '0,' || value === '0.')) {
+    // Permite números com vírgula/ponto decimal
+    if (!/^[0-9]*[,.]?[0-9]*$/.test(value)) return false;
+
+    // Para criptomoedas, aceita qualquer número decimal válido
+    if (tipo === 'criptomoeda') {
       return true;
     }
-  
-    if (!/^[0-9]*[,.]?[0-9]*$/.test(value)) return false;
-  
+    
+    // Para outros tipos, verifica se é número inteiro positivo
     const numericValue = parseFloat(value.replace(',', '.'));
-  
-    if (tipo === 'criptomoeda') {
-      return numericValue >= 0; // Aceita zero e positivos
-    } else {
-      return numericValue >= 1 && Number.isInteger(numericValue);
-    }
+    return numericValue >= 1 && Number.isInteger(numericValue);
   };
   
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
     
-    // Permite digitar "0," ou "0." para criptomoedas
-    if (form.subtipo === 'criptomoeda' && (rawValue === '0,' || rawValue === '0.')) {
-      setForm(prev => ({ ...prev, quantidade: 0 }));
-      return;
-    }
-  
     if (validateQuantidadeInput(rawValue, form.subtipo)) {
-      const numericValue = rawValue === '' ? 0 : parseFloat(rawValue.replace(',', '.'));
-      setForm(prev => ({
-        ...prev,
-        quantidade: numericValue
-      }));
+      // Mantém como string se for "0," ou "0." para criptomoedas
+      if (form.subtipo === 'criptomoeda' && (rawValue === '0,' || rawValue === '0.')) {
+        setForm(prev => ({ ...prev, quantidade: rawValue }));
+      } else {
+        const numericValue = rawValue === '' ? 0 : parseFloat(rawValue.replace(',', '.'));
+        setForm(prev => ({
+          ...prev,
+          quantidade: numericValue
+        }));
+      }
     }
   };
 
-  const formatQuantidadeValue = (value: number, tipo: string) => {
+  const formatQuantidadeValue = (value: number | string, tipo: string) => {
+    // Se for string (caso do "0," ou "0."), retorna diretamente
+    if (typeof value === 'string') return value;
+    
     if (value === 0) return '';
     if (tipo === 'criptomoeda') {
       return value.toLocaleString('pt-BR', {
@@ -140,18 +139,24 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (valorTotal > saldoDisponivel) {
+    // Garante que quantidade é tratada como número no submit
+    const quantidadeNumerica = typeof form.quantidade === 'string' 
+      ? parseFloat(form.quantidade.replace(',', '.')) 
+      : form.quantidade;
+    
+    if (quantidadeNumerica * form.precoAtual > saldoDisponivel) {
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
 
     const ativoCompleto = {
       ...form,
-      valorInvestido: valorTotal,
+      quantidade: quantidadeNumerica,
+      valorInvestido: quantidadeNumerica * form.precoAtual,
       tickerFormatado: formatarTicker(form.nome, form.subtipo),
       precoMedio: form.precoAtual,
       tipo: 'rendaVariavel',
-      valorAtual: valorTotal,
+      valorAtual: quantidadeNumerica * form.precoAtual,
       patrimonioPorDia: {},
       id: Date.now().toString()
     };
@@ -301,7 +306,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           disabled={
             !form.nome.trim() || 
             valorTotal <= 0 || 
-            form.quantidade <= 0 || 
+            (typeof form.quantidade === 'number' ? form.quantidade : parseFloat(form.quantidade.replace(',', '.'))) <= 0 || 
             form.precoAtual <= 0 ||
             form.loadingPreco
           }
