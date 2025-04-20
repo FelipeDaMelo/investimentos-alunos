@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import useMoneyInput from '../hooks/useMoneyInput';
+import useMoneyInput from '../../hooks/useMoneyInput';
 
 interface LoginProps {
   onLogin: (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => void;

@@ -20,7 +20,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
-    categoriaFixa: 'prefixada' as const,
+    categoriaFixa: 'prefixada' as 'prefixada' | 'posFixada' | 'hibrida', // ← Adicione os tipos possíveis
     parametrosFixa: {
       taxaPrefixada: 0,
       percentualCDI: 0,
