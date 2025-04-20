@@ -63,12 +63,14 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       if (form.quantidade > 0) {
         setValorTotal(form.quantidade * preco);
       }
-    } catch (error) {
-      setForm(prev => ({...prev, 
-        loadingPreco: false, 
-        errorPreco: error.message || 'Erro ao buscar preço'
-      }));
-    }
+    // Atualize o catch:
+} catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    setForm(prev => ({...prev, 
+      loadingPreco: false, 
+      errorPreco: errorMessage
+    }));
+  }
   };
 
   // Formata o ticker para busca na API
