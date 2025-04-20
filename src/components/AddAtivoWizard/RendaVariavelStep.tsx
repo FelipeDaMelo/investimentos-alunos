@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
-import useMoneyInput from '../../hooks/useMoneyInput';
 import fetchValorAtual from '../../fetchValorAtual';
 
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
@@ -29,10 +28,8 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     errorPreco: ''
   });
 
-  const { 
-    value: valorTotal, 
-    setValue: setValorTotal
-  } = useMoneyInput(0);
+  // Calculate total value in real-time
+  const valorTotal = form.quantidade * form.precoAtual;
 
   useEffect(() => {
     const buscarPrecoComDebounce = setTimeout(() => {
@@ -63,11 +60,6 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
         loadingPreco: false,
         nome: formatarTickerParaExibicao(prev.nome, prev.subtipo)
       }));
-      
-      // Atualiza o valor total se já tiver quantidade definida
-      if (form.quantidade > 0) {
-        setValorTotal(form.quantidade * preco);
-      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       setForm(prev => ({...prev, 
@@ -117,12 +109,13 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   };
 
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const quantidade = Number(e.target.value);
-    setForm(prev => ({...prev, quantidade}));
-    
-    // Calcula o valor total automaticamente
-    if (form.precoAtual > 0) {
-      setValorTotal(quantidade * form.precoAtual);
+    const value = e.target.value;
+    // Allow decimal values and empty input
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setForm(prev => ({
+        ...prev,
+        quantidade: value === '' ? 0 : parseFloat(value)
+      }));
     }
   };
 
@@ -142,7 +135,8 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
             ...form,
             subtipo: e.target.value as 'acao' | 'fii' | 'criptomoeda',
             nome: '',
-            precoAtual: 0
+            precoAtual: 0,
+            quantidade: 0
           })}
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
           required
@@ -190,12 +184,11 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
         <div>
           <label className="block mb-2 font-medium text-gray-700">Quantidade</label>
           <input
-            type="number"
-            value={form.quantidade || ''}
+            type="text" // Changed to text to allow better input control
+            value={form.quantidade === 0 ? '' : form.quantidade}
             onChange={handleQuantidadeChange}
             className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-            min="0.00000001"
-            step="0.00000001"
+            inputMode="decimal"
             disabled={form.precoAtual <= 0}
             required
           />
@@ -204,10 +197,10 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
         <div>
           <label className="block mb-2 font-medium text-gray-700">Valor Total</label>
           <div className="w-full p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
-            {new Intl.NumberFormat('pt-BR', {
+            {valorTotal.toLocaleString('pt-BR', {
               style: 'currency',
               currency: 'BRL'
-            }).format(form.quantidade * form.precoAtual)}
+            })}
           </div>
         </div>
       </div>
@@ -222,9 +215,9 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
         <div className="flex justify-between">
           <span className="text-sm font-medium text-gray-700">Saldo após compra:</span>
           <span className={`text-sm font-semibold ${
-            saldoDisponivel - (form.quantidade * form.precoAtual) < 0 ? 'text-red-600' : 'text-green-600'
+            saldoDisponivel - valorTotal < 0 ? 'text-red-600' : 'text-green-600'
           }`}>
-            {(saldoDisponivel - (form.quantidade * form.precoAtual)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+            {(saldoDisponivel - valorTotal).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
           </span>
         </div>
       </div>
@@ -254,7 +247,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           disabled={
             !form.nome.trim() || 
-            (form.quantidade * form.precoAtual) <= 0 || 
+            valorTotal <= 0 || 
             form.quantidade <= 0 || 
             form.precoAtual <= 0 ||
             form.loadingPreco
