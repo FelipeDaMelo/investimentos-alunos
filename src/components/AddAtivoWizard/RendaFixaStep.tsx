@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { criarAtivoFixa } from '../../../utils/ativoHelpers';
-import { RendaFixaAtivo } from '../../../types/Ativo';
-import useMoneyInput from '../../../hooks/useMoneyInput';
+import { criarAtivoFixa } from '../../utils/ativoHelpers';
+import { RendaFixaAtivo } from '../../types/Ativo';
+import useMoneyInput from '../../hooks/useMoneyInput';
 
 interface RendaFixaStepProps {
   onBack: () => void;
