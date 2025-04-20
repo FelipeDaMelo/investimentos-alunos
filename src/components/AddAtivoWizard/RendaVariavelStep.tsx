@@ -30,10 +30,9 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
 
   const valorTotal = form.quantidade * form.precoAtual;
 
-  // Busca o preço quando o ticker ou tipo muda
   useEffect(() => {
     const buscarPrecoComDebounce = setTimeout(() => {
-      if (form.nome.trim().length >= 2) { // Reduzido para 2 caracteres para ações internacionais
+      if (form.nome.trim().length >= 2) {
         buscarPreco();
       }
     }, 800);
@@ -69,7 +68,6 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     }
   };
 
-  // Formata o ticker para busca na API
   const formatarTicker = (ticker: string, tipo: string) => {
     const tickerLimpo = ticker.toUpperCase().trim();
     
@@ -78,52 +76,59 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     }
     
     if (tipo === 'acao_internacional') {
-      return tickerLimpo; // Mantém o ticker original para ações internacionais
+      return tickerLimpo;
     }
     
-    // Para ações/FIIs brasileiros (padrão .SA)
     return tickerLimpo.endsWith('.SA') ? tickerLimpo : `${tickerLimpo}.SA`;
   };
 
-  // Formata o ticker para exibição (remove sufixos)
   const formatarTickerParaExibicao = (ticker: string, tipo: string) => {
     if (tipo === 'criptomoeda') {
       return ticker.replace('-USD', '');
     }
-    if (tipo === 'acao_internacional') {
-      return ticker; // Mantém o ticker original
-    }
     return ticker.replace('.SA', '');
   };
 
-  // Valida entrada de quantidade por tipo de ativo
   const validateQuantidadeInput = (value: string, tipo: string) => {
-    if (tipo === 'criptomoeda' || tipo === 'acao_internacional') {
-      // Permite decimais para criptomoedas e ações internacionais
-      return value === '' || /^[0-9]*[,.]?[0-9]*$/.test(value);
+    if (value === '') return true;
+    
+    if (!/^[0-9]*[,.]?[0-9]*$/.test(value)) return false;
+
+    const numericValue = parseFloat(value.replace(',', '.'));
+
+    if (tipo === 'criptomoeda') {
+      return numericValue > 0;
     } else {
-      // Apenas inteiros para ações brasileiras e FIIs
-      return value === '' || /^[1-9][0-9]*$/.test(value);
+      return numericValue >= 1 && Number.isInteger(numericValue);
     }
   };
 
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(',', '.'); // Converte vírgula para ponto
-    if (validateQuantidadeInput(value, form.subtipo)) {
+    const rawValue = e.target.value;
+    
+    if (rawValue === '0,' || rawValue === '0.') {
+      setForm(prev => ({ ...prev, quantidade: 0 }));
+      return;
+    }
+
+    if (validateQuantidadeInput(rawValue, form.subtipo)) {
+      const numericValue = rawValue === '' ? 0 : parseFloat(rawValue.replace(',', '.'));
       setForm(prev => ({
         ...prev,
-        quantidade: value === '' ? 0 : parseFloat(value)
+        quantidade: numericValue
       }));
     }
   };
 
-  // Formata o valor para exibição
   const formatQuantidadeValue = (value: number, tipo: string) => {
     if (value === 0) return '';
-    if (tipo === 'criptomoeda' || tipo === 'acao_internacional') {
-      return value.toString().replace('.', ','); // Mostra vírgula para decimais
+    if (tipo === 'criptomoeda') {
+      return value.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 8
+      });
     }
-    return value.toString().split('.')[0]; // Apenas inteiros para outros tipos
+    return Math.floor(value).toString();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -148,7 +153,6 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     onSubmit(criarAtivoVariavel(ativoCompleto as RendaVariavelAtivoCompleto));
   };
 
-  // Exemplos para cada tipo de ativo
   const exemplosTicker = {
     acao: ['PETR4', 'VALE3', 'ITUB4'],
     fii: ['MXRF11', 'HGLG11', 'KNRI11'],
@@ -225,13 +229,15 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
             disabled={form.precoAtual <= 0}
             required
             placeholder={
-              form.subtipo === 'acao' ? 'Ex: 100' :
-              form.subtipo === 'fii' ? 'Ex: 10' :
-              'Ex: 0,5'
+              form.subtipo === 'criptomoeda' ? 'Ex: 0,01' : 
+              'Ex: 10 (apenas números inteiros)'
             }
           />
-          {(form.subtipo === 'criptomoeda' || form.subtipo === 'acao_internacional') && (
-            <p className="mt-1 text-sm text-gray-500">Digite a quantidade em frações (ex: 0,01)</p>
+          {form.subtipo === 'criptomoeda' && (
+            <p className="mt-1 text-sm text-gray-500">Digite valores decimais (ex: 0,5 ou 1,25)</p>
+          )}
+          {(form.subtipo === 'acao' || form.subtipo === 'acao_internacional' || form.subtipo === 'fii') && (
+            <p className="mt-1 text-sm text-gray-500">Apenas números inteiros positivos (ex: 1, 10, 100)</p>
           )}
         </div>
         
