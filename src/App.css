@@ -166,3 +166,26 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* styles/globals.css */
+.input-field {
+  @apply w-full p-3 border-2 rounded-lg transition-all;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none;
+  @apply hover:border-gray-300;
+}
+
+.select-field {
+  @apply w-full p-3 border-2 rounded-lg transition-all;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none;
+  @apply hover:border-gray-300;
+}
+
+.date-field {
+  @apply w-full p-2.5 border-2 rounded-lg transition-all;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none;
+  @apply hover:border-gray-300;
+}
+
+.input-label {
+  @apply block mb-2 font-medium text-gray-700;
+}

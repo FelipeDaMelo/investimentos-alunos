@@ -1,13 +1,15 @@
+import { Button } from '../ui/button'; // Adapte para seu sistema de design
+
 interface TipoAtivoStepProps {
-  onNext: (tipo: string) => void;
+  onNext: (tipo: 'rendaFixa' | 'rendaVariavel') => void;
 }
 
 export default function TipoAtivoStep({ onNext }: TipoAtivoStepProps) {
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-6">Selecione o Tipo de Ativo</h2>
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold">Selecione o Tipo de Ativo</h2>
       
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <button
           onClick={() => onNext('rendaFixa')}
           className="p-4 border rounded-lg hover:bg-gray-50 text-left"

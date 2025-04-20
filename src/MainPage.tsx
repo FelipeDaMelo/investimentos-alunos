@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,13 +10,20 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { db } from './firebaseConfig';
+import { db } from '../firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import AtivoCard from './components/AtivoCard';
-import AddAtivoWizard from './components/AddAtivoWizard';
-import { Ativo } from './types/Ativo';
+import AtivoCard from '../components/AtivoCard';
+import AddAtivoWizard from '../components/AddAtivoWizard';
+import { Ativo } from '../types/Ativo';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+const CORES_UNICAS = [
+  '#2E86AB', '#F18F01', '#73BA9B', '#D95D39', '#587B7F',
+  '#1B4965', '#3A7CA5', '#4A6FA5', '#166088', '#5E3023',
+  '#895737', '#B88B4A', '#D8C99B', '#D8973C', '#BD632F',
+  '#A846A0', '#5C6F68', '#8AA29E', '#6E7DAB', '#00BBF9'
+];
 
 interface MainPageProps {
   login: string;
@@ -26,171 +33,206 @@ interface MainPageProps {
   nomeGrupo: string;
 }
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+};
+
 const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPageProps) => {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
 
-  const calcularTotalInvestido = (ativos: Ativo[], tipo: 'rendaFixa' | 'rendaVariavel') => {
+  const coresAtivos = useMemo(() => {
+    const mapeamento: Record<string, string> = {};
+    ativos.forEach((ativo, index) => {
+      mapeamento[ativo.id] = CORES_UNICAS[index % CORES_UNICAS.length];
+    });
+    return mapeamento;
+  }, [ativos]);
+
+  const getCorAtivo = (ativoId: string) => coresAtivos[ativoId] || CORES_UNICAS[0];
+
+  const calcularTotalInvestido = (tipo: 'rendaFixa' | 'rendaVariavel') => {
     return ativos
       .filter(a => a.tipo === tipo)
       .reduce((total, a) => total + a.valorInvestido, 0);
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const docRef = doc(db, 'usuarios', login);
-      const docSnap = await getDoc(docRef);
+    const carregarDados = async () => {
+      setLoading(true);
+      try {
+        const docRef = doc(db, 'usuarios', login);
+        const docSnap = await getDoc(docRef);
 
-      let ativos: Ativo[] = [];
-      let porcentagemFixa = fixo;
-      let porcentagemVariavel = variavel;
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        ativos = (data.ativos || []).map((a: any) => ({
-          ...a,
-          patrimonioPorDia: a.patrimonioPorDia || {},
-        }));
-        porcentagemFixa = data.porcentagemFixa ?? fixo;
-        porcentagemVariavel = data.porcentagemVariavel ?? variavel;
-      } else {
-        await setDoc(docRef, {
-          ativos: [],
-          porcentagemFixa: fixo,
-          porcentagemVariavel: variavel
-        });
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setAtivos(data?.ativos || []);
+        } else {
+          await setDoc(docRef, {
+            ativos: [],
+            porcentagemFixa: fixo,
+            porcentagemVariavel: variavel
+          });
+        }
+      } catch (err) {
+        setError('Erro ao carregar dados');
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-
-      setAtivos(ativos);
-      setValorFixaDisponivel(valorInvestido * (porcentagemFixa / 100) - calcularTotalInvestido(ativos, 'rendaFixa'));
-      setValorVariavelDisponivel(valorInvestido * (porcentagemVariavel / 100) - calcularTotalInvestido(ativos, 'rendaVariavel'));
     };
-    fetchData();
-  }, [login, valorInvestido, fixo, variavel]);
+
+    carregarDados();
+  }, [login, fixo, variavel]);
 
   useEffect(() => {
-    const saveData = async () => {
-      const docRef = doc(db, 'usuarios', login);
-      try {
-        const ativosLimpos = ativos.map((ativo) => {
-          const novoAtivo: any = { ...ativo };
-          Object.keys(novoAtivo).forEach((key) => {
-            if (novoAtivo[key] === undefined) {
-              delete novoAtivo[key];
-            }
-          });
-          return novoAtivo;
-        });
-        await setDoc(docRef, {
-          ativos: ativosLimpos,
-          porcentagemFixa: fixo,
-          porcentagemVariavel: variavel
-        }, { merge: true });
-      } catch (error) {
-        setError('Erro ao salvar dados no Firebase');
-        console.error(error);
-      }
-    };
-    if (ativos.length > 0) saveData();
-  }, [ativos, login, fixo, variavel]);
+    setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
+    setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
+  }, [ativos, valorInvestido, fixo, variavel]);
 
-  const handleAddAtivo = (ativo: Ativo) => {
-    setAtivos((prev) => [...prev, ativo]);
-    if (ativo.tipo === 'rendaFixa') {
-      setValorFixaDisponivel((prev) => prev - ativo.valorInvestido);
-    } else {
-      setValorVariavelDisponivel((prev) => prev - ativo.valorInvestido);
-    }
+  const handleAddAtivo = (novoAtivo: Ativo) => {
+    setAtivos(prev => [...prev, novoAtivo]);
   };
 
   const handleDeleteAtivo = (id: string) => {
-    const ativoRemovido = ativos.find((ativo) => ativo.id === id);
-    if (ativoRemovido) {
-      if (ativoRemovido.tipo === 'rendaFixa') {
-        setValorFixaDisponivel((prev) => prev + ativoRemovido.valorInvestido);
-      } else {
-        setValorVariavelDisponivel((prev) => prev + ativoRemovido.valorInvestido);
-      }
-    }
-    const atualizados = ativos.filter((ativo) => ativo.id !== id);
-    setAtivos(atualizados);
+    setAtivos(prev => prev.filter(a => a.id !== id));
   };
 
   const allDates = Array.from(
-    new Set(ativos.flatMap((ativo) => Object.keys(ativo.patrimonioPorDia)))
+    new Set(ativos.flatMap(a => Object.keys(a.patrimonioPorDia)))
   ).sort();
-
-  const cores = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
 
   const chartData = {
     labels: allDates.map(date => {
       const [ano, mes, dia] = date.split('-');
       return `${dia}/${mes}/${ano}`;
     }),
-    datasets: ativos.map((ativo, i) => ({
+    datasets: ativos.map(ativo => ({
       label: ativo.nome,
-      data: allDates.map((date) => ativo.patrimonioPorDia[date] || 0),
-      borderColor: cores[i % cores.length],
-      fill: false,
-    })),
+      data: allDates.map(date => ativo.patrimonioPorDia[date] || 0),
+      borderColor: getCorAtivo(ativo.id),
+      backgroundColor: getCorAtivo(ativo.id) + '80',
+      borderWidth: 2,
+      tension: 0.1,
+      pointRadius: 4
+    }))
   };
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Monitoramento de Ativos - Grupo: {nomeGrupo}</h1>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      {loading && <p className="text-yellow-600 mb-4">Salvando...</p>}
+      
+      {error && (
+        <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+      
+      {loading && (
+        <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-lg mb-4">
+          Carregando...
+        </div>
+      )}
 
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200">
         <h2 className="text-xl font-semibold mb-3">Disponível para Investimento</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border p-3 rounded">
-            <h3 className="font-medium">Renda Fixa</h3>
-            <p className="text-2xl">R$ {valorFixaDisponivel.toFixed(2)}</p>
+          <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+            <h3 className="font-medium text-gray-700">Renda Fixa</h3>
+            <p className="text-2xl font-bold text-gray-800">
+              {formatCurrency(valorFixaDisponivel)}
+            </p>
           </div>
-          <div className="border p-3 rounded">
-            <h3 className="font-medium">Renda Variável / Criptomoedas</h3>
-            <p className="text-2xl">R$ {valorVariavelDisponivel.toFixed(2)}</p>
+          <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+            <h3 className="font-medium text-gray-700">Renda Variável / Criptomoedas</h3>
+            <p className="text-2xl font-bold text-gray-800">
+              {formatCurrency(valorVariavelDisponivel)}
+            </p>
           </div>
         </div>
       </div>
 
       <button
         onClick={() => setShowWizard(true)}
-        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors border-2 border-blue-600 hover:border-blue-700"
       >
         + Adicionar Ativo
       </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        {ativos.map((ativo) => (
-          <AtivoCard key={ativo.id} ativo={ativo} onDelete={handleDeleteAtivo} />
-        ))}
-      </div>
+      {ativos.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {ativos.map(ativo => (
+              <AtivoCard 
+                key={ativo.id} 
+                ativo={ativo} 
+                onDelete={handleDeleteAtivo}
+                cor={getCorAtivo(ativo.id)}
+              />
+            ))}
+          </div>
 
-      <div className="mt-8 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
-        <div className="h-64">
-          <Line 
-            data={chartData} 
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: 'top' as const,
-                },
-              },
-            }}
-          />
+          <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
+            <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
+            <div className="h-64">
+              <Line 
+                data={chartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          return ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      ticks: {
+                        callback: (value) => {
+                          return formatCurrency(Number(value));
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-4 justify-center">
+              {ativos.map(ativo => (
+                <div key={ativo.id} className="flex items-center bg-gray-50 px-3 py-2 rounded-full border-2 border-gray-200">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-2"
+                    style={{ backgroundColor: getCorAtivo(ativo.id) }}
+                  ></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {ativo.nome}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+          Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.
         </div>
-      </div>
+      )}
 
-      {/* Wizard Modal */}
       {showWizard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <AddAtivoWizard
@@ -198,6 +240,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
             onAddAtivo={handleAddAtivo}
             valorFixaDisponivel={valorFixaDisponivel}
             valorVariavelDisponivel={valorVariavelDisponivel}
+            quantidadeAtivos={ativos.length}
           />
         </div>
       )}

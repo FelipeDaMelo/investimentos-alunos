@@ -3,48 +3,59 @@ import { Ativo } from '../types/Ativo';
 interface AtivoCardProps {
   ativo: Ativo;
   onDelete: (id: string) => void;
+  cor: string;
 }
 
-const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete }) => {
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+};
+
+const formatDate = (dateString: string) => {
+  const options: Intl.DateTimeFormatOptions = { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric' 
+  };
+  return new Date(dateString).toLocaleDateString('pt-BR', options);
+};
+
+const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete, cor }) => {
   return (
-    <div className="border p-4 rounded-lg shadow-sm bg-white">
+    <div 
+      className="border-l-4 p-4 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow"
+      style={{ borderLeftColor: cor }}
+    >
       <div className="flex justify-between items-start">
-        <h3 className="font-bold text-lg">{ativo.nome}</h3>
-        <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-          {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' : 
-           ativo.subtipo === 'acao' ? 'Ação' :
-           ativo.subtipo === 'fii' ? 'FII' : 'Criptomoeda'}
-        </span>
+        <div>
+          <h3 className="font-bold text-lg">{ativo.nome}</h3>
+          <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
+            {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' : 
+             ativo.subtipo === 'acao' ? 'Ação' :
+             ativo.subtipo === 'fii' ? 'FII' : 'Criptomoeda'}
+          </span>
+        </div>
+        <div className="text-right">
+          <p className="font-medium">{formatCurrency(ativo.valorAtual)}</p>
+          <p className="text-sm text-gray-500">
+            {formatDate(ativo.dataInvestimento)}
+          </p>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
         <div>Investido:</div>
-        <div className="font-medium">R$ {ativo.valorInvestido.toFixed(2)}</div>
+        <div className="font-medium">{formatCurrency(ativo.valorInvestido)}</div>
         
-        <div>Valor Atual:</div>
-        <div className="font-medium">R$ {ativo.valorAtual.toFixed(2)}</div>
-        
-        <div>Data:</div>
-        <div>{new Date(ativo.dataInvestimento).toLocaleDateString()}</div>
+        {ativo.tipo === 'rendaVariavel' && (
+          <>
+            <div>Quantidade:</div>
+            <div>{ativo.quantidade.toFixed(2)}</div>
+          </>
+        )}
       </div>
-
-      {ativo.tipo === 'rendaFixa' && (
-        <div className="mt-3 text-sm">
-          <div>Categoria: {ativo.categoriaFixa}</div>
-          {ativo.parametrosFixa && (
-            <div className="mt-1 text-xs bg-gray-50 p-2 rounded">
-              <pre>{JSON.stringify(ativo.parametrosFixa, null, 2)}</pre>
-            </div>
-          )}
-        </div>
-      )}
-
-      {ativo.tipo === 'rendaVariavel' && (
-        <div className="mt-3 text-sm">
-          <div>Ticker: {ativo.tickerFormatado}</div>
-          <div>Quantidade: {ativo.quantidade.toFixed(2)}</div>
-        </div>
-      )}
 
       <button 
         onClick={() => onDelete(ativo.id)}
