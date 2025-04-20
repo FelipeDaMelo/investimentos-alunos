@@ -9,7 +9,7 @@ type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
     precoMedio: number;
   };
   
-  // Componente Spinner inline
+  // Componente Spinner simplificado
   const Spinner = () => (
     <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-solid border-current border-r-transparent" />
   );
@@ -110,14 +110,20 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       return;
     }
 
-    onSubmit(criarAtivoVariavel({
+    const ativoCompleto: RendaVariavelAtivoCompleto = {
       ...form,
       valorInvestido: valorTotal,
       tickerFormatado: formatarTicker(form.nome, form.subtipo),
       precoMedio: form.precoAtual,
-      tipo: 'rendaVariavel'
-    } as RendaVariavelAtivoCompleto));
+      tipo: 'rendaVariavel',
+      valorAtual: valorTotal, // Mesmo valor inicial
+      patrimonioPorDia: {}, // Será preenchido depois
+      id: Date.now().toString() // ID temporário
+    };
+
+    onSubmit(criarAtivoVariavel(ativoCompleto));
   };
+
 
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const quantidade = Number(e.target.value);
