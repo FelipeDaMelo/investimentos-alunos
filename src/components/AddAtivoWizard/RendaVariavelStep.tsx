@@ -6,13 +6,13 @@ import fetchValorAtual from '../../fetchValorAtual';
 
 // Tipo estendido localmente
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
-    precoMedio: number;
-  };
-  
-  // Componente Spinner simplificado
-  const Spinner = () => (
-    <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-solid border-current border-r-transparent" />
-  );
+  precoMedio: number;
+};
+
+// Componente Spinner corrigido
+const Spinner = ({ className = "" }: { className?: string }) => (
+  <div className={`inline-block animate-spin rounded-full border-2 border-solid border-current border-r-transparent ${className}`} />
+);
 
 interface RendaVariavelStepProps {
   onBack: () => void;
@@ -72,14 +72,13 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       if (form.quantidade > 0) {
         setValorTotal(form.quantidade * preco);
       }
-    // Atualize o catch:
-} catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    setForm(prev => ({...prev, 
-      loadingPreco: false, 
-      errorPreco: errorMessage
-    }));
-  }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setForm(prev => ({...prev, 
+        loadingPreco: false, 
+        errorPreco: errorMessage
+      }));
+    }
   };
 
   // Formata o ticker para busca na API
@@ -110,20 +109,19 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       return;
     }
 
-    const ativoCompleto: RendaVariavelAtivoCompleto = {
+    const ativoCompleto = {
       ...form,
       valorInvestido: valorTotal,
       tickerFormatado: formatarTicker(form.nome, form.subtipo),
       precoMedio: form.precoAtual,
       tipo: 'rendaVariavel',
-      valorAtual: valorTotal, // Mesmo valor inicial
-      patrimonioPorDia: {}, // Será preenchido depois
-      id: Date.now().toString() // ID temporário
+      valorAtual: valorTotal,
+      patrimonioPorDia: {},
+      id: Date.now().toString()
     };
 
-    onSubmit(criarAtivoVariavel(ativoCompleto));
+    onSubmit(criarAtivoVariavel(ativoCompleto as RendaVariavelAtivoCompleto));
   };
-
 
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const quantidade = Number(e.target.value);
@@ -186,7 +184,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           />
           {form.loadingPreco && (
             <div className="absolute right-3 top-3.5">
-              <Spinner size="small" />
+              <Spinner className="h-4 w-4" />
             </div>
           )}
         </div>
