@@ -92,25 +92,31 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const validateQuantidadeInput = (value: string, tipo: string) => {
     if (value === '') return true;
     
+    // Permite "0," ou "0." apenas para criptomoedas
+    if (tipo === 'criptomoeda' && (value === '0,' || value === '0.')) {
+      return true;
+    }
+  
     if (!/^[0-9]*[,.]?[0-9]*$/.test(value)) return false;
-
+  
     const numericValue = parseFloat(value.replace(',', '.'));
-
+  
     if (tipo === 'criptomoeda') {
-      return numericValue > 0;
+      return numericValue >= 0; // Aceita zero e positivos
     } else {
       return numericValue >= 1 && Number.isInteger(numericValue);
     }
   };
-
+  
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
     
-    if (rawValue === '0,' || rawValue === '0.') {
+    // Permite digitar "0," ou "0." para criptomoedas
+    if (form.subtipo === 'criptomoeda' && (rawValue === '0,' || rawValue === '0.')) {
       setForm(prev => ({ ...prev, quantidade: 0 }));
       return;
     }
-
+  
     if (validateQuantidadeInput(rawValue, form.subtipo)) {
       const numericValue = rawValue === '' ? 0 : parseFloat(rawValue.replace(',', '.'));
       setForm(prev => ({
