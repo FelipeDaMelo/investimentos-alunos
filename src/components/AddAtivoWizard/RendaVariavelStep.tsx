@@ -22,13 +22,21 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
     subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
-    quantidade: 0 as number | string, // Alterado para aceitar number ou string
+    quantidade: '', // Now always stored as string
     precoAtual: 0,
     loadingPreco: false,
     errorPreco: ''
   });
 
-  const valorTotal = (typeof form.quantidade === 'number' ? form.quantidade : parseFloat(form.quantidade.replace(',', '.'))) * form.precoAtual;
+  // Helper function to safely convert quantidade to number
+  const getQuantidadeNumerica = (): number => {
+    if (form.quantidade === '') return 0;
+    const value = form.quantidade.replace(',', '.');
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const valorTotal = getQuantidadeNumerica() * form.precoAtual;
 
   useEffect(() => {
     const buscarPrecoComDebounce = setTimeout(() => {
@@ -89,62 +97,54 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     return ticker.replace('.SA', '');
   };
 
-  const validateQuantidadeInput = (value: string, tipo: string) => {
-    if (value === '') return true;
-    
-    // Permite números com vírgula/ponto decimal
-    if (!/^[0-9]*[,.]?[0-9]*$/.test(value)) return false;
-
-    // Para criptomoedas, aceita qualquer número decimal válido
-    if (tipo === 'criptomoeda') {
-      return true;
-    }
-    
-    // Para outros tipos, verifica se é número inteiro positivo
-    const numericValue = parseFloat(value.replace(',', '.'));
-    return numericValue >= 1 && Number.isInteger(numericValue);
-  };
-  
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
     
-    if (validateQuantidadeInput(rawValue, form.subtipo)) {
-      // Mantém como string se for "0," ou "0." para criptomoedas
-      if (form.subtipo === 'criptomoeda' && (rawValue === '0,' || rawValue === '0.')) {
+    // Validate input based on asset type
+    if (form.subtipo === 'criptomoeda') {
+      // Allow decimals for cryptocurrencies
+      if (/^[0-9]*[,.]?[0-9]*$/.test(rawValue)) {
         setForm(prev => ({ ...prev, quantidade: rawValue }));
-      } else {
-        const numericValue = rawValue === '' ? 0 : parseFloat(rawValue.replace(',', '.'));
-        setForm(prev => ({
-          ...prev,
-          quantidade: numericValue
-        }));
+      }
+    } else {
+      // Only allow whole numbers for other asset types
+      if (/^[0-9]*$/.test(rawValue)) {
+        setForm(prev => ({ ...prev, quantidade: rawValue }));
       }
     }
   };
 
-  const formatQuantidadeValue = (value: number | string, tipo: string) => {
-    // Se for string (caso do "0," ou "0."), retorna diretamente
-    if (typeof value === 'string') return value;
+  const formatQuantidadeDisplay = () => {
+    if (form.quantidade === '') return '';
     
-    if (value === 0) return '';
-    if (tipo === 'criptomoeda') {
-      return value.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 8
-      });
+    // For crypto, show as entered (with decimal separator)
+    if (form.subtipo === 'criptomoeda') {
+      return form.quantidade;
     }
-    return Math.floor(value).toString();
+    
+    // For other types, format as integer
+    const num = getQuantidadeNumerica();
+    return num === 0 ? '' : Math.floor(num).toString();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Garante que quantidade é tratada como número no submit
-    const quantidadeNumerica = typeof form.quantidade === 'string' 
-      ? parseFloat(form.quantidade.replace(',', '.')) 
-      : form.quantidade;
+    const quantidadeNumerica = getQuantidadeNumerica();
     
-    if (quantidadeNumerica * form.precoAtual > saldoDisponivel) {
+    // Validate quantidade
+    if (quantidadeNumerica <= 0) {
+      alert('Quantidade deve ser maior que zero');
+      return;
+    }
+
+    // Validate for non-crypto assets
+    if (form.subtipo !== 'criptomoeda' && !Number.isInteger(quantidadeNumerica)) {
+      alert('Para este tipo de ativo, a quantidade deve ser um número inteiro');
+      return;
+    }
+
+    if (valorTotal > saldoDisponivel) {
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
@@ -152,11 +152,11 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     const ativoCompleto = {
       ...form,
       quantidade: quantidadeNumerica,
-      valorInvestido: quantidadeNumerica * form.precoAtual,
+      valorInvestido: valorTotal,
       tickerFormatado: formatarTicker(form.nome, form.subtipo),
       precoMedio: form.precoAtual,
       tipo: 'rendaVariavel',
-      valorAtual: quantidadeNumerica * form.precoAtual,
+      valorAtual: valorTotal,
       patrimonioPorDia: {},
       id: Date.now().toString()
     };
@@ -182,7 +182,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
             subtipo: e.target.value as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
             nome: '',
             precoAtual: 0,
-            quantidade: 0
+            quantidade: ''
           })}
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
           required
@@ -233,10 +233,10 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           <label className="block mb-2 font-medium text-gray-700">Quantidade</label>
           <input
             type="text"
-            value={formatQuantidadeValue(form.quantidade, form.subtipo)}
+            value={formatQuantidadeDisplay()}
             onChange={handleQuantidadeChange}
             className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-            inputMode="decimal"
+            inputMode={form.subtipo === 'criptomoeda' ? 'decimal' : 'numeric'}
             disabled={form.precoAtual <= 0}
             required
             placeholder={
@@ -306,7 +306,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           disabled={
             !form.nome.trim() || 
             valorTotal <= 0 || 
-            (typeof form.quantidade === 'number' ? form.quantidade : parseFloat(form.quantidade.replace(',', '.'))) <= 0 || 
+            getQuantidadeNumerica() <= 0 || 
             form.precoAtual <= 0 ||
             form.loadingPreco
           }
