@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { criarAtivoFixa } from '../../utils/ativoHelpers';
-import { RendaFixaAtivo } from '../../types/Ativo';
-import useMoneyInput from '../../hooks/useMoneyInput';
+import React, { useState } from 'react';
+import { criarAtivoFixa } from '../../../utils/ativoHelpers';
+import { RendaFixaAtivo } from '../../../types/Ativo';
+import useMoneyInput from '../../../hooks/useMoneyInput';
 
 interface RendaFixaStepProps {
   onBack: () => void;
@@ -13,33 +13,34 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const { 
     value: valorInvestido, 
     displayValue, 
-    handleChange,
-    setValue: setValorInvestido
+    handleChange
   } = useMoneyInput(0);
 
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
-    categoriaFixa: 'prefixada' as 'prefixada' | 'posFixada' | 'hibrida', // ← Adicione os tipos possíveis
+    categoriaFixa: 'prefixada' as 'prefixada' | 'posFixada' | 'hibrida',
     parametrosFixa: {
       taxaPrefixada: 0,
       percentualCDI: 0,
+      percentualSELIC: 0,
       ipca: 0
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (valorInvestido > saldoDisponivel) {
-      alert('O valor investido não pode ser maior que o saldo disponível');
+      alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`);
       return;
     }
+
     onSubmit(criarAtivoFixa({
       ...form,
       valorInvestido
     }));
   };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>

@@ -6,7 +6,7 @@ interface BaseAtivo {
   valorInvestido: number;
   dataInvestimento: string;
   valorAtual: number;
-  patrimonioPorDia: { [key: string]: number };
+  patrimonioPorDia: Record<string, number>;
   tipo: 'rendaFixa' | 'rendaVariavel';
 }
 

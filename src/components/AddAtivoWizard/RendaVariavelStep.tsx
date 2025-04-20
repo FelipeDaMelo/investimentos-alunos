@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 
@@ -13,17 +13,24 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     nome: '',
     valorInvestido: 0,
     dataInvestimento: new Date().toISOString().split('T')[0],
-    subtipo: 'acao' as const,
+    subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda',
     quantidade: 0
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (form.valorInvestido > saldoDisponivel) {
+      alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
+      return;
+    }
+
     onSubmit(criarAtivoVariavel({
       ...form,
       tickerFormatado: form.nome.toUpperCase()
     }));
   };
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

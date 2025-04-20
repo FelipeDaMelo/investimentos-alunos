@@ -7,7 +7,7 @@ export const criarAtivoFixa = (
   valorAtual: dados.valorInvestido,
   patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido },
   ...dados,
-  tipo: 'rendaFixa' as const
+  tipo: 'rendaFixa'
 });
 
 export const criarAtivoVariavel = (
@@ -22,6 +22,6 @@ export const criarAtivoVariavel = (
     valorAtual,
     patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido },
     ...dados,
-    tipo: 'rendaVariavel' as const
+    tipo: 'rendaVariavel'
   };
 };

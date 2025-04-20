@@ -25,7 +25,7 @@ const useMoneyInput = (initialValue: number) => {
     value,
     displayValue,
     handleChange,
-    setValue // Adicione isso para permitir atualização externa
+    setValue
   };
 };
 
