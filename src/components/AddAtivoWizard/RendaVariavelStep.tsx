@@ -3,7 +3,16 @@ import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 import useMoneyInput from '../../hooks/useMoneyInput';
 import fetchValorAtual from '../../fetchValorAtual';
-import { Spinner } from '../ui/Spinner';
+
+// Tipo estendido localmente
+type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
+    precoMedio: number;
+  };
+  
+  // Componente Spinner inline
+  const Spinner = () => (
+    <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-solid border-current border-r-transparent" />
+  );
 
 interface RendaVariavelStepProps {
   onBack: () => void;
@@ -105,8 +114,9 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       ...form,
       valorInvestido: valorTotal,
       tickerFormatado: formatarTicker(form.nome, form.subtipo),
-      precoMedio: form.precoAtual
-    }));
+      precoMedio: form.precoAtual,
+      tipo: 'rendaVariavel'
+    } as RendaVariavelAtivoCompleto));
   };
 
   const handleQuantidadeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
