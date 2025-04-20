@@ -32,7 +32,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     e.preventDefault();
     
     if (valorInvestido > saldoDisponivel) {
-      alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`);
+      alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
 
@@ -41,6 +41,20 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       valorInvestido
     }));
   };
+
+  const handleParametroChange = (tipo: 'CDI' | 'SELIC') => {
+    const valor = parseFloat(prompt(`Informe o percentual sobre ${tipo}:`) || '0');
+    setForm({
+      ...form,
+      parametrosFixa: {
+        ...form.parametrosFixa,
+        ...(tipo === 'CDI' 
+          ? { percentualCDI: valor } 
+          : { percentualSELIC: valor })
+      }
+    });
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -124,22 +138,22 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       {form.categoriaFixa === 'posFixada' && (
         <div>
           <label className="block mb-2 font-medium text-gray-700">Índice de Referência</label>
-          <select
-            onChange={(e) => {
-              const valor = parseFloat(prompt(`Informe o percentual sobre ${e.target.value}:`) || '0');
-              setForm({
-                ...form,
-                parametrosFixa: e.target.value === 'CDI' 
-                  ? { percentualCDI: valor }
-                  : { percentualSELIC: valor }
-              });
-            }}
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-          >
-            <option value="">Selecione...</option>
-            <option value="CDI">% CDI</option>
-            <option value="SELIC">% SELIC</option>
-          </select>
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={() => handleParametroChange('CDI')}
+              className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              % CDI: {form.parametrosFixa.percentualCDI}%
+            </button>
+            <button
+              type="button"
+              onClick={() => handleParametroChange('SELIC')}
+              className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              % SELIC: {form.parametrosFixa.percentualSELIC}%
+            </button>
+          </div>
         </div>
       )}
 
@@ -149,7 +163,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
             <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
             <input
               type="number"
-              value={form.parametrosFixa.taxaPrefixada || ''}
+              value={form.parametrosFixa.taxaPrefixada}
               onChange={(e) => setForm({
                 ...form,
                 parametrosFixa: {
@@ -164,31 +178,28 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
           </div>
           <div>
             <label className="block mb-2 font-medium text-gray-700">Parte Pós-fixada</label>
-            <select
-              onChange={(e) => {
-                const valor = parseFloat(prompt(`Informe o percentual sobre ${e.target.value}:`) || '0');
-                setForm({
-                  ...form,
-                  parametrosFixa: {
-                    ...form.parametrosFixa,
-                    ...(e.target.value === 'CDI' 
-                      ? { percentualCDI: valor }
-                      : { percentualSELIC: valor })
-                  }
-                });
-              }}
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-            >
-              <option value="">Selecione o índice...</option>
-              <option value="CDI">% CDI</option>
-              <option value="SELIC">% SELIC</option>
-            </select>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => handleParametroChange('CDI')}
+                className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                % CDI: {form.parametrosFixa.percentualCDI}%
+              </button>
+              <button
+                type="button"
+                onClick={() => handleParametroChange('SELIC')}
+                className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                % SELIC: {form.parametrosFixa.percentualSELIC}%
+              </button>
+            </div>
           </div>
           <div>
             <label className="block mb-2 font-medium text-gray-700">IPCA (% a.a)</label>
             <input
               type="number"
-              value={form.parametrosFixa.ipca || ''}
+              value={form.parametrosFixa.ipca}
               onChange={(e) => setForm({
                 ...form,
                 parametrosFixa: {
