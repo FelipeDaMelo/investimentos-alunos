@@ -1,23 +1,53 @@
 import React, { useState } from 'react';
 import useMoneyInput from './hooks/useMoneyInput';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebaseConfig';
 
 interface LoginProps {
   onLogin: (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const { 
-    value: valorInvestido, 
-    displayValue, 
-    handleChange 
-  } = useMoneyInput(0);
-  
+  const { value: valorInvestido, displayValue, handleChange } = useMoneyInput(0);
+
+  const [nomeGrupo, setNomeGrupo] = useState('');
   const [fixo, setFixo] = useState('');
   const [variavel, setVariavel] = useState('');
-  const [nomeGrupo, setNomeGrupo] = useState('');
   const [erro, setErro] = useState('');
+  const [verificando, setVerificando] = useState(false);
+  const [grupoExistente, setGrupoExistente] = useState<boolean | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const verificarGrupo = async () => {
+    if (!nomeGrupo.trim()) {
+      setErro('Informe o nome do grupo');
+      return;
+    }
+
+    setVerificando(true);
+    try {
+      const docRef = doc(db, 'usuarios', nomeGrupo);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        onLogin(
+          data.valorInvestido,
+          data.porcentagemFixa,
+          data.porcentagemVariavel,
+          nomeGrupo
+        );
+      } else {
+        setGrupoExistente(false); // grupo é novo, segue para preencher formulário
+      }
+    } catch (err) {
+      setErro('Erro ao verificar grupo');
+      console.error(err);
+    } finally {
+      setVerificando(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fixoNum = parseFloat(fixo);
     const variavelNum = parseFloat(variavel);
@@ -32,89 +62,105 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
-    if (!nomeGrupo.trim()) {
-      setErro('Nome do grupo é obrigatório');
-      return;
-    }
-
     if (valorInvestido <= 0) {
       setErro('Valor investido deve ser positivo');
       return;
     }
+
+    // Salva dados iniciais no Firestore
+    await setDoc(doc(db, 'usuarios', nomeGrupo), {
+      valorInvestido,
+      porcentagemFixa: fixoNum,
+      porcentagemVariavel: variavelNum,
+      ativos: []
+    });
 
     onLogin(valorInvestido, fixoNum, variavelNum, nomeGrupo);
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Configuração Inicial</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-2 font-medium text-gray-700">Nome do Grupo</label>
-          <input
-            type="text"
-            value={nomeGrupo}
-            onChange={(e) => setNomeGrupo(e.target.value)}
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-            placeholder="Ex: Grupo de Investimentos"
-            required
-          />
-        </div>
+      <h2 className="text-2xl font-bold mb-6 text-center">Bem-vindo ao Simulador</h2>
 
-        <div>
-          <label className="block mb-2 font-medium text-gray-700">Valor Total para Investir</label>
-          <input
-            type="text"
-            value={displayValue}
-            onChange={handleChange}
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-            placeholder="R$ 0,00"
-            required
-          />
-        </div>
+      <div className="space-y-4">
+        <label className="block mb-2 font-medium text-gray-700">Nome do Grupo</label>
+        <input
+          type="text"
+          value={nomeGrupo}
+          onChange={(e) => setNomeGrupo(e.target.value)}
+          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+          placeholder="Ex: Grupo de Investimentos"
+          required
+        />
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-2 font-medium text-gray-700">% Renda Fixa</label>
-            <input
-              type="number"
-              value={fixo}
-              onChange={(e) => setFixo(e.target.value)}
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-              placeholder="Ex: 60"
-              min="0"
-              max="100"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2 font-medium text-gray-700">% Renda Variável</label>
-            <input
-              type="number"
-              value={variavel}
-              onChange={(e) => setVariavel(e.target.value)}
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-              placeholder="Ex: 40"
-              min="0"
-              max="100"
-              required
-            />
-          </div>
-        </div>
+        {grupoExistente === null && (
+          <button
+            onClick={verificarGrupo}
+            disabled={verificando}
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          >
+            {verificando ? 'Verificando...' : 'Verificar Grupo'}
+          </button>
+        )}
 
-        <p className="text-sm text-gray-500">
-          Obs: Não inclua o símbolo "%" - apenas números (a soma deve ser 100)
-        </p>
+        {grupoExistente === false && (
+          <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+            <div>
+              <label className="block mb-2 font-medium text-gray-700">Valor Total para Investir</label>
+              <input
+                type="text"
+                value={displayValue}
+                onChange={handleChange}
+                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                placeholder="R$ 0,00"
+                required
+              />
+            </div>
 
-        {erro && <p className="text-red-500 text-sm">{erro}</p>}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 font-medium text-gray-700">% Renda Fixa</label>
+                <input
+                  type="number"
+                  value={fixo}
+                  onChange={(e) => setFixo(e.target.value)}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                  placeholder="Ex: 60"
+                  min="0"
+                  max="100"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block mb-2 font-medium text-gray-700">% Renda Variável</label>
+                <input
+                  type="number"
+                  value={variavel}
+                  onChange={(e) => setVariavel(e.target.value)}
+                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                  placeholder="Ex: 40"
+                  min="0"
+                  max="100"
+                  required
+                />
+              </div>
+            </div>
 
-        <button
-          type="submit"
-          className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-        >
-          Iniciar Simulação
-        </button>
-      </form>
+            <p className="text-sm text-gray-500">
+              Obs: A soma deve ser 100%
+            </p>
+
+            {erro && <p className="text-red-500 text-sm">{erro}</p>}
+
+            <button
+              type="submit"
+              className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+            >
+              Iniciar Simulação
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 };
