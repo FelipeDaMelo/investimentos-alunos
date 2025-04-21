@@ -1,3 +1,4 @@
+//src/components/AddAtivoWizard/TipoAtivoStep.tsx
 import React from 'react';
 
 interface TipoAtivoStepProps {

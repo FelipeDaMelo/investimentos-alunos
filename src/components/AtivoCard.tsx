@@ -1,3 +1,4 @@
+//src/components/AtivoCard.tsx
 import { Ativo } from '../types/Ativo';
 
 interface AtivoCardProps {

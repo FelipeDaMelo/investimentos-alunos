@@ -1,7 +1,9 @@
+//src/components/AddAtivoWizard/RendaVariavelStep.tsx
 import React, { useState, useEffect } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
-import fetchValorAtual from '../../fetchValorAtual';
+import fetchValorAtual from '../../fetchValorAtual';,
+
 
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
   precoMedio: number;

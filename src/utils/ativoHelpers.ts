@@ -1,3 +1,4 @@
+//src/utils/ativoHelpers.ts
 import { RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
 
 export const criarAtivoFixa = (

@@ -1,3 +1,4 @@
+//src/components/AddAtivoWizard/RendaFixaStep.tsx
 import React, { useState } from 'react';
 import { criarAtivoFixa } from '../../utils/ativoHelpers';
 import { RendaFixaAtivo } from '../../types/Ativo';

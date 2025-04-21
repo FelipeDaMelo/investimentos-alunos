@@ -11,10 +11,11 @@ import {
   Legend,
 } from 'chart.js';
 import { db } from './firebaseConfig';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
-import { Ativo } from './types/Ativo';
+import { Ativo, GrupoInvestimento } from './types/Ativo';
+import useAtualizarHistorico from './hooks/useAtualizarHistorico';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -26,11 +27,8 @@ const CORES_UNICAS = [
 ];
 
 interface MainPageProps {
-  login: string;
-  valorInvestido: number;
-  fixo: number;
-  variavel: number;
-  nomeGrupo: string;
+  grupo: GrupoInvestimento;
+  onLogout: () => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -40,94 +38,113 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPageProps) => {
-  const [ativos, setAtivos] = useState<Ativo[]>([]);
+const MainPage = ({ grupo, onLogout }: MainPageProps) => {
   const [loading, setLoading] = useState(false);
-  const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
-  const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  const [grupoLocal, setGrupoLocal] = useState<GrupoInvestimento>(grupo);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
-    ativos.forEach((ativo, index) => {
+    grupoLocal.ativos.forEach((ativo, index) => {
       mapeamento[ativo.id] = CORES_UNICAS[index % CORES_UNICAS.length];
     });
     return mapeamento;
-  }, [ativos]);
+  }, [grupoLocal.ativos]);
 
   const getCorAtivo = (ativoId: string) => coresAtivos[ativoId] || CORES_UNICAS[0];
 
   const calcularTotalInvestido = (tipo: 'rendaFixa' | 'rendaVariavel') => {
-    return ativos
+    return grupoLocal.ativos
       .filter(a => a.tipo === tipo)
       .reduce((total, a) => total + a.valorInvestido, 0);
   };
 
-  useEffect(() => {
-    const carregarDados = async () => {
+  const valorFixaDisponivel = grupoLocal.valorTotalInvestido * (grupoLocal.porcentagemRendaFixa / 100) - calcularTotalInvestido('rendaFixa');
+  const valorVariavelDisponivel = grupoLocal.valorTotalInvestido * (grupoLocal.porcentagemRendaVariavel / 100) - calcularTotalInvestido('rendaVariavel');
+
+  const handleAddAtivo = async (novoAtivo: Ativo) => {
+    try {
       setLoading(true);
-      try {
-        const docRef = doc(db, 'usuarios', login);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setAtivos(data?.ativos || []);
-        } else {
-          await setDoc(docRef, {
-            ativos: [],
-            porcentagemFixa: fixo,
-            porcentagemVariavel: variavel
-          });
-        }
-      } catch (err) {
-        setError('Erro ao carregar dados');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    carregarDados();
-  }, [login, fixo, variavel]);
-
-  useEffect(() => {
-    setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
-    setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
-  }, [ativos, valorInvestido, fixo, variavel]);
-
-  const handleAddAtivo = (novoAtivo: Ativo) => {
-    setAtivos(prev => [...prev, novoAtivo]);
+      const updatedAtivos = [...grupoLocal.ativos, novoAtivo];
+      const docRef = doc(db, 'gruposInvestimento', grupoLocal.nome.toLowerCase().replace(/\s+/g, '-'));
+      
+      await updateDoc(docRef, {
+        ativos: updatedAtivos
+      });
+      
+      setGrupoLocal(prev => ({
+        ...prev,
+        ativos: updatedAtivos
+      }));
+    } catch (err) {
+      setError('Erro ao adicionar ativo');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteAtivo = (id: string) => {
-    setAtivos(prev => prev.filter(a => a.id !== id));
+  const handleDeleteAtivo = async (id: string) => {
+    try {
+      setLoading(true);
+      const updatedAtivos = grupoLocal.ativos.filter(a => a.id !== id);
+      const docRef = doc(db, 'gruposInvestimento', grupoLocal.nome.toLowerCase().replace(/\s+/g, '-'));
+      
+      await updateDoc(docRef, {
+        ativos: updatedAtivos
+      });
+      
+      setGrupoLocal(prev => ({
+        ...prev,
+        ativos: updatedAtivos
+      }));
+    } catch (err) {
+      setError('Erro ao remover ativo');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const allDates = Array.from(
-    new Set(ativos.flatMap(a => Object.keys(a.patrimonioPorDia)))
-  ).sort();
+  useAtualizarHistorico(grupoLocal.nome.toLowerCase().replace(/\s+/g, '-'), grupoLocal.ativos);
 
   const chartData = {
-    labels: allDates.map(date => {
-      const [ano, mes, dia] = date.split('-');
-      return `${dia}/${mes}/${ano}`;
+    labels: grupoLocal.historicoPatrimonio.map(item => {
+      const [ano, mes, dia] = item.data.split('-');
+      return `${dia}/${mes}`;
     }),
-    datasets: ativos.map(ativo => ({
-      label: ativo.nome,
-      data: allDates.map(date => ativo.patrimonioPorDia[date] || 0),
-      borderColor: getCorAtivo(ativo.id),
-      backgroundColor: getCorAtivo(ativo.id) + '80',
-      borderWidth: 2,
-      tension: 0.1,
-      pointRadius: 4
-    }))
+    datasets: [
+      {
+        label: 'Patrimônio Total',
+        data: grupoLocal.historicoPatrimonio.map(item => item.valorTotal),
+        borderColor: '#4F46E5',
+        backgroundColor: '#4F46E520',
+        borderWidth: 2,
+        tension: 0.1
+      },
+      ...grupoLocal.ativos.map(ativo => ({
+        label: ativo.nome,
+        data: grupoLocal.historicoPatrimonio.map(item => item.detalhesAtivos[ativo.id] || 0),
+        borderColor: getCorAtivo(ativo.id),
+        backgroundColor: getCorAtivo(ativo.id) + '80',
+        borderWidth: 1,
+        hidden: true
+      }))
+    ]
   };
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Monitoramento de Ativos - Grupo: {nomeGrupo}</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Monitoramento - {grupoLocal.nome}</h1>
+        <button
+          onClick={onLogout}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Sair do Grupo
+        </button>
+      </div>
       
       {error && (
         <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -149,11 +166,17 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
             <p className="text-2xl font-bold text-gray-800">
               {formatCurrency(valorFixaDisponivel)}
             </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {grupoLocal.porcentagemRendaFixa}% do total
+            </p>
           </div>
           <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-            <h3 className="font-medium text-gray-700">Renda Variável / Criptomoedas</h3>
+            <h3 className="font-medium text-gray-700">Renda Variável</h3>
             <p className="text-2xl font-bold text-gray-800">
               {formatCurrency(valorVariavelDisponivel)}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {grupoLocal.porcentagemRendaVariavel}% do total
             </p>
           </div>
         </div>
@@ -166,10 +189,10 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
         + Adicionar Ativo
       </button>
 
-      {ativos.length > 0 ? (
+      {grupoLocal.ativos.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {ativos.map(ativo => (
+            {grupoLocal.ativos.map(ativo => (
               <AtivoCard 
                 key={ativo.id} 
                 ativo={ativo} 
@@ -213,7 +236,11 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
             </div>
 
             <div className="flex flex-wrap gap-3 mt-4 justify-center">
-              {ativos.map(ativo => (
+              <div className="flex items-center bg-gray-50 px-3 py-2 rounded-full border-2 border-gray-200">
+                <div className="w-4 h-4 rounded-full mr-2 bg-indigo-600"></div>
+                <span className="text-sm font-medium text-gray-700">Total</span>
+              </div>
+              {grupoLocal.ativos.map(ativo => (
                 <div key={ativo.id} className="flex items-center bg-gray-50 px-3 py-2 rounded-full border-2 border-gray-200">
                   <div 
                     className="w-4 h-4 rounded-full mr-2"
@@ -240,7 +267,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
             onAddAtivo={handleAddAtivo}
             valorFixaDisponivel={valorFixaDisponivel}
             valorVariavelDisponivel={valorVariavelDisponivel}
-            quantidadeAtivos={ativos.length}
+            quantidadeAtivos={grupoLocal.ativos.length}
           />
         </div>
       )}
