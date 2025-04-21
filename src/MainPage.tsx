@@ -232,10 +232,16 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
       {showWizard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-            <AddAtivoWizard onClose={() => setShowWizard(false)} onAdd={handleAddAtivo} />
-          </div>
-        </div>
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+        <AddAtivoWizard 
+        onClose={() => setShowWizard(false)} 
+        onAddAtivo={handleAddAtivo}
+        valorFixaDisponivel={valorFixaDisponivel} 
+        valorVariavelDisponivel={valorVariavelDisponivel} 
+        quantidadeAtivos={ativos.length} 
+    />
+  </div>
+</div>
       )}
     </div>
   );
