@@ -74,6 +74,8 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
         if (docSnap.exists()) {
           const data = docSnap.data();
           setAtivos(data?.ativos || []);
+          setValorFixaDisponivel(valorInvestido * (data.porcentagemFixa / 100) - calcularTotalInvestido('rendaFixa'));
+          setValorVariavelDisponivel(valorInvestido * (data.porcentagemVariavel / 100) - calcularTotalInvestido('rendaVariavel'));
         } else {
           await setDoc(docRef, {
             ativos: [],
@@ -90,12 +92,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     };
 
     carregarDados();
-  }, [login, fixo, variavel]);
-
-  useEffect(() => {
-    setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
-    setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
-  }, [ativos, valorInvestido, fixo, variavel]);
+  }, [login, fixo, variavel, valorInvestido]);
 
   const handleAddAtivo = (novoAtivo: Ativo) => {
     setAtivos(prev => [...prev, novoAtivo]);
@@ -235,13 +232,9 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
       {showWizard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <AddAtivoWizard
-            onClose={() => setShowWizard(false)}
-            onAddAtivo={handleAddAtivo}
-            valorFixaDisponivel={valorFixaDisponivel}
-            valorVariavelDisponivel={valorVariavelDisponivel}
-            quantidadeAtivos={ativos.length}
-          />
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+            <AddAtivoWizard onClose={() => setShowWizard(false)} onAdd={handleAddAtivo} />
+          </div>
         </div>
       )}
     </div>
