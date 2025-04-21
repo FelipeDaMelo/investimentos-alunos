@@ -39,7 +39,8 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
 
     onSubmit(criarAtivoFixa({
       ...form,
-      valorInvestido
+      valorInvestido,
+      dataAdicao: new Date().toISOString() // Adicionando dataAdicao que estava faltando
     }));
   };
 

@@ -43,7 +43,7 @@ export interface GrupoInvestimento {
     valorTotal: number;
     detalhesAtivos: Record<string, number>;
   }[];
-  historicoVendas: {
+  historicoVendas?: {  // Adicione o ? para tornar opcional
     data: string;
     valorVendido: number;
     lucroPrejuizo: number;

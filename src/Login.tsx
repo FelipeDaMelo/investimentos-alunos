@@ -100,6 +100,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onLoading }) => {
       dataCriacao: new Date().toISOString(),
       ativos: [],
       historicoPatrimonio: [],
+      historicoVendas: [],  // Inicializando array vazio
       configuracoes: {
         moedaPadrao: 'BRL',
         notificacoesAtivadas: true
