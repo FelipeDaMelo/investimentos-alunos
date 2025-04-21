@@ -1,4 +1,3 @@
-//src/components/AddAtivoWizard/RendaFixaStep.tsx
 import React, { useState } from 'react';
 import { criarAtivoFixa } from '../../utils/ativoHelpers';
 import { RendaFixaAtivo } from '../../types/Ativo';
@@ -39,8 +38,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
 
     onSubmit(criarAtivoFixa({
       ...form,
-      valorInvestido,
-      dataAdicao: new Date().toISOString() // Adicionando dataAdicao que estava faltando
+      valorInvestido
     }));
   };
 

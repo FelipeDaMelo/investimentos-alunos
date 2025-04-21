@@ -1,4 +1,3 @@
-//src/hooks/useMoneyInput.ts
 import { useState } from 'react';
 
 const useMoneyInput = (initialValue: number) => {

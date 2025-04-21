@@ -1,9 +1,7 @@
-//src/components/AddAtivoWizard/RendaVariavelStep.tsx
 import React, { useState, useEffect } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 import fetchValorAtual from '../../fetchValorAtual';
-
 
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
   precoMedio: number;
@@ -150,7 +148,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
-    
+
     const ativoCompleto = {
       ...form,
       quantidade: quantidadeNumerica,
@@ -160,8 +158,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       tipo: 'rendaVariavel',
       valorAtual: valorTotal,
       patrimonioPorDia: {},
-      id: Date.now().toString(),
-      dataAdicao: new Date().toISOString()  // Adicionando propriedade faltante
+      id: Date.now().toString()
     };
 
     onSubmit(criarAtivoVariavel(ativoCompleto as RendaVariavelAtivoCompleto));
