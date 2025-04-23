@@ -16,8 +16,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     handleChange
   } = useMoneyInput(0);
 
-  const [erro, setErro] = useState<string | null>(null);
-
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
@@ -32,15 +30,12 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (valorInvestido > saldoDisponivel) {
-      setErro(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {
-        style: 'currency', currency: 'BRL'
-      })})`);
+      alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
 
-    setErro(null);
     onSubmit(criarAtivoFixa({
       ...form,
       valorInvestido
@@ -48,13 +43,13 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   };
 
   const handleParametroChange = (tipo: 'CDI' | 'SELIC') => {
-    const valor = Math.max(0, parseFloat(prompt(`Informe o percentual sobre ${tipo}:`) || '0'));
+    const valor = parseFloat(prompt(`Informe o percentual sobre ${tipo}:`) || '0');
     setForm({
       ...form,
       parametrosFixa: {
         ...form.parametrosFixa,
-        ...(tipo === 'CDI'
-          ? { percentualCDI: valor }
+        ...(tipo === 'CDI' 
+          ? { percentualCDI: valor } 
           : { percentualSELIC: valor })
       }
     });
@@ -89,7 +84,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
             currency: 'BRL'
           }).format(saldoDisponivel)}
         </p>
-        {erro && <p className="text-red-600 text-sm mt-1">{erro}</p>}
       </div>
 
       <div>
@@ -109,7 +103,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         <select
           value={form.categoriaFixa}
           onChange={(e) => setForm({
-            ...form,
+            ...form, 
             categoriaFixa: e.target.value as 'prefixada' | 'posFixada' | 'hibrida'
           })}
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
@@ -126,9 +120,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
           <label className="block mb-2 font-medium text-gray-700">Taxa Anual (%)</label>
           <input
             type="number"
-            min="0"
-            max="100"
-            step="0.01"
             value={form.parametrosFixa.taxaPrefixada}
             onChange={(e) => setForm({
               ...form,
@@ -138,6 +129,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
               }
             })}
             className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+            step="0.01"
             required
           />
         </div>
@@ -152,14 +144,14 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
               onClick={() => handleParametroChange('CDI')}
               className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
-              Editar % CDI ({form.parametrosFixa.percentualCDI}%)
+              % CDI: {form.parametrosFixa.percentualCDI}%
             </button>
             <button
               type="button"
               onClick={() => handleParametroChange('SELIC')}
               className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
-              Editar % SELIC ({form.parametrosFixa.percentualSELIC}%)
+              % SELIC: {form.parametrosFixa.percentualSELIC}%
             </button>
           </div>
         </div>
@@ -171,9 +163,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
             <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
             <input
               type="number"
-              min="0"
-              max="100"
-              step="0.01"
               value={form.parametrosFixa.taxaPrefixada}
               onChange={(e) => setForm({
                 ...form,
@@ -183,6 +172,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
                 }
               })}
               className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+              step="0.01"
               required
             />
           </div>
@@ -194,14 +184,14 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
                 onClick={() => handleParametroChange('CDI')}
                 className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                Editar % CDI ({form.parametrosFixa.percentualCDI}%)
+                % CDI: {form.parametrosFixa.percentualCDI}%
               </button>
               <button
                 type="button"
                 onClick={() => handleParametroChange('SELIC')}
                 className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                Editar % SELIC ({form.parametrosFixa.percentualSELIC}%)
+                % SELIC: {form.parametrosFixa.percentualSELIC}%
               </button>
             </div>
           </div>
@@ -209,8 +199,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
             <label className="block mb-2 font-medium text-gray-700">IPCA (% a.a)</label>
             <input
               type="number"
-              min="0"
-              step="0.01"
               value={form.parametrosFixa.ipca}
               onChange={(e) => setForm({
                 ...form,
@@ -220,6 +208,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
                 }
               })}
               className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+              step="0.01"
               placeholder="Ex: 3.2"
             />
           </div>
