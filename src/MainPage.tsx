@@ -93,6 +93,25 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   }, [login, fixo, variavel]);
 
   useEffect(() => {
+    const salvarAtivosNoFirestore = async () => {
+      try {
+        const docRef = doc(db, 'usuarios', login);
+        await setDoc(docRef, {
+          ativos,
+          porcentagemFixa: fixo,
+          porcentagemVariavel: variavel
+        });
+      } catch (err) {
+        console.error('Erro ao salvar ativos no Firestore:', err);
+      }
+    };
+
+    if (!loading) {
+      salvarAtivosNoFirestore();
+    }
+  }, [ativos, fixo, variavel, login, loading]);
+
+  useEffect(() => {
     setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
     setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
   }, [ativos, valorInvestido, fixo, variavel]);
