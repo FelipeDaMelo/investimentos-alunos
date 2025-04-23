@@ -192,10 +192,11 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
       {showWizard && (
         <AddAtivoWizard
-          onClose={() => setShowWizard(false)}
-          onAddAtivo={handleAddAtivo}
-          valorFixaDisponivel={valorFixaDisponivel}
-          valorVariavelDisponivel={valorVariavelDisponivel}
+        onClose={() => setShowWizard(false)}
+        onAddAtivo={handleAddAtivo}
+        valorFixaDisponivel={valorFixaDisponivel}
+        valorVariavelDisponivel={valorVariavelDisponivel}
+        quantidadeAtivos={ativos.length}
         />
       )}
     </div>
