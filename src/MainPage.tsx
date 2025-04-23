@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import './index.css'
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,

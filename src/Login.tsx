@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import useMoneyInput from './hooks/useMoneyInput';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
-
+import './index.css'
 interface LoginProps {
   onLogin: (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => void;
 }
