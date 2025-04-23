@@ -11,7 +11,7 @@ import {
   Legend,
 } from 'chart.js';
 import { db } from './firebaseConfig';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
 import { Ativo } from './types/Ativo';
@@ -58,16 +58,10 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
   const getCorAtivo = (ativoId: string) => coresAtivos[ativoId] || CORES_UNICAS[0];
 
-  const atualizarValoresDisponiveis = (todosAtivos: Ativo[]) => {
-    const totalFixa = todosAtivos
-      .filter(a => a.tipo === 'rendaFixa')
-      .reduce((soma, a) => soma + a.valorInvestido, 0);
-    const totalVariavel = todosAtivos
-      .filter(a => a.tipo === 'rendaVariavel')
-      .reduce((soma, a) => soma + a.valorInvestido, 0);
-
-    setValorFixaDisponivel(valorInvestido * (fixo / 100) - totalFixa);
-    setValorVariavelDisponivel(valorInvestido * (variavel / 100) - totalVariavel);
+  const calcularTotalInvestido = (tipo: 'rendaFixa' | 'rendaVariavel') => {
+    return ativos
+      .filter(a => a.tipo === tipo)
+      .reduce((total, a) => total + a.valorInvestido, 0);
   };
 
   useEffect(() => {
@@ -80,119 +74,175 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
         if (docSnap.exists()) {
           const data = docSnap.data();
           setAtivos(data?.ativos || []);
-          atualizarValoresDisponiveis(data?.ativos || []);
         } else {
           await setDoc(docRef, {
             ativos: [],
             porcentagemFixa: fixo,
-            porcentagemVariavel: variavel,
+            porcentagemVariavel: variavel
           });
         }
       } catch (err) {
-        console.error("Erro ao carregar dados do Firestore", err);
         setError('Erro ao carregar dados');
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
     carregarDados();
-  }, []);
+  }, [login, fixo, variavel]);
 
-  const handleAddAtivo = async (novoAtivo: Ativo) => {
-    const novosAtivos = [...ativos, novoAtivo];
-    setAtivos(novosAtivos);
-    atualizarValoresDisponiveis(novosAtivos);
+  useEffect(() => {
+    setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
+    setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
+  }, [ativos, valorInvestido, fixo, variavel]);
 
-    try {
-      await updateDoc(doc(db, 'usuarios', login), {
-        ativos: novosAtivos
-      });
-    } catch (err) {
-      console.error("Erro ao adicionar ativo", err);
-      setError('Erro ao adicionar o ativo');
-    }
+  const handleAddAtivo = (novoAtivo: Ativo) => {
+    setAtivos(prev => [...prev, novoAtivo]);
   };
 
-  const handleDeleteAtivo = async (id: string) => {
-    const novosAtivos = ativos.filter(a => a.id !== id);
-    setAtivos(novosAtivos);
-    atualizarValoresDisponiveis(novosAtivos);
-
-    try {
-      await updateDoc(doc(db, 'usuarios', login), {
-        ativos: novosAtivos
-      });
-    } catch (err) {
-      console.error("Erro ao remover ativo", err);
-      setError('Erro ao remover o ativo');
-    }
+  const handleDeleteAtivo = (id: string) => {
+    setAtivos(prev => prev.filter(a => a.id !== id));
   };
+
+  const allDates = Array.from(
+    new Set(ativos.flatMap(a => Object.keys(a.patrimonioPorDia)))
+  ).sort();
 
   const chartData = {
-    labels: ativos.map(a => a.nome),
-    datasets: [{
-      label: 'Valor Investido',
-      data: ativos.map(a => a.valorInvestido),
-      borderColor: 'rgb(75, 192, 192)',
-      backgroundColor: ativos.map(a => getCorAtivo(a.id)),
-    }],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: { display: false },
-      title: { display: true, text: 'Distribuição dos Ativos' }
-    }
+    labels: allDates.map(date => {
+      const [ano, mes, dia] = date.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }),
+    datasets: ativos.map(ativo => ({
+      label: ativo.nome,
+      data: allDates.map(date => ativo.patrimonioPorDia[date] || 0),
+      borderColor: getCorAtivo(ativo.id),
+      backgroundColor: getCorAtivo(ativo.id) + '80',
+      borderWidth: 2,
+      tension: 0.1,
+      pointRadius: 4
+    }))
   };
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-zinc-800">Painel do Grupo: {nomeGrupo}</h1>
-        <button
-          onClick={() => setShowWizard(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-2xl shadow"
-        >
-          Adicionar Ativo
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-2xl shadow">
-          <h2 className="text-xl font-semibold text-zinc-700 mb-2">Resumo de Investimentos</h2>
-          <p className="text-zinc-600">Renda Fixa Disponível: <strong>{formatCurrency(valorFixaDisponivel)}</strong></p>
-          <p className="text-zinc-600">Renda Variável Disponível: <strong>{formatCurrency(valorVariavelDisponivel)}</strong></p>
+    <div className="p-4 max-w-6xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Monitoramento de Ativos - Grupo: {nomeGrupo}</h1>
+      
+      {error && (
+        <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+          {error}
         </div>
+      )}
+      
+      {loading && (
+        <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-lg mb-4">
+          Carregando...
+        </div>
+      )}
 
-        <div className="bg-white p-6 rounded-2xl shadow">
-          <h2 className="text-xl font-semibold text-zinc-700 mb-4">Distribuição dos Ativos</h2>
-          <Line data={chartData} options={chartOptions} />
+      <div className="bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200">
+        <h2 className="text-xl font-semibold mb-3">Disponível para Investimento</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+            <h3 className="font-medium text-gray-700">Renda Fixa</h3>
+            <p className="text-2xl font-bold text-gray-800">
+              {formatCurrency(valorFixaDisponivel)}
+            </p>
+          </div>
+          <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+            <h3 className="font-medium text-gray-700">Renda Variável / Criptomoedas</h3>
+            <p className="text-2xl font-bold text-gray-800">
+              {formatCurrency(valorVariavelDisponivel)}
+            </p>
+          </div>
         </div>
       </div>
 
-      {error && <p className="text-red-600 font-medium mb-4">{error}</p>}
+      <button
+        onClick={() => setShowWizard(true)}
+        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors border-2 border-blue-600 hover:border-blue-700"
+      >
+        + Adicionar Ativo
+      </button>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {ativos.map((ativo) => (
-          <AtivoCard
-            key={ativo.id}
-            ativo={ativo}
-            cor={getCorAtivo(ativo.id)}
-            onDelete={() => handleDeleteAtivo(ativo.id)}
-          />
-        ))}
-      </div>
+      {ativos.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {ativos.map(ativo => (
+              <AtivoCard 
+                key={ativo.id} 
+                ativo={ativo} 
+                onDelete={handleDeleteAtivo}
+                cor={getCorAtivo(ativo.id)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
+            <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
+            <div className="h-64">
+              <Line 
+                data={chartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          return ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      ticks: {
+                        callback: (value) => {
+                          return formatCurrency(Number(value));
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-4 justify-center">
+              {ativos.map(ativo => (
+                <div key={ativo.id} className="flex items-center bg-gray-50 px-3 py-2 rounded-full border-2 border-gray-200">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-2"
+                    style={{ backgroundColor: getCorAtivo(ativo.id) }}
+                  ></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {ativo.nome}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+          Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.
+        </div>
+      )}
 
       {showWizard && (
-        <AddAtivoWizard
-          onClose={() => setShowWizard(false)}
-          onAddAtivo={handleAddAtivo}
-          valorFixaDisponivel={valorFixaDisponivel}
-          valorVariavelDisponivel={valorVariavelDisponivel}
-          quantidadeAtivos={ativos.length}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <AddAtivoWizard
+            onClose={() => setShowWizard(false)}
+            onAddAtivo={handleAddAtivo}
+            valorFixaDisponivel={valorFixaDisponivel}
+            valorVariavelDisponivel={valorVariavelDisponivel}
+            quantidadeAtivos={ativos.length}
+          />
+        </div>
       )}
     </div>
   );
