@@ -103,53 +103,35 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     };
 
     carregarDados();
-  }, []);
-
-  const handleAddAtivo = async (novoAtivo: Ativo) => {
-    const novosAtivos = [...ativos, novoAtivo];
-    setAtivos(novosAtivos);
-    atualizarValoresDisponiveis(novosAtivos);
-
-    try {
-      await updateDoc(doc(db, 'usuarios', login), {
-        ativos: novosAtivos
-      });
-    } catch (err) {
-      console.error("Erro ao adicionar ativo", err);
-      setError('Erro ao adicionar o ativo');
-    }
-  };
-
-  const handleDeleteAtivo = async (id: string) => {
-    const novosAtivos = ativos.filter(a => a.id !== id);
-    setAtivos(novosAtivos);
-    atualizarValoresDisponiveis(novosAtivos);
-
-    try {
-      await updateDoc(doc(db, 'usuarios', login), {
-        ativos: novosAtivos
-      });
-    } catch (err) {
-      console.error("Erro ao remover ativo", err);
-      setError('Erro ao remover o ativo');
-    }
-  };
+  }, [login]);
 
   const chartData = {
     labels: ativos.map(a => a.nome),
-    datasets: [{
-      label: 'Valor Investido',
-      data: ativos.map(a => a.valorInvestido),
-      borderColor: 'rgb(75, 192, 192)',
-      backgroundColor: ativos.map(a => getCorAtivo(a.id)),
-    }],
+    datasets: ativos.map(ativo => ({
+      label: ativo.nome,
+      data: ativo.patrimonioPorDia ? Object.values(ativo.patrimonioPorDia) : [],
+      borderColor: getCorAtivo(ativo.id),
+      backgroundColor: getCorAtivo(ativo.id) + '80',
+      borderWidth: 2,
+      tension: 0.1,
+      pointRadius: 4
+    }))
   };
 
   const chartOptions = {
     responsive: true,
     plugins: {
-      legend: { display: false },
-      title: { display: true, text: 'Distribuição dos Ativos' }
+      legend: { display: true },
+      title: { display: true, text: 'Evolução do Patrimônio dos Ativos' }
+    },
+    scales: {
+      y: {
+        ticks: {
+          callback: (value) => {
+            return formatCurrency(Number(value));
+          }
+        }
+      }
     }
   };
 
@@ -192,11 +174,11 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
       {showWizard && (
         <AddAtivoWizard
-        onClose={() => setShowWizard(false)}
-        onAddAtivo={handleAddAtivo}
-        valorFixaDisponivel={valorFixaDisponivel}
-        valorVariavelDisponivel={valorVariavelDisponivel}
-        quantidadeAtivos={ativos.length}
+          onClose={() => setShowWizard(false)}
+          onAddAtivo={handleAddAtivo}
+          valorFixaDisponivel={valorFixaDisponivel}
+          valorVariavelDisponivel={valorVariavelDisponivel}
+          quantidadeAtivos={ativos.length}
         />
       )}
     </div>
