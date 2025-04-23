@@ -1,11 +1,14 @@
-// src/fetchValorAtual.tsx
 const cache = new Map<string, string>();
 
-// Função auxiliar para pegar a cotação do dólar
-const fetchCotacaoDolar = async (): Promise<number> => {
-  const res = await fetch('/api/fetch-valor?ticker=USDBRL=X');
-  const data = await res.json();
-  return parseFloat(data.valorAtual);
+const getCotacaoDolarBRL = async (): Promise<number> => {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await res.json();
+    return data.rates.BRL;
+  } catch (error) {
+    console.error('Erro ao obter cotação do dólar:', error);
+    return 5.0; // fallback de segurança
+  }
 };
 
 const fetchValorAtual = async (ticker: string) => {
@@ -19,20 +22,17 @@ const fetchValorAtual = async (ticker: string) => {
 
     if (/^[A-Z]{4}\d$/.test(tickerCorrigido)) {
       tickerCorrigido += '.SA';
-    }
-
-    if (!tickerCorrigido.includes('.') && !tickerCorrigido.includes('-')) {
+    } else if (!tickerCorrigido.includes('.') && !tickerCorrigido.includes('-')) {
       tickerCorrigido += '-USD';
       isCrypto = true;
     }
 
     const res = await fetch(`/api/fetch-valor?ticker=${tickerCorrigido}`);
     const data = await res.json();
-
     let valor = parseFloat(data.valorAtual);
 
     if (isCrypto) {
-      const cotacaoDolar = await fetchCotacaoDolar();
+      const cotacaoDolar = await getCotacaoDolarBRL();
       valor *= cotacaoDolar;
     }
 
