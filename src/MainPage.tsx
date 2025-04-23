@@ -58,12 +58,6 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
   const getCorAtivo = (ativoId: string) => coresAtivos[ativoId] || CORES_UNICAS[0];
 
-  const calcularTotalInvestido = (tipo: 'rendaFixa' | 'rendaVariavel') => {
-    return ativos
-      .filter(a => a.tipo === tipo)
-      .reduce((total, a) => total + a.valorInvestido, 0);
-  };
-
   const atualizarValoresDisponiveis = (todosAtivos: Ativo[]) => {
     const totalFixa = todosAtivos
       .filter(a => a.tipo === 'rendaFixa')
@@ -103,65 +97,84 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     };
 
     carregarDados();
-  }, [login]);
+  }, []);
+
+  const handleAddAtivo = async (novoAtivo: Ativo) => {
+    const novosAtivos = [...ativos, novoAtivo];
+    setAtivos(novosAtivos);
+    atualizarValoresDisponiveis(novosAtivos);
+
+    try {
+      await updateDoc(doc(db, 'usuarios', login), {
+        ativos: novosAtivos
+      });
+    } catch (err) {
+      console.error("Erro ao adicionar ativo", err);
+      setError('Erro ao adicionar o ativo');
+    }
+  };
+
+  const handleDeleteAtivo = async (id: string) => {
+    const novosAtivos = ativos.filter(a => a.id !== id);
+    setAtivos(novosAtivos);
+    atualizarValoresDisponiveis(novosAtivos);
+
+    try {
+      await updateDoc(doc(db, 'usuarios', login), {
+        ativos: novosAtivos
+      });
+    } catch (err) {
+      console.error("Erro ao remover ativo", err);
+      setError('Erro ao remover o ativo');
+    }
+  };
 
   const chartData = {
     labels: ativos.map(a => a.nome),
-    datasets: ativos.map(ativo => ({
-      label: ativo.nome,
-      data: ativo.patrimonioPorDia ? Object.values(ativo.patrimonioPorDia) : [],
-      borderColor: getCorAtivo(ativo.id),
-      backgroundColor: getCorAtivo(ativo.id) + '80',
-      borderWidth: 2,
-      tension: 0.1,
-      pointRadius: 4
-    }))
+    datasets: [{
+      label: 'Valor Investido',
+      data: ativos.map(a => a.valorInvestido),
+      borderColor: 'rgb(75, 192, 192)',
+      backgroundColor: ativos.map(a => getCorAtivo(a.id)),
+    }],
   };
 
   const chartOptions = {
     responsive: true,
     plugins: {
-      legend: { display: true },
-      title: { display: true, text: 'Evolução do Patrimônio dos Ativos' }
-    },
-    scales: {
-      y: {
-        ticks: {
-          callback: (value) => {
-            return formatCurrency(Number(value));
-          }
-        }
-      }
+      legend: { display: false },
+      title: { display: true, text: 'Distribuição dos Ativos' }
     }
   };
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Painel do Grupo: {nomeGrupo}</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-zinc-800">Painel do Grupo: {nomeGrupo}</h1>
         <button
           onClick={() => setShowWizard(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-2xl shadow"
         >
           Adicionar Ativo
         </button>
       </div>
 
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white shadow p-4 rounded-lg">
-          <h2 className="text-lg font-semibold">Resumo de Investimentos</h2>
-          <p>Renda Fixa Disponível: <strong>{formatCurrency(valorFixaDisponivel)}</strong></p>
-          <p>Renda Variável Disponível: <strong>{formatCurrency(valorVariavelDisponivel)}</strong></p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold text-zinc-700 mb-2">Resumo de Investimentos</h2>
+          <p className="text-zinc-600">Renda Fixa Disponível: <strong>{formatCurrency(valorFixaDisponivel)}</strong></p>
+          <p className="text-zinc-600">Renda Variável Disponível: <strong>{formatCurrency(valorVariavelDisponivel)}</strong></p>
         </div>
 
-        <div className="bg-white shadow p-4 rounded-lg">
+        <div className="bg-white p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold text-zinc-700 mb-4">Distribuição dos Ativos</h2>
           <Line data={chartData} options={chartOptions} />
         </div>
       </div>
 
-      {error && <p className="text-red-600">{error}</p>}
+      {error && <p className="text-red-600 font-medium mb-4">{error}</p>}
 
-      <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {ativos.map((ativo) => (
           <AtivoCard
             key={ativo.id}
