@@ -82,13 +82,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-center">Bem-vindo ao Simulador</h2>
 
-      <div className="space-y-4">
-        <label className="block mb-2 font-medium text-gray-700">Nome do Grupo</label>
+      <div className="space-y-6">
+        <label className="block text-gray-700 font-medium mb-3">Nome do Grupo</label>
         <input
           type="text"
           value={nomeGrupo}
           onChange={(e) => setNomeGrupo(e.target.value)}
-          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+          className="w-full p-4 border-2 border-gray-400 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
           placeholder="Ex: Grupo de Investimentos"
           required
         />
@@ -97,7 +97,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <button
             onClick={verificarGrupo}
             disabled={verificando}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
           >
             {verificando ? 'Verificando...' : 'Verificar Grupo'}
           </button>
@@ -106,25 +106,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         {grupoExistente === false && (
           <form onSubmit={handleSubmit} className="space-y-4 mt-6">
             <div>
-              <label className="block mb-2 font-medium text-gray-700">Valor Total para Investir</label>
+              <label className="block text-gray-700 font-medium mb-3">Valor Total para Investir</label>
               <input
                 type="text"
                 value={displayValue}
                 onChange={handleChange}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                className="w-full p-4 border-2 border-gray-400 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
                 placeholder="R$ 0,00"
                 required
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block mb-2 font-medium text-gray-700">% Renda Fixa</label>
+                <label className="block text-gray-700 font-medium mb-3">% Renda Fixa</label>
                 <input
                   type="number"
                   value={fixo}
                   onChange={(e) => setFixo(e.target.value)}
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                  className="w-full p-4 border-2 border-gray-400 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
                   placeholder="Ex: 60"
                   min="0"
                   max="100"
@@ -132,12 +132,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 />
               </div>
               <div>
-                <label className="block mb-2 font-medium text-gray-700">% Renda Variável</label>
+                <label className="block text-gray-700 font-medium mb-3">% Renda Variável</label>
                 <input
                   type="number"
                   value={variavel}
                   onChange={(e) => setVariavel(e.target.value)}
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                  className="w-full p-4 border-2 border-gray-400 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
                   placeholder="Ex: 40"
                   min="0"
                   max="100"
@@ -154,7 +154,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+              className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             >
               Iniciar Simulação
             </button>

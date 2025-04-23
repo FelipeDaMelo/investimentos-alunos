@@ -213,11 +213,11 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
       </div>
 
       <button
-        onClick={() => setShowWizard(true)}
-        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors border-2 border-blue-600 hover:border-blue-700"
-      >
-        + Adicionar Ativo
-      </button>
+       onClick={() => setShowWizard(true)}
+       className="mb-6 bg-blue-600 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 border-4 border-blue-600 hover:border-blue-800 shadow-lg"
+       >
+       + Adicionar Ativo
+       </button>
 
       {ativos.length > 0 ? (
         <>

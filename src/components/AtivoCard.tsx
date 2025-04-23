@@ -110,7 +110,7 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
           />
           <button 
             onClick={handleVenda}
-            className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+            className="bg-blue-500 hover:bg-blue-700 text-white text-sm py-1 px-4 rounded flex items-center gap-1"
           >
             <ShoppingCart className="w-4 h-4" />
             Vender
@@ -119,7 +119,7 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
       ) : (
         <button 
           onClick={handleVenda}
-          className="mt-3 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+          className="bg-blue-500 hover:bg-blue-700 text-white text-sm py-1 px-4 rounded flex items-center gap-1 mt-3"
         >
           <ShoppingCart className="w-4 h-4" />
           Vender Tudo
