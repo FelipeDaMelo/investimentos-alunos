@@ -11,7 +11,7 @@ import {
   Legend,
 } from 'chart.js';
 import { db } from './firebaseConfig';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
 import { Ativo } from './types/Ativo';
@@ -93,35 +93,39 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   }, [login, fixo, variavel]);
 
   useEffect(() => {
-    const salvarAtivosNoFirestore = async () => {
-      try {
-        const docRef = doc(db, 'usuarios', login);
-        await setDoc(docRef, {
-          ativos,
-          porcentagemFixa: fixo,
-          porcentagemVariavel: variavel
-        });
-      } catch (err) {
-        console.error('Erro ao salvar ativos no Firestore:', err);
-      }
-    };
-
-    if (!loading) {
-      salvarAtivosNoFirestore();
-    }
-  }, [ativos, fixo, variavel, login, loading]);
-
-  useEffect(() => {
     setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
     setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
   }, [ativos, valorInvestido, fixo, variavel]);
 
-  const handleAddAtivo = (novoAtivo: Ativo) => {
-    setAtivos(prev => [...prev, novoAtivo]);
+  const handleAddAtivo = async (novoAtivo: Ativo) => {
+    try {
+      setAtivos(prev => [...prev, novoAtivo]);
+
+      // Atualiza os dados no Firestore
+      const docRef = doc(db, 'usuarios', login);
+      await updateDoc(docRef, {
+        ativos: [...ativos, novoAtivo]
+      });
+    } catch (err) {
+      setError('Erro ao adicionar ativo');
+      console.error(err);
+    }
   };
 
-  const handleDeleteAtivo = (id: string) => {
-    setAtivos(prev => prev.filter(a => a.id !== id));
+  const handleDeleteAtivo = async (id: string) => {
+    try {
+      const ativosRestantes = ativos.filter(a => a.id !== id);
+      setAtivos(ativosRestantes);
+
+      // Atualiza os dados no Firestore
+      const docRef = doc(db, 'usuarios', login);
+      await updateDoc(docRef, {
+        ativos: ativosRestantes
+      });
+    } catch (err) {
+      setError('Erro ao remover ativo');
+      console.error(err);
+    }
   };
 
   const allDates = Array.from(
