@@ -196,7 +196,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
               <AtivoCard 
                 key={ativo.id} 
                 ativo={ativo} 
-                onDelete={handleDeleteAtivo}
+                onVender={handleDeleteAtivo}
                 cor={getCorAtivo(ativo.id)}
               />
             ))}

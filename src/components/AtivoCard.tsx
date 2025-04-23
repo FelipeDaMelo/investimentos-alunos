@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Ativo } from '../types/Ativo';
 
 interface AtivoCardProps {
   ativo: Ativo;
-  onDelete: (id: string) => void;
+  onVender: (id: string, quantidade: number) => void;
   cor: string;
 }
 
@@ -22,7 +23,26 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR', options);
 };
 
-const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete, cor }) => {
+const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
+  const [quantidadeVenda, setQuantidadeVenda] = useState(0);
+  const [erro, setErro] = useState('');
+
+  const handleVenda = () => {
+    if (ativo.tipo === 'rendaFixa') {
+      onVender(ativo.id, ativo.quantidade); // vende tudo
+      return;
+    }
+
+    if (quantidadeVenda <= 0 || quantidadeVenda > ativo.quantidade) {
+      setErro('Quantidade inválida');
+      return;
+    }
+
+    onVender(ativo.id, quantidadeVenda);
+    setQuantidadeVenda(0);
+    setErro('');
+  };
+
   return (
     <div 
       className="border-l-4 p-4 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow"
@@ -57,12 +77,34 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete, cor }) => {
         )}
       </div>
 
-      <button 
-        onClick={() => onDelete(ativo.id)}
-        className="mt-3 text-red-600 hover:text-red-800 text-sm"
-      >
-        Remover Ativo
-      </button>
+      {ativo.tipo === 'rendaVariavel' ? (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="number"
+            value={quantidadeVenda}
+            onChange={(e) => setQuantidadeVenda(Number(e.target.value))}
+            placeholder="Qtd a vender"
+            className="border border-gray-300 rounded px-2 py-1 w-24 text-sm"
+            min={0}
+            max={ativo.quantidade}
+          />
+          <button 
+            onClick={handleVenda}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            Vender
+          </button>
+        </div>
+      ) : (
+        <button 
+          onClick={handleVenda}
+          className="mt-3 text-blue-600 hover:text-blue-800 text-sm"
+        >
+          Vender Tudo
+        </button>
+      )}
+
+      {erro && <p className="text-red-600 text-sm mt-1">{erro}</p>}
     </div>
   );
 };
