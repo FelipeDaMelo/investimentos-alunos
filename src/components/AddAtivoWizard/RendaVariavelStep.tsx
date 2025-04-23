@@ -21,7 +21,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
-    subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
+    subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda',
     quantidade: '', // Now always stored as string
     precoAtual: 0,
     loadingPreco: false,
@@ -81,10 +81,6 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     
     if (tipo === 'criptomoeda') {
       return tickerLimpo.includes('-') ? tickerLimpo : `${tickerLimpo}-USD`;
-    }
-    
-    if (tipo === 'acao_internacional') {
-      return tickerLimpo;
     }
     
     return tickerLimpo.endsWith('.SA') ? tickerLimpo : `${tickerLimpo}.SA`;
@@ -167,8 +163,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const exemplosTicker = {
     acao: ['PETR4', 'VALE3', 'ITUB4'],
     fii: ['MXRF11', 'HGLG11', 'KNRI11'],
-    criptomoeda: ['BTC', 'ETH', 'SOL'],
-    acao_internacional: ['AAPL', 'GOOGL', 'TSLA']
+    criptomoeda: ['BTC', 'ETH', 'SOL']
   };
 
   return (
@@ -179,7 +174,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           value={form.subtipo}
           onChange={(e) => setForm({
             ...form,
-            subtipo: e.target.value as 'acao' | 'fii' | 'criptomoeda' | 'acao_internacional',
+            subtipo: e.target.value as 'acao' | 'fii' | 'criptomoeda',
             nome: '',
             precoAtual: 0,
             quantidade: ''
@@ -188,8 +183,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           required
         >
           <option value="acao">Ação Brasileira</option>
-          <option value="acao_internacional">Ação Internacional</option>
-          <option value="fii">FII</option>
+           <option value="fii">FII</option>
           <option value="criptomoeda">Criptomoeda</option>
         </select>
       </div>
@@ -197,8 +191,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       <div>
         <label className="block mb-2 font-medium text-gray-700">
           {form.subtipo === 'acao' ? 'Código da Ação (Brasileira)' : 
-           form.subtipo === 'acao_internacional' ? 'Código da Ação (Internacional)' :
-           form.subtipo === 'fii' ? 'Código do FII' : 'Código da Criptomoeda'}
+          form.subtipo === 'fii' ? 'Código do FII' : 'Código da Criptomoeda'}
           <span className="ml-2 text-sm text-gray-500">
             Exemplos: {exemplosTicker[form.subtipo].join(', ')}
           </span>
@@ -247,7 +240,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           {form.subtipo === 'criptomoeda' && (
             <p className="mt-1 text-sm text-gray-500">Digite valores decimais (ex: 0,5 ou 1,25)</p>
           )}
-          {(form.subtipo === 'acao' || form.subtipo === 'acao_internacional' || form.subtipo === 'fii') && (
+          {(form.subtipo === 'acao' || form.subtipo === 'fii') && (
             <p className="mt-1 text-sm text-gray-500">Apenas números inteiros positivos (ex: 1, 10, 100)</p>
           )}
         </div>
