@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Ativo } from '../types/Ativo';
+import { Banknote, TrendingUp, TrendingDown, Landmark, ArrowUpRight, ArrowDownRight, ShoppingCart } from 'lucide-react';
 
 interface AtivoCardProps {
   ativo: Ativo;
@@ -29,7 +30,7 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
 
   const handleVenda = () => {
     if (ativo.tipo === 'rendaFixa') {
-      onVender(ativo.id, ativo.quantidade); // vende tudo
+      onVender(ativo.id, 0); // vende tudo
       return;
     }
 
@@ -43,6 +44,16 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
     setErro('');
   };
 
+  // Ícone baseado no tipo de ativo
+  const Icon = 
+    ativo.tipo === 'rendaFixa' ? <Landmark className="inline w-4 h-4 mr-1" /> :
+    ativo.subtipo === 'acao' ? <TrendingUp className="inline w-4 h-4 mr-1" /> :
+    ativo.subtipo === 'fii' ? <Banknote className="inline w-4 h-4 mr-1" /> :
+    <TrendingDown className="inline w-4 h-4 mr-1" />;
+
+  // Cálculo de lucro ou prejuízo
+  const lucro = ativo.valorAtual - ativo.valorInvestido;
+
   return (
     <div 
       className="border-l-4 p-4 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow"
@@ -50,7 +61,10 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
     >
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="font-bold text-lg">{ativo.nome}</h3>
+          <h3 className="font-bold text-lg flex items-center">
+            {Icon}
+            {ativo.nome}
+          </h3>
           <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
             {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' : 
              ativo.subtipo === 'acao' ? 'Ação' :
@@ -63,6 +77,12 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
             {formatDate(ativo.dataInvestimento)}
           </p>
         </div>
+      </div>
+
+      {/* Exibe lucro ou prejuízo com ícones */}
+      <div className={lucro >= 0 ? 'text-green-600 flex items-center' : 'text-red-600 flex items-center'}>
+        {lucro >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+        {formatCurrency(lucro)} ({((lucro / ativo.valorInvestido) * 100).toFixed(2)}%)
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
@@ -90,16 +110,18 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onVender, cor }) => {
           />
           <button 
             onClick={handleVenda}
-            className="text-blue-600 hover:text-blue-800 text-sm"
+            className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
           >
+            <ShoppingCart className="w-4 h-4" />
             Vender
           </button>
         </div>
       ) : (
         <button 
           onClick={handleVenda}
-          className="mt-3 text-blue-600 hover:text-blue-800 text-sm"
+          className="mt-3 text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
         >
+          <ShoppingCart className="w-4 h-4" />
           Vender Tudo
         </button>
       )}

@@ -101,7 +101,6 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     try {
       setAtivos(prev => [...prev, novoAtivo]);
 
-      // Atualiza os dados no Firestore
       const docRef = doc(db, 'usuarios', login);
       await updateDoc(docRef, {
         ativos: [...ativos, novoAtivo]
@@ -112,18 +111,49 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     }
   };
 
-  const handleDeleteAtivo = async (id: string) => {
+  const handleVenderAtivo = async (id: string, quantidade: number) => {
     try {
-      const ativosRestantes = ativos.filter(a => a.id !== id);
-      setAtivos(ativosRestantes);
-
-      // Atualiza os dados no Firestore
       const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, {
-        ativos: ativosRestantes
-      });
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) return;
+
+      const data = docSnap.data();
+      const ativosUsuario: Ativo[] = data?.ativos || [];
+      const ativo = ativosUsuario.find(a => a.id === id);
+      if (!ativo) return;
+
+      if (ativo.tipo === 'rendaFixa') {
+        const novosAtivos = ativosUsuario.filter(a => a.id !== id);
+        setAtivos(novosAtivos);
+        await updateDoc(docRef, { ativos: novosAtivos });
+        return;
+      }
+
+      if ('quantidade' in ativo) {
+        const novaQuantidade = ativo.quantidade - quantidade;
+
+        if (novaQuantidade <= 0) {
+          const novosAtivos = ativosUsuario.filter(a => a.id !== id);
+          setAtivos(novosAtivos);
+          await updateDoc(docRef, { ativos: novosAtivos });
+        } else {
+          const novoValorInvestido = novaQuantidade * ativo.valorAtual;
+          const ativosAtualizados = ativosUsuario.map(a => {
+            if (a.id === id) {
+              return {
+                ...a,
+                quantidade: novaQuantidade,
+                valorInvestido: novoValorInvestido
+              };
+            }
+            return a;
+          });
+          setAtivos(ativosAtualizados);
+          await updateDoc(docRef, { ativos: ativosAtualizados });
+        }
+      }
     } catch (err) {
-      setError('Erro ao remover ativo');
+      setError('Erro ao vender ativo');
       console.error(err);
     }
   };
@@ -196,7 +226,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
               <AtivoCard 
                 key={ativo.id} 
                 ativo={ativo} 
-                onVender={handleDeleteAtivo}
+                onVender={handleVenderAtivo}
                 cor={getCorAtivo(ativo.id)}
               />
             ))}
