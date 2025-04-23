@@ -1,5 +1,12 @@
-//src/fetchValorAtual.tsx
+// src/fetchValorAtual.tsx
 const cache = new Map<string, string>();
+
+// Função auxiliar para pegar a cotação do dólar
+const fetchCotacaoDolar = async (): Promise<number> => {
+  const res = await fetch('/api/fetch-valor?ticker=USDBRL=X');
+  const data = await res.json();
+  return parseFloat(data.valorAtual);
+};
 
 const fetchValorAtual = async (ticker: string) => {
   try {
@@ -8,6 +15,7 @@ const fetchValorAtual = async (ticker: string) => {
     }
 
     let tickerCorrigido = ticker.trim().toUpperCase();
+    let isCrypto = false;
 
     if (/^[A-Z]{4}\d$/.test(tickerCorrigido)) {
       tickerCorrigido += '.SA';
@@ -15,13 +23,22 @@ const fetchValorAtual = async (ticker: string) => {
 
     if (!tickerCorrigido.includes('.') && !tickerCorrigido.includes('-')) {
       tickerCorrigido += '-USD';
+      isCrypto = true;
     }
 
     const res = await fetch(`/api/fetch-valor?ticker=${tickerCorrigido}`);
     const data = await res.json();
 
-    cache.set(ticker, data.valorAtual);
-    return data.valorAtual;
+    let valor = parseFloat(data.valorAtual);
+
+    if (isCrypto) {
+      const cotacaoDolar = await fetchCotacaoDolar();
+      valor *= cotacaoDolar;
+    }
+
+    const valorFormatado = valor.toFixed(2);
+    cache.set(ticker, valorFormatado);
+    return valorFormatado;
   } catch (error) {
     console.error('Erro ao buscar valor do ativo:', error);
     return 'Erro ao carregar';
