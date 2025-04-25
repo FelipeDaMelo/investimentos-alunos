@@ -91,7 +91,7 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string
 
     const intervalId = setInterval(atualizar, 60 * 1000); // 1 minuto para simular 1 dia
     return () => clearInterval(intervalId);
-  }, [ativos, setAtivos, login]);
+  }, [ativos, setAtivos, login]);  // Dependências ajustadas
 };
 
 export default useAtualizarAtivos;
