@@ -49,6 +49,9 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  if (ativos.length > 0) {
+    useAtualizarAtivos(ativos, setAtivos, login);
+  }
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};

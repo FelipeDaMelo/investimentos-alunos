@@ -36,6 +36,9 @@ const calcularRendimentoFixa = (ativo: RendaFixaAtivo, diasPassados: number): nu
 
 const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string) => {
   useEffect(() => {
+    // ✅ Proteção: só roda se houver ativos carregados
+    if (ativos.length === 0) return;
+
     const atualizar = async () => {
       const agora = new Date();
       const hoje = agora.toISOString().split('T')[0];
@@ -86,7 +89,7 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string
 
     atualizar();
 
-    const intervalId = setInterval(atualizar, 60 * 1000); // 1 minuto (modo teste)
+    const intervalId = setInterval(atualizar, 60 * 1000); // 1 minuto para simular 1 dia
     return () => clearInterval(intervalId);
   }, [ativos, setAtivos, login]);
 };
