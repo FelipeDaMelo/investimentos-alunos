@@ -104,11 +104,12 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
 
   const handleAddAtivo = async (novoAtivo: Ativo) => {
     try {
-      setAtivos(prev => [...prev, novoAtivo]);
-
-      const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, {
-        ativos: [...ativos, novoAtivo]
+      // Atualiza os ativos com base no estado atual
+      setAtivos(prevAtivos => {
+        const novosAtivos = [...prevAtivos, novoAtivo];
+        const docRef = doc(db, 'usuarios', login);
+        updateDoc(docRef, { ativos: novosAtivos });
+        return novosAtivos;
       });
     } catch (err) {
       setError('Erro ao adicionar ativo');
@@ -224,64 +225,26 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
         + Adicionar Ativo
       </button>
 
+      {showWizard && <AddAtivoWizard onAddAtivo={handleAddAtivo} />}
+
       {ativos.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {ativos.map(ativo => (
-              <AtivoCard 
-                key={ativo.id} 
-                ativo={ativo} 
+              <AtivoCard
+                key={ativo.id}
+                ativo={ativo}
                 onVender={handleVenderAtivo}
-                cor={getCorAtivo(ativo.id)}
               />
             ))}
           </div>
 
-          <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
-            <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
-            <div className="h-64">
-              <Line 
-                data={chartData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: (context) => {
-                          return ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`;
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    y: {
-                      ticks: {
-                        callback: (value) => {
-                          return formatCurrency(Number(value));
-                        }
-                      }
-                    }
-                  }
-                }}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3 mt-4 justify-center">
-              {ativos.map(ativo => (
-                <div key={ativo.id} className="py-2 px-4 bg-gray-200 rounded-lg mb-3">
-                  <h3>{ativo.nome}</h3>
-                  <p>{formatCurrency(ativo.valorAtual)}</p>
-                </div>
-              ))}
-            </div>
+          <div className="w-full max-w-4xl mx-auto">
+            <Line data={chartData} />
           </div>
         </>
       ) : (
-        <p>Nenhum ativo registrado.</p>
+        <p className="text-center text-gray-500">Nenhum ativo adicionado ainda.</p>
       )}
     </div>
   );
