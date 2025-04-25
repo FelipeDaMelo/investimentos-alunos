@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import fetchValorAtual from '../fetchValorAtual';
 import { Ativo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
 type SetAtivos = React.Dispatch<React.SetStateAction<Ativo[]>>;
 
@@ -32,17 +34,22 @@ const calcularRendimentoFixa = (ativo: RendaFixaAtivo, diasPassados: number): nu
   return rendimento;
 };
 
-const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
+const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string) => {
   useEffect(() => {
     const atualizar = async () => {
-      const hoje = new Date().toISOString().split('T')[0];
+      const agora = new Date();
+      const hoje = agora.toISOString().split('T')[0];
+
       const updatedAtivos = await Promise.all(
         ativos.map(async (ativo) => {
+          // TESTE: 1 minuto = 1 dia
+          const minutosPassados = Math.max(
+            0,
+            Math.floor((agora.getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60))
+          );
+
           if (ativo.tipo === 'rendaFixa') {
-            const diasPassados = Math.max(0, Math.floor(
-              (new Date(hoje).getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60 * 60 * 24)
-            ));
-            const rendimento = calcularRendimentoFixa(ativo as RendaFixaAtivo, diasPassados);
+            const rendimento = calcularRendimentoFixa(ativo as RendaFixaAtivo, minutosPassados);
 
             return {
               ...ativo,
@@ -55,26 +62,33 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos) => {
           } else {
             const ativoVar = ativo as RendaVariavelAtivo;
             const valorAtual = parseFloat(await fetchValorAtual(ativoVar.tickerFormatado));
-            const updatedPatrimonio = ativoVar.quantidade * valorAtual;
+            const patrimonio = ativoVar.quantidade * valorAtual;
 
             return {
               ...ativo,
               valorAtual,
               patrimonioPorDia: {
                 ...ativo.patrimonioPorDia,
-                [hoje]: updatedPatrimonio,
+                [hoje]: patrimonio,
               },
             };
           }
         })
       );
+
       setAtivos(updatedAtivos);
+
+      const docRef = doc(db, 'usuarios', login);
+      await updateDoc(docRef, {
+        ativos: updatedAtivos,
+      });
     };
 
     atualizar();
-    const intervalId = setInterval(atualizar, 86400000);
+
+    const intervalId = setInterval(atualizar, 60 * 1000); // 1 minuto (modo teste)
     return () => clearInterval(intervalId);
-  }, [ativos, setAtivos]);
+  }, [ativos, setAtivos, login]);
 };
 
 export default useAtualizarAtivos;

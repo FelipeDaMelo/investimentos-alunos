@@ -16,6 +16,7 @@ import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
 import { Ativo } from './types/Ativo';
+import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -48,6 +49,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  useAtualizarAtivos(ativos, setAtivos, login);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
@@ -96,7 +98,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   useEffect(() => {
     setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
     setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
-  }, [ativos, valorInvestido, fixo, variavel]);
+      }, [ativos, valorInvestido, fixo, variavel]);
 
   const handleAddAtivo = async (novoAtivo: Ativo) => {
     try {
