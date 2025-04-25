@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import './index.css';
+import './index.css'
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -49,9 +49,13 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
-
-  // Atualizar os ativos com a função de hook personalizada
-  useAtualizarAtivos(ativos, setAtivos, login);
+  // Usando uma verificação para evitar a chamada repetida de useAtualizarAtivos
+  useEffect(() => {
+    if (ativos.length > 0) {
+      // Só executa a atualização de ativos se houver ativos carregados
+      useAtualizarAtivos(ativos, setAtivos, login);
+    }
+  }, [ativos, login]);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
@@ -100,16 +104,15 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   useEffect(() => {
     setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
     setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
-  }, [ativos, valorInvestido, fixo, variavel]);
+      }, [ativos, valorInvestido, fixo, variavel]);
 
   const handleAddAtivo = async (novoAtivo: Ativo) => {
     try {
-      // Atualiza os ativos com base no estado atual
-      setAtivos(prevAtivos => {
-        const novosAtivos = [...prevAtivos, novoAtivo];
-        const docRef = doc(db, 'usuarios', login);
-        updateDoc(docRef, { ativos: novosAtivos });
-        return novosAtivos;
+      setAtivos(prev => [...prev, novoAtivo]);
+
+      const docRef = doc(db, 'usuarios', login);
+      await updateDoc(docRef, {
+        ativos: [...ativos, novoAtivo]
       });
     } catch (err) {
       setError('Erro ao adicionar ativo');
@@ -219,32 +222,89 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
       </div>
 
       <button
-        onClick={() => setShowWizard(true)}
-        className="mb-6 bg-blue-600 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 border-4 border-blue-600 hover:border-blue-800 shadow-lg"
-      >
-        + Adicionar Ativo
-      </button>
-
-      {showWizard && <AddAtivoWizard onAddAtivo={handleAddAtivo} />}
+       onClick={() => setShowWizard(true)}
+       className="mb-6 bg-blue-600 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 border-4 border-blue-600 hover:border-blue-800 shadow-lg"
+       >
+       + Adicionar Ativo
+       </button>
 
       {ativos.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {ativos.map(ativo => (
-              <AtivoCard
-                key={ativo.id}
-                ativo={ativo}
+              <AtivoCard 
+                key={ativo.id} 
+                ativo={ativo} 
                 onVender={handleVenderAtivo}
+                cor={getCorAtivo(ativo.id)}
               />
             ))}
           </div>
 
-          <div className="w-full max-w-4xl mx-auto">
-            <Line data={chartData} />
+          <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
+            <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
+            <div className="h-64">
+              <Line 
+                data={chartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          return ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      ticks: {
+                        callback: (value) => {
+                          return formatCurrency(Number(value));
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-4 justify-center">
+              {ativos.map(ativo => (
+                <div key={ativo.id} className="flex items-center bg-gray-50 px-3 py-2 rounded-full border-2 border-gray-200">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-2"
+                    style={{ backgroundColor: getCorAtivo(ativo.id) }}
+                  ></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {ativo.nome}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       ) : (
-        <p className="text-center text-gray-500">Nenhum ativo adicionado ainda.</p>
+        <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+          Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.
+        </div>
+      )}
+
+      {showWizard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <AddAtivoWizard
+            onClose={() => setShowWizard(false)}
+            onAddAtivo={handleAddAtivo}
+            valorFixaDisponivel={valorFixaDisponivel}
+            valorVariavelDisponivel={valorVariavelDisponivel}
+            quantidadeAtivos={ativos.length}
+          />
+        </div>
       )}
     </div>
   );
