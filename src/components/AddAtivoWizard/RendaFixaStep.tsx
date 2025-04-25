@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { criarAtivoFixa } from '../../utils/ativoHelpers';
 import { RendaFixaAtivo } from '../../types/Ativo';
 import useMoneyInput from '../../hooks/useMoneyInput';
+import fetchValorAtual from '../../fetchValorAtual'; // <-- você já tem esse util agora
 
 interface RendaFixaStepProps {
   onBack: () => void;
@@ -16,6 +17,11 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     handleChange
   } = useMoneyInput(0);
 
+  const [taxasReferencia, setTaxasReferencia] = useState({
+    cdi: 0,
+    selic: 0
+  });
+
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
@@ -28,9 +34,25 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     }
   });
 
+  useEffect(() => {
+    const carregarTaxas = async () => {
+      const [cdi, selic] = await Promise.all([
+        fetchValorAtual('CDI'),
+        fetchValorAtual('SELIC')
+      ]);
+
+      setTaxasReferencia({
+        cdi: parseFloat(cdi),
+        selic: parseFloat(selic)
+      });
+    };
+
+    carregarTaxas();
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (valorInvestido > saldoDisponivel) {
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
@@ -43,16 +65,24 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   };
 
   const handleParametroChange = (tipo: 'CDI' | 'SELIC') => {
-    const valor = parseFloat(prompt(`Informe o percentual sobre ${tipo}:`) || '0');
+    const taxaBase = tipo === 'CDI' ? taxasReferencia.cdi : taxasReferencia.selic;
+
+    const percentual = parseFloat(prompt(`Informe o percentual sobre ${tipo} (Ex: 110 para 110%):`) || '0');
+    if (isNaN(percentual)) return;
+
+    const taxaEfetiva = (percentual / 100) * taxaBase;
+
     setForm({
       ...form,
       parametrosFixa: {
         ...form.parametrosFixa,
         ...(tipo === 'CDI' 
-          ? { percentualCDI: valor } 
-          : { percentualSELIC: valor })
+          ? { percentualCDI: percentual } 
+          : { percentualSELIC: percentual })
       }
     });
+
+    alert(`A taxa efetiva baseada em ${percentual}% de ${tipo} (${taxaBase}% a.a) é ${taxaEfetiva.toFixed(2)}% a.a`);
   };
 
   return (
