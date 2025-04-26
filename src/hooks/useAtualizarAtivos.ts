@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import fetchValorAtual from '../fetchValorAtual';
 import { Ativo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -34,18 +34,23 @@ const calcularRendimentoFixa = (ativo: RendaFixaAtivo, diasPassados: number): nu
   return rendimento;
 };
 
+const ativosMudaram = (novos: Ativo[], antigos: Ativo[]): boolean => {
+  return JSON.stringify(novos) !== JSON.stringify(antigos);
+};
+
 const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string) => {
+  const ativosRef = useRef(ativos);
+
   useEffect(() => {
-    // ✅ Proteção: só roda se houver ativos carregados
     if (ativos.length === 0) return;
+    ativosRef.current = ativos;
 
     const atualizar = async () => {
       const agora = new Date();
       const hoje = agora.toISOString().split('T')[0];
 
       const updatedAtivos = await Promise.all(
-        ativos.map(async (ativo) => {
-          // TESTE: 1 minuto = 1 dia
+        ativosRef.current.map(async (ativo) => {
           const minutosPassados = Math.max(
             0,
             Math.floor((agora.getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60))
@@ -64,12 +69,12 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string
             };
           } else {
             const ativoVar = ativo as RendaVariavelAtivo;
-            const valorAtual = parseFloat(await fetchValorAtual(ativoVar.tickerFormatado));
-            const patrimonio = ativoVar.quantidade * valorAtual;
+            const novoValor = parseFloat(await fetchValorAtual(ativoVar.tickerFormatado));
+            const patrimonio = ativoVar.quantidade * novoValor;
 
             return {
               ...ativo,
-              valorAtual,
+              valorAtual: novoValor,
               patrimonioPorDia: {
                 ...ativo.patrimonioPorDia,
                 [hoje]: patrimonio,
@@ -79,17 +84,21 @@ const useAtualizarAtivos = (ativos: Ativo[], setAtivos: SetAtivos, login: string
         })
       );
 
+      // Sempre atualiza o estado local (para o gráfico)
       setAtivos(updatedAtivos);
+      ativosRef.current = updatedAtivos;
 
-      const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, {
-        ativos: updatedAtivos,
-      });
+      // Só atualiza o Firestore se houver mudança real nos ativos
+      if (ativosMudaram(updatedAtivos, ativosRef.current)) {
+        const docRef = doc(db, 'usuarios', login);
+        await updateDoc(docRef, {
+          ativos: updatedAtivos,
+        });
+      }
     };
 
     atualizar();
-
-    const intervalId = setInterval(atualizar, 60 * 1000); // 1 minuto para simular 1 dia
+    const intervalId = setInterval(atualizar, 60 * 1000); // 1 minuto = 1 dia
     return () => clearInterval(intervalId);
   }, [ativos, setAtivos, login]);
 };

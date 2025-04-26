@@ -51,11 +51,10 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const [showWizard, setShowWizard] = useState(false);
   // Usando uma verificação para evitar a chamada repetida de useAtualizarAtivos
   useEffect(() => {
-    if (ativos.length > 0) {
-      // Só executa a atualização de ativos se houver ativos carregados
-      useAtualizarAtivos(ativos, setAtivos, login);
+    if (login) {
+      useAtualizarAtivos([], setAtivos, login);
     }
-  }, [ativos, login]);
+  }, [login]);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
