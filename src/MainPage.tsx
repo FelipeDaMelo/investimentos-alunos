@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import './index.css'
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -12,11 +11,11 @@ import {
   Legend,
 } from 'chart.js';
 import { db } from './firebaseConfig';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
 import { Ativo } from './types/Ativo';
-import useAtualizarAtivos from './hooks/useAtualizarAtivos';
+import useAtualizarAtivos from './hooks/useAtualizarAtivos'; // <-- Importando seu hook de atualização
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -49,12 +48,6 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
-  // Usando uma verificação para evitar a chamada repetida de useAtualizarAtivos
-  useEffect(() => {
-    if (login) {
-      useAtualizarAtivos([], setAtivos, login);
-    }
-  }, [login]);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
@@ -71,6 +64,17 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
       .filter(a => a.tipo === tipo)
       .reduce((total, a) => total + a.valorInvestido, 0);
   };
+
+  // 🟰 Atualizar ativos e salvar no Firestore
+  useAtualizarAtivos(ativos, async (updatedAtivos) => {
+    setAtivos(updatedAtivos);
+    try {
+      const docRef = doc(db, 'usuarios', login);
+      await updateDoc(docRef, { ativos: updatedAtivos });
+    } catch (err) {
+      console.error('Erro ao atualizar ativos no Firestore:', err);
+    }
+  });
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -103,15 +107,16 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   useEffect(() => {
     setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
     setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
-      }, [ativos, valorInvestido, fixo, variavel]);
+  }, [ativos, valorInvestido, fixo, variavel]);
 
   const handleAddAtivo = async (novoAtivo: Ativo) => {
     try {
-      setAtivos(prev => [...prev, novoAtivo]);
+      const novosAtivos = [...ativos, novoAtivo];
+      setAtivos(novosAtivos);
 
       const docRef = doc(db, 'usuarios', login);
       await updateDoc(docRef, {
-        ativos: [...ativos, novoAtivo]
+        ativos: novosAtivos
       });
     } catch (err) {
       setError('Erro ao adicionar ativo');
@@ -119,49 +124,17 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
     }
   };
 
-  const handleVenderAtivo = async (id: string, quantidade: number) => {
+  const handleDeleteAtivo = async (id: string) => {
     try {
+      const ativosRestantes = ativos.filter(a => a.id !== id);
+      setAtivos(ativosRestantes);
+
       const docRef = doc(db, 'usuarios', login);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) return;
-
-      const data = docSnap.data();
-      const ativosUsuario: Ativo[] = data?.ativos || [];
-      const ativo = ativosUsuario.find(a => a.id === id);
-      if (!ativo) return;
-
-      if (ativo.tipo === 'rendaFixa') {
-        const novosAtivos = ativosUsuario.filter(a => a.id !== id);
-        setAtivos(novosAtivos);
-        await updateDoc(docRef, { ativos: novosAtivos });
-        return;
-      }
-
-      if ('quantidade' in ativo) {
-        const novaQuantidade = ativo.quantidade - quantidade;
-
-        if (novaQuantidade <= 0) {
-          const novosAtivos = ativosUsuario.filter(a => a.id !== id);
-          setAtivos(novosAtivos);
-          await updateDoc(docRef, { ativos: novosAtivos });
-        } else {
-          const novoValorInvestido = novaQuantidade * ativo.valorAtual;
-          const ativosAtualizados = ativosUsuario.map(a => {
-            if (a.id === id) {
-              return {
-                ...a,
-                quantidade: novaQuantidade,
-                valorInvestido: novoValorInvestido
-              };
-            }
-            return a;
-          });
-          setAtivos(ativosAtualizados);
-          await updateDoc(docRef, { ativos: ativosAtualizados });
-        }
-      }
+      await updateDoc(docRef, {
+        ativos: ativosRestantes
+      });
     } catch (err) {
-      setError('Erro ao vender ativo');
+      setError('Erro ao remover ativo');
       console.error(err);
     }
   };
@@ -221,11 +194,11 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
       </div>
 
       <button
-       onClick={() => setShowWizard(true)}
-       className="mb-6 bg-blue-600 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 border-4 border-blue-600 hover:border-blue-800 shadow-lg"
-       >
-       + Adicionar Ativo
-       </button>
+        onClick={() => setShowWizard(true)}
+        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors border-2 border-blue-600 hover:border-blue-700"
+      >
+        + Adicionar Ativo
+      </button>
 
       {ativos.length > 0 ? (
         <>
@@ -234,7 +207,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
               <AtivoCard 
                 key={ativo.id} 
                 ativo={ativo} 
-                onVender={handleVenderAtivo}
+                onDelete={handleDeleteAtivo}
                 cor={getCorAtivo(ativo.id)}
               />
             ))}
@@ -271,20 +244,6 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
                   }
                 }}
               />
-            </div>
-
-            <div className="flex flex-wrap gap-3 mt-4 justify-center">
-              {ativos.map(ativo => (
-                <div key={ativo.id} className="flex items-center bg-gray-50 px-3 py-2 rounded-full border-2 border-gray-200">
-                  <div 
-                    className="w-4 h-4 rounded-full mr-2"
-                    style={{ backgroundColor: getCorAtivo(ativo.id) }}
-                  ></div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {ativo.nome}
-                  </span>
-                </div>
-              ))}
             </div>
           </div>
         </>
