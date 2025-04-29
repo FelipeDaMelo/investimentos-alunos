@@ -4,7 +4,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
 }
 
-export default function Button({ children, variant = 'primary', ...props }: ButtonProps) {
+export default function Button({ children, variant = 'primary', type = 'button', ...props }: ButtonProps) {
   const baseStyles = "font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transform transition-all duration-300";
 
   const variantStyles = {
@@ -14,6 +14,7 @@ export default function Button({ children, variant = 'primary', ...props }: Butt
 
   return (
     <button
+      type={type} // 👈 Aqui definimos o tipo padrão como 'button'
       {...props}
       className={`${baseStyles} ${variantStyles[variant]} ${props.className || ''}`}
     >
