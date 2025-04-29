@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import useMoneyInput from './hooks/useMoneyInput';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import Button from './components/Button';
+
 
 interface LoginProps {
   onLogin: (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => void;
@@ -94,13 +96,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         />
 
         {grupoExistente === null && (
-          <button
-            onClick={verificarGrupo}
-            disabled={verificando}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          >
-            {verificando ? 'Verificando...' : 'Verificar Grupo'}
-          </button>
+          <Button
+  onClick={verificarGrupo}
+  disabled={verificando}
+  className="w-full"
+>
+  {verificando ? 'Verificando...' : 'Verificar Grupo'}
+</Button>
         )}
 
         {grupoExistente === false && (
@@ -152,12 +154,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             {erro && <p className="text-red-500 text-sm">{erro}</p>}
 
-            <button
-              type="submit"
-              className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-            >
-              Iniciar Simulação
-            </button>
+            <Button
+  type="submit"
+  className="w-full"
+>
+  Iniciar Simulação
+</Button>
           </form>
         )}
       </div>

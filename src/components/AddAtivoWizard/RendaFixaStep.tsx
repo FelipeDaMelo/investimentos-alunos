@@ -3,6 +3,7 @@ import { criarAtivoFixa } from '../../utils/ativoHelpers';
 import { RendaFixaAtivo } from '../../types/Ativo';
 import useMoneyInput from '../../hooks/useMoneyInput';
 import fetchValorAtual from '../../fetchValorAtual';
+import Button from '../Button';
 
 interface RendaFixaStepProps {
   onBack: () => void;
@@ -160,14 +161,13 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
               <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
             )}
           </div>
-          <button 
-            type="button"
-            onClick={carregarTaxas}
-            disabled={carregandoTaxas}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
-          </button>
+          <Button
+  type="button"
+  onClick={carregarTaxas}
+  disabled={carregandoTaxas}
+>
+  {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
+</Button>
         </div>
       )}
 
@@ -231,23 +231,23 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         </>
       )}
 
-      {/* Botões */}
-      <div className="flex justify-between pt-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="px-6 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Voltar
-        </button>
-        <button
-          type="submit"
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          disabled={!form.nome || valorInvestido <= 0}
-        >
-          Adicionar Ativo
-        </button>
-      </div>
+{/* Botões */}
+<div className="flex justify-between pt-4">
+  <Button
+    type="button"
+    variant="secondary"
+    onClick={onBack}
+  >
+    Voltar
+  </Button>
+
+  <Button
+    type="submit"
+    disabled={!form.nome || valorInvestido <= 0}
+  >
+    Adicionar Ativo
+  </Button>
+</div>
     </form>
   );
 }

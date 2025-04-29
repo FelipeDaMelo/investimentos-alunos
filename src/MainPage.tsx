@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { db } from './firebaseConfig';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,12 +12,11 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { db } from './firebaseConfig';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
-import { Ativo } from './types/Ativo';
-import useAtualizarAtivos from './hooks/useAtualizarAtivos'; // <-- Importando seu hook de atualização
+import VendaAtivoModal from './components/VendaAtivoModal'; // Importando o modal de venda
+import { Ativo, RendaVariavelAtivo, RendaFixaAtivo } from './types/Ativo';
+import Button from './components/Button';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -41,13 +42,15 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPageProps) => {
+export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPageProps) {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  const [ativoSelecionado, setAtivoSelecionado] = useState<Ativo | null>(null); // 🔵 Modal de venda
+  const [showVendaModal, setShowVendaModal] = useState(false);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
@@ -64,17 +67,6 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
       .filter(a => a.tipo === tipo)
       .reduce((total, a) => total + a.valorInvestido, 0);
   };
-
-  // 🟰 Atualizar ativos e salvar no Firestore
-  useAtualizarAtivos(ativos, async (updatedAtivos) => {
-    setAtivos(updatedAtivos);
-    try {
-      const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, { ativos: updatedAtivos });
-    } catch (err) {
-      console.error('Erro ao atualizar ativos no Firestore:', err);
-    }
-  });
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -115,28 +107,69 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
       setAtivos(novosAtivos);
 
       const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, {
-        ativos: novosAtivos
-      });
+      await updateDoc(docRef, { ativos: novosAtivos });
     } catch (err) {
       setError('Erro ao adicionar ativo');
       console.error(err);
     }
   };
 
-  const handleDeleteAtivo = async (id: string) => {
-    try {
-      const ativosRestantes = ativos.filter(a => a.id !== id);
+  const handleSellAtivo = (id: string) => {
+    const ativo = ativos.find(a => a.id === id);
+    if (!ativo) return;
+    setAtivoSelecionado(ativo);
+    setShowVendaModal(true);
+  };
+
+  const confirmarVenda = async (quantidadeVendida: number) => {
+    if (!ativoSelecionado) return;
+
+    if (ativoSelecionado.tipo === 'rendaFixa') {
+      // Venda total da renda fixa
+      setValorFixaDisponivel(prev => prev + ativoSelecionado.valorAtual);
+      const ativosRestantes = ativos.filter(a => a.id !== ativoSelecionado.id);
       setAtivos(ativosRestantes);
 
       const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, {
-        ativos: ativosRestantes
-      });
-    } catch (err) {
-      setError('Erro ao remover ativo');
-      console.error(err);
+      await updateDoc(docRef, { ativos: ativosRestantes });
+    } else {
+      // Venda parcial ou total de renda variável
+      const ativoVar = ativoSelecionado;
+
+      const valorVenda = quantidadeVendida * ativoVar.valorAtual;
+      setValorVariavelDisponivel(prev => prev + valorVenda);
+
+      if (quantidadeVendida === ativoVar.quantidade) {
+        // Venda total
+        const ativosRestantes = ativos.filter(a => a.id !== ativoVar.id);
+        setAtivos(ativosRestantes);
+
+        const docRef = doc(db, 'usuarios', login);
+        await updateDoc(docRef, { ativos: ativosRestantes });
+      } else {
+        // Venda parcial
+        const ativosAtualizados = ativos.map(a => {
+          if (a.id === ativoVar.id && a.tipo === 'rendaVariavel') {
+            const ativoVariavel = a as RendaVariavelAtivo; // forçando tipo seguro
+            const novaQuantidade = ativoVariavel.quantidade - quantidadeVendida;
+            const novoValorInvestido = novaQuantidade * ativoVariavel.valorAtual;
+            return {
+              ...ativoVariavel,
+              quantidade: novaQuantidade,
+              valorInvestido: novoValorInvestido,
+            };
+          }
+          return a;
+        });
+        setAtivos(ativosAtualizados);
+
+        const docRef = doc(db, 'usuarios', login);
+        await updateDoc(docRef, { ativos: ativosAtualizados });
+      }
     }
+
+    setShowVendaModal(false);
+    setAtivoSelecionado(null);
   };
 
   const allDates = Array.from(
@@ -162,13 +195,13 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Monitoramento de Ativos - Grupo: {nomeGrupo}</h1>
-      
+
       {error && (
         <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
-      
+
       {loading && (
         <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-lg mb-4">
           Carregando...
@@ -193,12 +226,12 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
         </div>
       </div>
 
-      <button
-        onClick={() => setShowWizard(true)}
-        className="mb-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors border-2 border-blue-600 hover:border-blue-700"
-      >
-        + Adicionar Ativo
-      </button>
+      <Button
+  onClick={() => setShowWizard(true)}
+  className="mb-6"
+>
+  + Adicionar Ativo
+</Button>
 
       {ativos.length > 0 ? (
         <>
@@ -207,7 +240,7 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
               <AtivoCard 
                 key={ativo.id} 
                 ativo={ativo} 
-                onDelete={handleDeleteAtivo}
+                onSell={handleSellAtivo} 
                 cor={getCorAtivo(ativo.id)}
               />
             ))}
@@ -216,34 +249,25 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
           <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
             <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
             <div className="h-64">
-              <Line 
-                data={chartData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: (context) => {
-                          return ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`;
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    y: {
-                      ticks: {
-                        callback: (value) => {
-                          return formatCurrency(Number(value));
-                        }
-                      }
+              <Line data={chartData} options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: (context) => ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`
                     }
                   }
-                }}
-              />
+                },
+                scales: {
+                  y: {
+                    ticks: {
+                      callback: (value) => formatCurrency(Number(value))
+                    }
+                  }
+                }
+              }} />
             </div>
           </div>
         </>
@@ -264,8 +288,14 @@ const MainPage = ({ login, valorInvestido, fixo, variavel, nomeGrupo }: MainPage
           />
         </div>
       )}
+
+      {showVendaModal && ativoSelecionado && (
+        <VendaAtivoModal 
+          ativo={ativoSelecionado}
+          onClose={() => setShowVendaModal(false)}
+          onConfirm={confirmarVenda}
+        />
+      )}
     </div>
   );
-};
-
-export default MainPage;
+}

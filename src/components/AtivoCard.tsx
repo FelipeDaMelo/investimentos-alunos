@@ -1,8 +1,9 @@
 import { Ativo } from '../types/Ativo';
+import Button from './Button';
 
 interface AtivoCardProps {
   ativo: Ativo;
-  onDelete: (id: string) => void;
+  onSell: (id: string) => void;
   cor: string;
 }
 
@@ -22,7 +23,7 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR', options);
 };
 
-const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete, cor }) => {
+const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor }) => {
   return (
     <div 
       className="border-l-4 p-4 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow"
@@ -57,12 +58,12 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onDelete, cor }) => {
         )}
       </div>
 
-      <button 
-        onClick={() => onDelete(ativo.id)}
-        className="mt-3 text-red-600 hover:text-red-800 text-sm"
-      >
-        Remover Ativo
-      </button>
+      <Button
+  onClick={() => onSell(ativo.id)}
+  className="mt-3"
+>
+  Vender
+</Button>
     </div>
   );
 };
