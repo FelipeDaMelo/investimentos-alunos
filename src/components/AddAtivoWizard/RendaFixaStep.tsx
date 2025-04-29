@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { criarAtivoFixa } from '../../utils/ativoHelpers';
 import { RendaFixaAtivo } from '../../types/Ativo';
 import useMoneyInput from '../../hooks/useMoneyInput';
+import fetchValorAtual from '../../fetchValorAtual';
 
 interface RendaFixaStepProps {
   onBack: () => void;
@@ -27,6 +28,35 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       ipca: 0
     }
   });
+
+  const [cdiAtual, setCdiAtual] = useState<number | null>(null);
+  const [selicAtual, setSelicAtual] = useState<number | null>(null);
+  const [carregandoTaxas, setCarregandoTaxas] = useState(false);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string>('');
+
+  const carregarTaxas = async () => {
+    try {
+      setCarregandoTaxas(true);
+      const cdi = await fetchValorAtual('CDI');
+      const selic = await fetchValorAtual('SELIC');
+      setCdiAtual(parseFloat(cdi));
+      setSelicAtual(parseFloat(selic));
+      const agora = new Date();
+      const horas = agora.getHours().toString().padStart(2, '0');
+      const minutos = agora.getMinutes().toString().padStart(2, '0');
+      setUltimaAtualizacao(`${horas}:${minutos}`);
+    } catch (error) {
+      console.error('Erro ao buscar CDI/SELIC:', error);
+    } finally {
+      setCarregandoTaxas(false);
+    }
+  };
+
+  useEffect(() => {
+    if (form.categoriaFixa === 'posFixada') {
+      carregarTaxas();
+    }
+  }, [form.categoriaFixa]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +87,8 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+
+      {/* Nome do ativo */}
       <div>
         <label className="block mb-2 font-medium text-gray-700">Nome do Ativo</label>
         <input
@@ -69,6 +101,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         />
       </div>
 
+      {/* Valor Investido */}
       <div>
         <label className="block mb-2 font-medium text-gray-700">Valor Investido</label>
         <input
@@ -86,6 +119,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         </p>
       </div>
 
+      {/* Data da Aplicação */}
       <div>
         <label className="block mb-2 font-medium text-gray-700">Data da Aplicação</label>
         <input
@@ -98,12 +132,13 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         />
       </div>
 
+      {/* Categoria */}
       <div>
         <label className="block mb-2 font-medium text-gray-700">Categoria</label>
         <select
           value={form.categoriaFixa}
           onChange={(e) => setForm({
-            ...form, 
+            ...form,
             categoriaFixa: e.target.value as 'prefixada' | 'posFixada' | 'hibrida'
           })}
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
@@ -115,6 +150,28 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         </select>
       </div>
 
+      {/* 🔵 Taxas e botão quando for Pós-fixada */}
+      {form.categoriaFixa === 'posFixada' && (
+        <div className="bg-blue-50 p-4 rounded-lg space-y-2 text-sm text-gray-700">
+          <div>
+            <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(2)}% a.a.` : 'Carregando...'}</p>
+            <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(2)}% a.a.` : 'Carregando...'}</p>
+            {ultimaAtualizacao && (
+              <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
+            )}
+          </div>
+          <button 
+            type="button"
+            onClick={carregarTaxas}
+            disabled={carregandoTaxas}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
+          </button>
+        </div>
+      )}
+
+      {/* Campos específicos por categoria */}
       {form.categoriaFixa === 'prefixada' && (
         <div>
           <label className="block mb-2 font-medium text-gray-700">Taxa Anual (%)</label>
@@ -132,28 +189,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
             step="0.01"
             required
           />
-        </div>
-      )}
-
-      {form.categoriaFixa === 'posFixada' && (
-        <div>
-          <label className="block mb-2 font-medium text-gray-700">Índice de Referência</label>
-          <div className="flex space-x-2">
-            <button
-              type="button"
-              onClick={() => handleParametroChange('CDI')}
-              className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              % CDI: {form.parametrosFixa.percentualCDI}%
-            </button>
-            <button
-              type="button"
-              onClick={() => handleParametroChange('SELIC')}
-              className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              % SELIC: {form.parametrosFixa.percentualSELIC}%
-            </button>
-          </div>
         </div>
       )}
 
@@ -177,25 +212,6 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
             />
           </div>
           <div>
-            <label className="block mb-2 font-medium text-gray-700">Parte Pós-fixada</label>
-            <div className="flex space-x-2">
-              <button
-                type="button"
-                onClick={() => handleParametroChange('CDI')}
-                className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                % CDI: {form.parametrosFixa.percentualCDI}%
-              </button>
-              <button
-                type="button"
-                onClick={() => handleParametroChange('SELIC')}
-                className="flex-1 p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                % SELIC: {form.parametrosFixa.percentualSELIC}%
-              </button>
-            </div>
-          </div>
-          <div>
             <label className="block mb-2 font-medium text-gray-700">IPCA (% a.a)</label>
             <input
               type="number"
@@ -215,6 +231,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         </>
       )}
 
+      {/* Botões */}
       <div className="flex justify-between pt-4">
         <button
           type="button"
