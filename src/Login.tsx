@@ -4,7 +4,6 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import Button from './components/Button';
 
-
 interface LoginProps {
   onLogin: (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string) => void;
 }
@@ -69,7 +68,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
-    // Salva dados iniciais no Firestore
     await setDoc(doc(db, 'usuarios', nomeGrupo), {
       valorInvestido,
       porcentagemFixa: fixoNum,
@@ -84,30 +82,32 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-center">Bem-vindo ao Simulador</h2>
 
-      <div className="space-y-4">
-        <label className="block mb-2 font-medium text-gray-700">Nome do Grupo</label>
-        <input
-          type="text"
-          value={nomeGrupo}
-          onChange={(e) => setNomeGrupo(e.target.value)}
-          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-          placeholder="Ex: Grupo de Investimentos"
-          required
-        />
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <label className="block mb-2 font-medium text-gray-700">Nome do Grupo</label>
+          <input
+            type="text"
+            value={nomeGrupo}
+            onChange={(e) => setNomeGrupo(e.target.value)}
+            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+            placeholder="Ex: Grupo de Investimento"
+            required
+          />
+        </div>
 
         {grupoExistente === null && (
           <Button
-  onClick={verificarGrupo}
-  disabled={verificando}
-  className="w-full"
->
-  {verificando ? 'Verificando...' : 'Verificar Grupo'}
-</Button>
+            onClick={verificarGrupo}
+            disabled={verificando}
+            className="w-full"
+          >
+            {verificando ? 'Verificando...' : 'Verificar Grupo'}
+          </Button>
         )}
 
         {grupoExistente === false && (
-          <form onSubmit={handleSubmit} className="space-y-4 mt-6">
-            <div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               <label className="block mb-2 font-medium text-gray-700">Valor Total para Investir</label>
               <input
                 type="text"
@@ -155,11 +155,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             {erro && <p className="text-red-500 text-sm">{erro}</p>}
 
             <Button
-  type="submit"
-  className="w-full"
->
-  Iniciar Simulação
-</Button>
+              type="submit"
+              className="w-full"
+            >
+              Iniciar Simulação
+            </Button>
           </form>
         )}
       </div>
