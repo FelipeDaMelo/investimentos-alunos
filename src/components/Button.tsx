@@ -11,11 +11,12 @@ export default function Button({
   className = '',
   ...props
 }: ButtonProps) {
-  const baseStyles = "font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transform transition-all duration-300";
+  const baseStyles =
+    'font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105 transform transition-all duration-300';
 
   const variantStyles = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white",
-    secondary: "bg-gray-300 hover:bg-gray-400 text-gray-700",
+    primary: 'bg-blue-600 hover:bg-blue-700 text-white !important',
+    secondary: 'bg-gray-300 hover:bg-gray-400 text-gray-700 !important',
   };
 
   return (
