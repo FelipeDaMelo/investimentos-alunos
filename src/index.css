@@ -1,3 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* App.css - Refatorado para funcionar em harmonia com Tailwind */
+
+/* Root container */
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  @apply font-sans;
+  padding-bottom: 4rem; /* espaço para o rodapé fixo */
+  position: relative;
+  min-height: 100vh;
+}
+
+body {
+  @apply font-sans;
+}
+
+/* Logo e animação */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+/* Cartão genérico */
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* Estilo para os cards de ativos */
+.card-container {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Tipografia básica */
+h3 {
+  color: #333;
+}
+
+p {
+  font-size: 1rem;
+  color: #666;
+}
+
+/* Container de wizard */
+.wizard-container {
+  position: relative;
+  background: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* Reutilização de estilos com @apply */
+input[type="text"],
+input[type="number"] {
+  @apply px-4 py-3 border-2 border-gray-300 rounded-xl shadow-md bg-white text-gray-800;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-300 focus:outline-none transition-all;
+}
+
+.select-field {
+  @apply w-full p-3 border-2 rounded-lg transition-all;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none;
+  @apply hover:border-gray-300;
+}
+
+.date-field {
+  @apply w-full p-2.5 border-2 rounded-lg transition-all;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none;
+  @apply hover:border-gray-300;
+}
+
+.input-label {
+  @apply block mb-2 font-medium text-gray-700;
+}
+
+/* Botões padrão reforçados */
+button,
+[type='button'],
+[type='submit'],
+[type='reset'] {
+  @apply bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-colors duration-300;
+  @apply hover:bg-blue-700;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Botões personalizados para seleção de tipo de ativo e fechamento */
+.button-renda {
+  @apply flex flex-col items-center justify-center border border-gray-300 rounded-xl bg-white px-6 py-4 text-gray-800 shadow hover:bg-gray-100 transition-all;
+}
+
+.button-close {
+  @apply w-10 h-10 flex items-center justify-center bg-gray-100 border border-gray-300 text-gray-700 rounded-full shadow hover:bg-gray-200 transition-all;
+}
+
+/* Rodapé fixo com destaque no canto inferior direito */
+footer {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #1f2937;
+  box-shadow: -2px -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}

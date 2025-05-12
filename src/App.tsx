@@ -1,4 +1,4 @@
-//src/App.tsx
+// src/App.tsx
 import React, { useState, useCallback } from 'react';
 import Login from './Login';
 import MainPage from './MainPage';
@@ -22,7 +22,7 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 relative pb-20">
       {!login ? (
         <Login onLogin={handleLogin} />
       ) : (
@@ -34,6 +34,10 @@ const App = () => {
           nomeGrupo={nomeGrupo} 
         />
       )}
+
+      <footer>
+        Desenvolvido por Prof. Dr. Felipe Damas Melo
+      </footer>
     </div>
   );
 };

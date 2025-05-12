@@ -18,6 +18,7 @@ import VendaAtivoModal from './components/VendaAtivoModal'; // Importando o moda
 import { Ativo, RendaVariavelAtivo, RendaFixaAtivo } from './types/Ativo';
 import Button from './components/Button';
 
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const CORES_UNICAS = [
@@ -194,45 +195,47 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Monitoramento de Ativos - Grupo: {nomeGrupo}</h1>
-
+      <h1 className="text-2xl font-bold mb-8 text-center">
+        Monitoramento de Ativos - Grupo: {nomeGrupo}
+      </h1>
+  
       {error && (
         <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
-
+  
       {loading && (
         <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-lg mb-4">
           Carregando...
         </div>
       )}
-
-      <div className="bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200">
-        <h2 className="text-xl font-semibold mb-3">Disponível para Investimento</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-            <h3 className="font-medium text-gray-700">Renda Fixa</h3>
-            <p className="text-2xl font-bold text-gray-800">
+  
+      <div className="bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200 text-left">
+        <h2 className="text-xl font-semibold mb-4">Disponível para Investimento</h2>
+  
+        <div className="space-y-3">
+          <div className="flex justify-start items-center gap-4">
+            <span className="font-medium text-gray-700 w-72">Renda Fixa</span>
+            <span className="text-lg font-bold text-gray-800">
               {formatCurrency(valorFixaDisponivel)}
-            </p>
+            </span>
           </div>
-          <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-            <h3 className="font-medium text-gray-700">Renda Variável / Criptomoedas</h3>
-            <p className="text-2xl font-bold text-gray-800">
+          <div className="flex justify-start items-center gap-4">
+            <span className="font-medium text-gray-700 w-72">Renda Variável / Criptomoedas</span>
+            <span className="text-lg font-bold text-gray-800">
               {formatCurrency(valorVariavelDisponivel)}
-            </p>
+            </span>
           </div>
         </div>
       </div>
-
-      <Button
-  onClick={() => setShowWizard(true)}
-  className="mb-6"
->
-  + Adicionar Ativo
-</Button>
-
+  
+      <div className="text-center">
+        <Button onClick={() => setShowWizard(true)} className="mb-6">
+          + Adicionar Ativo
+        </Button>
+      </div>
+  
       {ativos.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -245,7 +248,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
               />
             ))}
           </div>
-
+  
           <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
             <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
             <div className="h-64">
@@ -272,11 +275,11 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
           </div>
         </>
       ) : (
-        <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+        <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
           Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.
         </div>
       )}
-
+  
       {showWizard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <AddAtivoWizard
@@ -288,7 +291,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
           />
         </div>
       )}
-
+  
       {showVendaModal && ativoSelecionado && (
         <VendaAtivoModal 
           ativo={ativoSelecionado}

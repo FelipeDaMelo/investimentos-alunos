@@ -1,12 +1,18 @@
 /* App.css - Refatorado para funcionar em harmonia com Tailwind */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Root container */
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
-  text-align: center;
-  font-family: Arial, sans-serif;
+  padding-bottom: 4rem; /* espaço para o rodapé fixo */
+  position: relative;
+  min-height: 100vh;
+  @apply font-sans; /* Usa Inter conforme tailwind.config.js */
 }
 
 /* Logo e animação */
@@ -121,3 +127,14 @@ p {
 
 /* Remove sobrescritas globais de <button> */
 /* Os estilos agora devem vir exclusivamente das classes do Tailwind ou componentes como <Button /> */
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700 !important;
+  font-size: revert !important;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+}

@@ -78,18 +78,31 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     onLogin(valorInvestido, fixoNum, variavelNum, nomeGrupo);
   };
 
-  return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Bem-vindo ao Simulador</h2>
 
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <label className="block mb-2 font-medium text-gray-700">Nome do Grupo</label>
+  const inputClass = "w-full px-4 py-3 border-2 border-gray-300 rounded-xl shadow-lg bg-white text-gray-900 font-bold focus:border-blue-600 focus:ring-2 focus:ring-blue-300 focus:outline-none transition-all";
+  const rowClass = "flex items-center gap-4 mb-4";
+  const labelClass = "w-40 text-right font-bold text-gray-700";
+
+  return (
+    
+    <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
+<h2
+  className="text-4xl mb-10 text-center drop-shadow-sm"
+  style={{ fontWeight: 'bold', color: '#1e40af', fontSize: '2.0rem' }} 
+>
+  Bem-vindo ao Simulador de Investimentos
+</h2>
+
+      <div>
+        <div className={rowClass}>
+        <label className={labelClass} style={{ fontWeight: 'bold' }}>
+  Nome do Grupo:
+</label>
           <input
             type="text"
             value={nomeGrupo}
             onChange={(e) => setNomeGrupo(e.target.value)}
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+            className={inputClass}
             placeholder="Ex: Grupo de Investimento"
             required
           />
@@ -99,64 +112,70 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <Button
             onClick={verificarGrupo}
             disabled={verificando}
-            className="w-full"
+            className="w-full mt-2"
           >
             {verificando ? 'Verificando...' : 'Verificar Grupo'}
           </Button>
         )}
 
         {grupoExistente === false && (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <label className="block mb-2 font-medium text-gray-700">Valor Total para Investir</label>
-              <input
-                type="text"
-                value={displayValue}
-                onChange={handleChange}
-                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-                placeholder="R$ 0,00"
-                required
+          <form onSubmit={handleSubmit} className="mt-6">
+            <div className={rowClass}>
+  <label className={labelClass} style={{ fontWeight: 'bold' }}>
+    Valor Total:
+  </label>
+  <input
+    type="text"
+    value={displayValue}
+    onChange={handleChange}
+    className={inputClass}
+    placeholder="R$ 0,00"
+    required
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2 font-medium text-gray-700">% Renda Fixa</label>
-                <input
-                  type="number"
-                  value={fixo}
-                  onChange={(e) => setFixo(e.target.value)}
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-                  placeholder="Ex: 60"
-                  min="0"
-                  max="100"
-                  required
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={rowClass}>
+              <label className={labelClass} style={{ fontWeight: 'bold' }}>
+    % Renda Fixa:
+  </label>
+  <input
+    type="number"
+    value={fixo}
+    onChange={(e) => setFixo(e.target.value)}
+    className={inputClass}
+    placeholder="Ex: 60"
+    min="0"
+    max="100"
+    required
                 />
               </div>
-              <div>
-                <label className="block mb-2 font-medium text-gray-700">% Renda Variável</label>
-                <input
-                  type="number"
-                  value={variavel}
-                  onChange={(e) => setVariavel(e.target.value)}
-                  className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-                  placeholder="Ex: 40"
-                  min="0"
-                  max="100"
-                  required
+              <div className={rowClass}>
+              <label className={labelClass} style={{ fontWeight: 'bold' }}>
+    % Renda Variável:
+  </label>
+  <input
+    type="number"
+    value={variavel}
+    onChange={(e) => setVariavel(e.target.value)}
+    className={inputClass}
+    placeholder="Ex: 40"
+    min="0"
+    max="100"
+    required
                 />
               </div>
             </div>
 
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 text-left mt-4">
               Obs: A soma deve ser 100%
             </p>
 
-            {erro && <p className="text-red-500 text-sm">{erro}</p>}
+            {erro && <p className="text-red-500 text-sm text-left mt-2">{erro}</p>}
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full mt-4"
             >
               Iniciar Simulação
             </Button>
