@@ -1,4 +1,6 @@
+// ✅ AtivoCard.tsx
 import { Ativo } from '../types/Ativo';
+import { RendaVariavelAtivo } from '../types/Ativo';
 import Button from './Button';
 
 interface AtivoCardProps {
@@ -15,17 +17,31 @@ const formatCurrency = (value: number) => {
 };
 
 const formatDate = (dateString: string) => {
-  const options: Intl.DateTimeFormatOptions = { 
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric' 
+  const options: Intl.DateTimeFormatOptions = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
   };
   return new Date(dateString).toLocaleDateString('pt-BR', options);
 };
 
 const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor }) => {
+  const isRendaVariavel = ativo.tipo === 'rendaVariavel';
+
+  const rendimentoTotal = isRendaVariavel
+    ? (ativo as RendaVariavelAtivo).valorAtual - (ativo as RendaVariavelAtivo).valorInvestido
+    : 0;
+
+  const rendimentoPercentual = isRendaVariavel
+    ? (rendimentoTotal / (ativo as RendaVariavelAtivo).valorInvestido) * 100
+    : 0;
+
+  const precoMedio = isRendaVariavel && (ativo as RendaVariavelAtivo).quantidade > 0
+    ? (ativo as RendaVariavelAtivo).valorInvestido / (ativo as RendaVariavelAtivo).quantidade
+    : 0;
+
   return (
-    <div 
+    <div
       className="border-l-4 p-4 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow"
       style={{ borderLeftColor: cor }}
     >
@@ -33,37 +49,53 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor }) => {
         <div>
           <h3 className="font-bold text-lg">{ativo.nome}</h3>
           <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
-            {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' : 
-             ativo.subtipo === 'acao' ? 'Ação' :
-             ativo.subtipo === 'fii' ? 'FII' : 'Criptomoeda'}
+            {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' :
+              ativo.subtipo === 'acao' ? 'Ação' :
+              ativo.subtipo === 'fii' ? 'FII' : 'Criptomoeda'}
           </span>
         </div>
         <div className="text-right">
           <p className="font-medium">{formatCurrency(ativo.valorAtual)}</p>
-          <p className="text-sm text-gray-500">
-            {formatDate(ativo.dataInvestimento)}
-          </p>
+          <p className="text-sm text-gray-500">{formatDate(ativo.dataInvestimento)}</p>
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
         <div>Investido:</div>
         <div className="font-medium">{formatCurrency(ativo.valorInvestido)}</div>
-        
-        {ativo.tipo === 'rendaVariavel' && (
+
+        {isRendaVariavel && (
           <>
             <div>Quantidade:</div>
-            <div>{ativo.quantidade.toFixed(2)}</div>
+            <div>{(ativo as RendaVariavelAtivo).quantidade.toFixed(2)}</div>
+
+            <div>Preço médio:</div>
+            <div>{formatCurrency(precoMedio)}</div>
+
+            <div>Rendimento:</div>
+            <div className={rendimentoTotal >= 0 ? 'text-green-600' : 'text-red-600'}>
+              {formatCurrency(rendimentoTotal)} ({rendimentoPercentual.toFixed(2)}%)
+            </div>
           </>
         )}
       </div>
 
-      <Button
-  onClick={() => onSell(ativo.id)}
-  className="mt-3"
->
-  Vender
-</Button>
+      {isRendaVariavel && (ativo as RendaVariavelAtivo).compras?.length > 1 && (
+        <div className="mt-3">
+          <h4 className="font-semibold text-sm">Histórico de Compras:</h4>
+          <ul className="list-disc list-inside text-xs text-gray-600">
+            {(ativo as RendaVariavelAtivo).compras.map((compra, index) => (
+              <li key={index}>
+                {formatCurrency(compra.valor)} - {formatDate(compra.data)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <Button onClick={() => onSell(ativo.id)} className="mt-4">
+        Vender
+      </Button>
     </div>
   );
 };

@@ -104,9 +104,41 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
 
   const handleAddAtivo = async (novoAtivo: Ativo) => {
     try {
-      const novosAtivos = [...ativos, novoAtivo];
+      let novosAtivos: Ativo[];
+  
+      if (novoAtivo.tipo === 'rendaVariavel') {
+        const existente = ativos.find(
+          a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === (novoAtivo as RendaVariavelAtivo).tickerFormatado
+        ) as RendaVariavelAtivo | undefined;
+  
+        if (existente) {
+          const novaQuantidade = existente.quantidade + (novoAtivo as RendaVariavelAtivo).quantidade;
+          const novoInvestimento = existente.valorInvestido + novoAtivo.valorInvestido;
+          const novoPrecoMedio = novoInvestimento / novaQuantidade;
+  
+          const atualizado: RendaVariavelAtivo = {
+            ...existente,
+            quantidade: novaQuantidade,
+            valorInvestido: novoInvestimento,
+            valorAtual: novoPrecoMedio,
+            patrimonioPorDia: {
+              ...existente.patrimonioPorDia,
+              [new Date().toISOString().split('T')[0]]: novaQuantidade * novoPrecoMedio
+            }
+          };
+  
+          novosAtivos = ativos.map(a =>
+            a.id === existente.id ? atualizado : a
+          );
+        } else {
+          novosAtivos = [...ativos, novoAtivo];
+        }
+      } else {
+        novosAtivos = [...ativos, novoAtivo];
+      }
+  
       setAtivos(novosAtivos);
-
+  
       const docRef = doc(db, 'usuarios', login);
       await updateDoc(docRef, { ativos: novosAtivos });
     } catch (err) {
@@ -114,6 +146,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
       console.error(err);
     }
   };
+  
 
   const handleSellAtivo = (id: string) => {
     const ativo = ativos.find(a => a.id === id);

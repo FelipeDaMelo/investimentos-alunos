@@ -157,7 +157,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       id: Date.now().toString()
     };
 
-    onSubmit(criarAtivoVariavel(ativoCompleto as RendaVariavelAtivoCompleto));
+    onSubmit(ativoCompleto as any);
   };
 
   const exemplosTicker = {
