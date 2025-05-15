@@ -133,13 +133,8 @@ input[type="number"] {
 }
 
 /* Botões padrão reforçados */
-button,
-[type='button'],
-[type='submit'],
-[type='reset'] {
-  @apply bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-colors duration-300;
-  @apply hover:bg-blue-700;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+.btn-primary {
+  @apply bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-colors duration-300 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 /* Botões personalizados para seleção de tipo de ativo e fechamento */

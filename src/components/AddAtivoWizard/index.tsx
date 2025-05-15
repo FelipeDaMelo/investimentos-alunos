@@ -29,12 +29,13 @@ export default function AddAtivoWizard({
 
   return (
     <div className="bg-white rounded-lg p-6 w-full max-w-md relative">
-      <button 
-        onClick={onClose}
-        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-      >
-        ✕
-      </button>
+<button 
+  onClick={onClose}
+  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 shadow-md transition"
+  aria-label="Fechar"
+>
+  ✕
+</button>
 
       {step === 'tipo' && (
         <TipoAtivoStep 

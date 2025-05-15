@@ -125,6 +125,12 @@ p {
   @apply block mb-2 font-medium text-gray-700;
 }
 
+.btn-option {
+  background-color: #f3f4f6 !important; /* cinza claro (bg-gray-100) */
+  color: #1f2937 !important;           /* cinza escuro (text-gray-800) */
+  @apply hover:bg-gray-200 p-6 rounded-lg shadow transition;
+}
+
 /* Remove sobrescritas globais de <button> */
 /* Os estilos agora devem vir exclusivamente das classes do Tailwind ou componentes como <Button /> */
 

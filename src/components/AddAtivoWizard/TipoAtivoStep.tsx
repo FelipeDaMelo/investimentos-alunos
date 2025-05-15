@@ -13,10 +13,10 @@ export default function TipoAtivoStep({ onNext, onClose }: TipoAtivoStepProps) {
           <button
             type="button"
             onClick={onClose}
-            className="btn-close"
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-700 text-white text-lg font-bold transition"
             aria-label="Fechar"
           >
-            "Cancelar Ativo"
+            ×
           </button>
         )}
         <h2 className="text-2xl font-bold text-center">Selecione o Tipo de Ativo</h2>
@@ -26,19 +26,19 @@ export default function TipoAtivoStep({ onNext, onClose }: TipoAtivoStepProps) {
         <button
           type="button"
           onClick={() => onNext('rendaFixa')}
-          className="btn-option"
+          className="bg-blue-200 hover:bg-blue-300 text-gray-800 p-6 rounded-xl shadow-md transition-all text-left"
         >
-          <h3 className="text-lg font-medium">📈 Renda Fixa</h3>
-          <p className="text-sm text-black-600 mt-2">CDB, LCI, LCA, Tesouro Direto, etc.</p>
+          <h3 className="text-lg font-semibold">📈 Renda Fixa</h3>
+          <p className="text-sm text-gray-700 mt-2">CDB, LCI, LCA, Tesouro Direto, etc.</p>
         </button>
 
         <button
           type="button"
           onClick={() => onNext('rendaVariavel')}
-          className="btn-option"
+          className="bg-blue-200 hover:bg-blue-300 text-gray-800 p-6 rounded-xl shadow-md transition-all text-left"
         >
-          <h3 className="text-lg font-medium">📊 Renda Variável</h3>
-          <p className="text-sm text-black-600 mt-2">Ações, FIIs, Criptomoedas</p>
+          <h3 className="text-lg font-semibold">📊 Renda Variável</h3>
+          <p className="text-sm text-gray-700 mt-2">Ações, FIIs, Criptomoedas</p>
         </button>
       </div>
     </div>

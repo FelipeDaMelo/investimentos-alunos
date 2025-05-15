@@ -1,4 +1,4 @@
-import fetchValorAtual from '../fetchValorAtual'; 
+import fetchValorAtual from '../fetchValorAtual';
 import { RendaFixaAtivo } from '../types/Ativo';
 
 const calcularRendimentoFixa = async (ativo: RendaFixaAtivo, diasPassados: number): Promise<number> => {
@@ -10,24 +10,43 @@ const calcularRendimentoFixa = async (ativo: RendaFixaAtivo, diasPassados: numbe
   }
 
   if (ativo.categoriaFixa === 'posFixada') {
-    const { percentualCDI, percentualSELIC } = ativo.parametrosFixa || {};
+    const { percentualCDI, percentualSELIC, ipca } = ativo.parametrosFixa || {};
 
-    if (percentualCDI !== undefined) {
-      const cdiAtual = parseFloat(await fetchValorAtual('CDI')); // busca CDI real
-      const diaria = (cdiAtual * percentualCDI / 100) / 100 / 252;
+    if (percentualCDI && percentualCDI > 0) {
+      const cdiAtual = parseFloat(await fetchValorAtual('CDI')); // % a.d.
+      const diaria = (cdiAtual * percentualCDI / 100) / 100;
       rendimento *= Math.pow(1 + diaria, diasPassados);
     } 
-    else if (percentualSELIC !== undefined) {
-      const selicAtual = parseFloat(await fetchValorAtual('SELIC')); // busca SELIC real
-      const diaria = (selicAtual * percentualSELIC / 100) / 100 / 252;
+    else if (percentualSELIC && percentualSELIC > 0) {
+      const selicAtual = parseFloat(await fetchValorAtual('SELIC')); // % a.d.
+      const diaria = (selicAtual * percentualSELIC / 100) / 100;
+      rendimento *= Math.pow(1 + diaria, diasPassados);
+    }
+    else if (ipca && ipca > 0) {
+      const ipcaMensal = parseFloat(await fetchValorAtual('IPCA')); // % a.m.
+      const ipcaDiaria = (Math.pow(1 + ipcaMensal / 100, 1 / 30) - 1);
+      const diaria = ipcaDiaria * (ipca / 100); // % proporcional
       rendimento *= Math.pow(1 + diaria, diasPassados);
     }
   }
 
   if (ativo.categoriaFixa === 'hibrida') {
     const diariaPrefixada = (ativo.parametrosFixa?.taxaPrefixada || 0) / 100 / 252;
-    const diariaIPCA = (ativo.parametrosFixa?.ipca || 0) / 100 / 252;
-    rendimento *= Math.pow(1 + diariaPrefixada + diariaIPCA, diasPassados);
+
+    let diariaIndexada = 0;
+
+    if (ativo.parametrosFixa?.percentualCDI && ativo.parametrosFixa.percentualCDI > 0) {
+      const cdiAtual = parseFloat(await fetchValorAtual('CDI'));
+      diariaIndexada = (cdiAtual * ativo.parametrosFixa.percentualCDI / 100) / 100;
+    } else if (ativo.parametrosFixa?.percentualSELIC && ativo.parametrosFixa.percentualSELIC > 0) {
+      const selicAtual = parseFloat(await fetchValorAtual('SELIC'));
+      diariaIndexada = (selicAtual * ativo.parametrosFixa.percentualSELIC / 100) / 100;
+    } else if (ativo.parametrosFixa?.ipca && ativo.parametrosFixa.ipca > 0) {
+      const ipcaMensal = parseFloat(await fetchValorAtual('IPCA'));
+      diariaIndexada = (Math.pow(1 + ipcaMensal / 100, 1 / 30) - 1) * (ativo.parametrosFixa.ipca / 100);
+    }
+
+    rendimento *= Math.pow(1 + diariaPrefixada + diariaIndexada, diasPassados);
   }
 
   return rendimento;
