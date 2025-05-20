@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { db } from './firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion } from 'firebase/firestore';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,6 +18,8 @@ import AddAtivoWizard from './components/AddAtivoWizard';
 import VendaAtivoModal from './components/VendaAtivoModal'; // Importando o modal de venda
 import { Ativo, RendaVariavelAtivo, RendaFixaAtivo } from './types/Ativo';
 import Button from './components/Button';
+import DepositarModal from './components/DepositarModal';
+import HistoricoModal from './components/HistoricoModal';
 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -52,6 +55,12 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [showWizard, setShowWizard] = useState(false);
   const [ativoSelecionado, setAtivoSelecionado] = useState<Ativo | null>(null); // 🔵 Modal de venda
   const [showVendaModal, setShowVendaModal] = useState(false);
+  const [showDepositar, setShowDepositar] = useState(false);
+  const [depositoFixa, setDepositoFixa] = useState(0);
+  const [depositoVariavel, setDepositoVariavel] = useState(0);
+  const [totalDepositado, setTotalDepositado] = useState(0);
+  const [historico, setHistorico] = useState([]);
+  const [showHistorico, setShowHistorico] = useState(false);
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
@@ -79,6 +88,10 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
         if (docSnap.exists()) {
           const data = docSnap.data();
           setAtivos(data?.ativos || []);
+          setTotalDepositado(data?.totalDepositado || 0);
+          setDepositoFixa(data?.depositoFixa || 0);
+          setDepositoVariavel(data?.depositoVariavel || 0);
+         setHistorico(data?.historico || []);
         } else {
           await setDoc(docRef, {
             ativos: [],
@@ -97,10 +110,46 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     carregarDados();
   }, [login, fixo, variavel]);
 
-  useEffect(() => {
-    setValorFixaDisponivel(valorInvestido * (fixo / 100) - calcularTotalInvestido('rendaFixa'));
-    setValorVariavelDisponivel(valorInvestido * (variavel / 100) - calcularTotalInvestido('rendaVariavel'));
-  }, [ativos, valorInvestido, fixo, variavel]);
+useEffect(() => {
+  const valorFixaInicial = valorInvestido * (fixo / 100);
+  const valorVariavelInicial = valorInvestido * (variavel / 100);
+
+  const totalFixa = valorFixaInicial + depositoFixa;
+  const totalVariavel = valorVariavelInicial + depositoVariavel;
+
+  setValorFixaDisponivel(totalFixa - calcularTotalInvestido('rendaFixa'));
+  setValorVariavelDisponivel(totalVariavel - calcularTotalInvestido('rendaVariavel'));
+}, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
+
+const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel') => {
+  const docRef = doc(db, 'usuarios', login);
+
+  if (destino === 'fixa') {
+    setDepositoFixa(prev => prev + valor);
+    await updateDoc(docRef, {
+      depositoFixa: depositoFixa + valor,
+      historico: arrayUnion({
+    tipo: 'deposito',
+    valor,
+    destino,
+    data: new Date().toISOString()
+  }),
+    });
+  } else {
+    setDepositoVariavel(prev => prev + valor);
+    await updateDoc(docRef, {
+      depositoVariavel: depositoVariavel + valor,
+      historico: arrayUnion({
+    tipo: 'deposito',
+    valor,
+    destino,
+    data: new Date().toISOString()
+  }),
+    });
+  }
+};
+
+
 
   const handleAddAtivo = async (novoAtivo: Ativo) => {
     try {
@@ -141,6 +190,15 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   
       const docRef = doc(db, 'usuarios', login);
       await updateDoc(docRef, { ativos: novosAtivos });
+      await updateDoc(docRef, {
+  historico: arrayUnion({
+    tipo: 'compra',
+    valor: novoAtivo.valorInvestido,
+    nome: novoAtivo.nome,
+    categoria: novoAtivo.tipo,
+    data: new Date().toISOString()
+  })
+});
     } catch (err) {
       setError('Erro ao adicionar ativo');
       console.error(err);
@@ -166,6 +224,15 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
 
       const docRef = doc(db, 'usuarios', login);
       await updateDoc(docRef, { ativos: ativosRestantes });
+      await updateDoc(docRef, {
+  historico: arrayUnion({
+    tipo: 'venda',
+    valor: quantidadeVendida * ativoSelecionado.valorAtual,
+    nome: ativoSelecionado.nome,
+    categoria: ativoSelecionado.tipo,
+    data: new Date().toISOString()
+  })
+});
     } else {
       // Venda parcial ou total de renda variável
       const ativoVar = ativoSelecionado;
@@ -199,6 +266,15 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
 
         const docRef = doc(db, 'usuarios', login);
         await updateDoc(docRef, { ativos: ativosAtualizados });
+        await updateDoc(docRef, {
+  historico: arrayUnion({
+    tipo: 'venda',
+    valor: quantidadeVendida * ativoSelecionado.valorAtual,
+    nome: ativoSelecionado.nome,
+    categoria: ativoSelecionado.tipo,
+    data: new Date().toISOString()
+  })
+});
       }
     }
 
@@ -227,6 +303,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   };
 
   return (
+    
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-8 text-center">
         Monitoramento de Ativos - Grupo: {nomeGrupo}
@@ -244,31 +321,49 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
         </div>
       )}
   
-      <div className="bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200 text-left">
-        <h2 className="text-xl font-semibold mb-4">Disponível para Investimento</h2>
-  
-        <div className="space-y-3">
-          <div className="flex justify-start items-center gap-4">
-            <span className="font-medium text-gray-700 w-72">Renda Fixa</span>
-            <span className="text-lg font-bold text-gray-800">
-              {formatCurrency(valorFixaDisponivel)}
-            </span>
-          </div>
-          <div className="flex justify-start items-center gap-4">
-            <span className="font-medium text-gray-700 w-72">Renda Variável / Criptomoedas</span>
-            <span className="text-lg font-bold text-gray-800">
-              {formatCurrency(valorVariavelDisponivel)}
-            </span>
-          </div>
-        </div>
-      </div>
+<div className="relative bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200 text-left">
+  <h2 className="text-xl font-semibold mb-4">Disponível para Investimento</h2>
+
+  <div className="space-y-3">
+    <div className="flex justify-start items-center gap-4">
+      <span className="font-medium text-gray-700 w-72">Renda Fixa</span>
+      <span className="text-lg font-bold text-gray-800">
+        {formatCurrency(valorFixaDisponivel)}
+      </span>
+    </div>
+    <div className="flex justify-start items-center gap-4">
+      <span className="font-medium text-gray-700 w-72">Renda Variável / Criptomoedas</span>
+      <span className="text-lg font-bold text-gray-800">
+        {formatCurrency(valorVariavelDisponivel)}
+      </span>
+    </div>
+  </div>
+
+  {/* Botão fixo no canto superior direito do box */}
+  <div className="absolute top-4 right-4">
+    <Button
+      onClick={() => setShowDepositar(true)}
+      className="bg-green-600 hover:bg-green-700 text-white shadow"
+    >
+      + Depositar
+    </Button>
+  </div>
+  <div className="absolute bottom-4 right-4">
+    <Button
+      onClick={() => setShowHistorico(true)}
+      className="bg-red-600 hover:bg-red-700 text-white shadow"
+    >
+      + Ver Extrato
+    </Button>
+  </div>
+</div>
   
       <div className="text-center">
         <Button onClick={() => setShowWizard(true)} className="mb-6">
           + Adicionar Ativo
         </Button>
       </div>
-  
+
       {ativos.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -332,6 +427,24 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
           onConfirm={confirmarVenda}
         />
       )}
+
+      {showDepositar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <DepositarModal
+            onClose={() => setShowDepositar(false)}
+            onConfirm={handleDeposito}
+          />
+        </div>
+      )}
+
+      {showHistorico && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <HistoricoModal
+      historico={historico}
+      onClose={() => setShowHistorico(false)}
+    />
+  </div>
+)}
     </div>
-  );
+   );
 }

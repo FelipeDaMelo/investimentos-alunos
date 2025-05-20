@@ -35,6 +35,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [IPCAAtual, setIPCAAtual] = useState<number | null>(null);
   const [carregandoTaxas, setCarregandoTaxas] = useState(false);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string>('');
+  const [indiceSelecionado, setIndiceSelecionado] = useState<'CDI' | 'SELIC' | 'IPCA'>('CDI');
 
   const carregarTaxas = async () => {
     try {
@@ -76,22 +77,9 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     }));
   };
 
-  const handleParametroChange = (tipo: 'CDI' | 'SELIC') => {
-    const valor = parseFloat(prompt(`Informe o percentual sobre ${tipo}:`) || '0');
-    setForm({
-      ...form,
-      parametrosFixa: {
-        ...form.parametrosFixa,
-        ...(tipo === 'CDI' 
-          ? { percentualCDI: valor } 
-          : { percentualSELIC: valor })
-      }
-    });
-  };
-
   return (
     <form 
-  onSubmit={handleSubmit} 
+    onSubmit={handleSubmit} 
   className="space-y-4 overflow-y-auto max-h-[calc(100vh-120px)] px-2"
 >
 
@@ -158,25 +146,80 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       </div>
 
       {/* 🔵 Taxas e botão quando for Pós-fixada */}
-      {form.categoriaFixa === 'posFixada' && (
-        <div className="bg-blue-50 p-4 rounded-lg space-y-2 text-sm text-gray-700">
-        <div>
-          <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-          <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-          <p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.m.` : 'Carregando...'}</p>
-          {ultimaAtualizacao && (
-            <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
-          )}
-        </div>
-        <Button
-  type="button"
-  onClick={carregarTaxas}
-  disabled={carregandoTaxas}
->
-  {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
-</Button>
-        </div>
+{form.categoriaFixa === 'posFixada' && (
+  <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
+    <div>
+      <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+      <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+      {ultimaAtualizacao && (
+        <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
       )}
+    </div>
+
+    <Button
+      type="button"
+      onClick={carregarTaxas}
+      disabled={carregandoTaxas}
+    >
+      {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
+    </Button>
+
+    {/* 🔽 Novo bloco: escolha de índice e percentual */}
+    <div>
+      <label className="block mb-1 font-medium">Índice de Referência</label>
+      <select
+        value={
+          form.parametrosFixa.percentualCDI > 0 ? 'CDI' : 'SELIC'
+        }
+        onChange={(e) => {
+          const indice = e.target.value as 'CDI' | 'SELIC';
+          setForm({
+            ...form,
+            parametrosFixa: {
+              ...form.parametrosFixa,
+              percentualCDI: indice === 'CDI' ? form.parametrosFixa.percentualCDI || 100 : 0,
+              percentualSELIC: indice === 'SELIC' ? form.parametrosFixa.percentualSELIC || 100 : 0,
+              ipca: 0
+            }
+          });
+        }}
+        className="w-full p-3 border-2 border-gray-300 rounded-lg"
+      >
+        <option value="CDI">CDI</option>
+        <option value="SELIC">SELIC</option>
+      </select>
+    </div>
+
+    <div>
+      <label className="block mb-1 font-medium">Percentual (%)</label>
+      <input
+        type="number"
+        value={
+          form.parametrosFixa.percentualCDI > 0
+            ? form.parametrosFixa.percentualCDI
+            : form.parametrosFixa.percentualSELIC
+        }
+        onChange={(e) => {
+          const valor = Number(e.target.value);
+          const indice =
+            form.parametrosFixa.percentualCDI > 0 ? 'CDI' : 'SELIC';
+
+          setForm({
+            ...form,
+            parametrosFixa: {
+              ...form.parametrosFixa,
+              percentualCDI: indice === 'CDI' ? valor : 0,
+              percentualSELIC: indice === 'SELIC' ? valor : 0
+            }
+          });
+        }}
+        step="0.01"
+        className="w-full p-3 border-2 border-gray-300 rounded-lg"
+      />
+    </div>
+  </div>
+)}
+
 
       {/* Campos específicos por categoria */}
       {form.categoriaFixa === 'prefixada' && (
@@ -199,134 +242,93 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
         </div>
       )}
 
-      {/* 🔵 Taxas e botão quando for Pós-fixada */}
       {form.categoriaFixa === 'hibrida' && (
-        <div className="bg-blue-50 p-4 rounded-lg space-y-2 text-sm text-gray-700">
+        <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
           <div>
-            <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-            <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-            <p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.m.` : 'Carregando...'}</p>
-            {ultimaAtualizacao && (
-              <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
-            )}
+            <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
+            <input
+              type="number"
+              value={form.parametrosFixa.taxaPrefixada}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  parametrosFixa: {
+                    ...form.parametrosFixa,
+                    taxaPrefixada: Number(e.target.value),
+                  },
+                })
+              }
+              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+              step="0.01"
+              required
+            />
           </div>
-          <Button
-  type="button"
-  onClick={carregarTaxas}
-  disabled={carregandoTaxas}
->
-  {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC/IPCA'}
-</Button>
+
+          <div>
+            <label className="block mb-2 font-medium text-gray-700">Índice Variável</label>
+            <select
+              value={indiceSelecionado}
+              onChange={(e) => {
+                const novoIndice = e.target.value as 'CDI' | 'SELIC' | 'IPCA';
+                setIndiceSelecionado(novoIndice);
+              }}
+              className="w-full p-3 border-2 border-gray-300 rounded-lg"
+            >
+              <option value="CDI">CDI</option>
+              <option value="SELIC">SELIC</option>
+              <option value="IPCA">IPCA</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-2 font-medium text-gray-700">Percentual sobre o índice selecionado</label>
+            <input
+              type="number"
+              value={
+                indiceSelecionado === 'CDI'
+                  ? form.parametrosFixa.percentualCDI
+                  : indiceSelecionado === 'SELIC'
+                  ? form.parametrosFixa.percentualSELIC
+                  : form.parametrosFixa.ipca
+              }
+              onChange={(e) => {
+                const valor = Number(e.target.value);
+                setForm({
+                  ...form,
+                  parametrosFixa: {
+                    ...form.parametrosFixa,
+                    percentualCDI: indiceSelecionado === 'CDI' ? valor : form.parametrosFixa.percentualCDI,
+                    percentualSELIC: indiceSelecionado === 'SELIC' ? valor : form.parametrosFixa.percentualSELIC,
+                    ipca: indiceSelecionado === 'IPCA' ? valor : form.parametrosFixa.ipca,
+                  },
+                });
+              }}
+              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+              step="0.01"
+              required
+            />
+          </div>
         </div>
       )}
-
-{form.categoriaFixa === 'hibrida' && (
-  <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
-    <div>
-      <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
-      <input
-        type="number"
-        value={form.parametrosFixa.taxaPrefixada}
-        onChange={(e) =>
-          setForm({
-            ...form,
-            parametrosFixa: {
-              ...form.parametrosFixa,
-              taxaPrefixada: Number(e.target.value),
-            },
-          })
-        }
-        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-        step="0.01"
-        required
-      />
-    </div>
-
-    <div>
-      <label className="block mb-2 font-medium text-gray-700">Índice Variável</label>
-      <select
-        value={
-          form.parametrosFixa.percentualCDI > 0
-            ? 'CDI'
-            : form.parametrosFixa.percentualSELIC > 0
-            ? 'SELIC'
-            : 'IPCA'
-        }
-        onChange={(e) => {
-          const indice = e.target.value as 'CDI' | 'SELIC' | 'IPCA';
-          setForm({
-            ...form,
-            parametrosFixa: {
-              ...form.parametrosFixa,
-              percentualCDI: indice === 'CDI' ? form.parametrosFixa.percentualCDI || 100 : 0,
-              percentualSELIC: indice === 'SELIC' ? form.parametrosFixa.percentualSELIC || 100 : 0,
-              ipca: indice === 'IPCA' ? form.parametrosFixa.ipca || 100 : 0,
-            },
-          });
-        }}
-        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-      >
-        <option value="CDI">CDI</option>
-        <option value="SELIC">SELIC</option>
-        <option value="IPCA">IPCA</option>
-      </select>
-    </div>
-
-    <div>
-      <label className="block mb-2 font-medium text-gray-700">Percentual sobre o índice selecionado</label>
-      <input
-        type="number"
-        value={
-          form.parametrosFixa.percentualCDI > 0
-            ? form.parametrosFixa.percentualCDI
-            : form.parametrosFixa.percentualSELIC > 0
-            ? form.parametrosFixa.percentualSELIC
-            : form.parametrosFixa.ipca
-        }
-        onChange={(e) => {
-          const valor = Number(e.target.value);
-          const indice =
-            form.parametrosFixa.percentualCDI > 0
-              ? 'CDI'
-              : form.parametrosFixa.percentualSELIC > 0
-              ? 'SELIC'
-              : 'IPCA';
-
-          setForm({
-            ...form,
-            parametrosFixa: {
-              ...form.parametrosFixa,
-              percentualCDI: indice === 'CDI' ? valor : 0,
-              percentualSELIC: indice === 'SELIC' ? valor : 0,
-              ipca: indice === 'IPCA' ? valor : 0,
-            },
-          });
-        }}
-        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
-        step="0.01"
-        required
-      />
-    </div>
-  </div>
-)}
-
-{/* Botões */}
-<div className="flex justify-between pt-4">
-  <Button
-    type="button"
-    variant="secondary"
-    onClick={onBack}
-  >
-    Voltar
-  </Button>
-
-  <Button
-    type="submit"
-    disabled={!form.nome || valorInvestido <= 0}
-  >
-    Adicionar Ativo
-  </Button>
-</div>
+ <div className="flex justify-between pt-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="px-6 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Voltar
+        </button>
+        <button
+          type="submit"
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          disabled={
+            !form.nome.trim() || 
+            valorInvestido <= 0
+          }
+        >
+          Adicionar Ativo
+        </button>
+      </div>
     </form>
   );
 }

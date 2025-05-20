@@ -22,13 +22,7 @@ const calcularRendimentoFixa = async (ativo: RendaFixaAtivo, diasPassados: numbe
       const diaria = (selicAtual * percentualSELIC / 100) / 100;
       rendimento *= Math.pow(1 + diaria, diasPassados);
     }
-    else if (ipca && ipca > 0) {
-      const ipcaMensal = parseFloat(await fetchValorAtual('IPCA')); // % a.m.
-      const ipcaDiaria = (Math.pow(1 + ipcaMensal / 100, 1 / 30) - 1);
-      const diaria = ipcaDiaria * (ipca / 100); // % proporcional
-      rendimento *= Math.pow(1 + diaria, diasPassados);
-    }
-  }
+      }
 
   if (ativo.categoriaFixa === 'hibrida') {
     const diariaPrefixada = (ativo.parametrosFixa?.taxaPrefixada || 0) / 100 / 252;

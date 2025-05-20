@@ -1,3 +1,9 @@
+// ✅ Atualização de types/Ativo.ts
+export type Compra = {
+  valor: number;
+  data: string;
+};
+
 export type Ativo = RendaFixaAtivo | RendaVariavelAtivo;
 
 interface BaseAtivo {
@@ -26,4 +32,6 @@ export interface RendaVariavelAtivo extends BaseAtivo {
   subtipo: 'acao' | 'fii' | 'criptomoeda';
   tickerFormatado: string;
   quantidade: number;
+  precoMedio: number;
+  compras: Compra[];
 }
