@@ -50,7 +50,7 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor }) => {
           <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
             {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' :
               ativo.subtipo === 'acao' ? 'Ação' :
-              ativo.subtipo === 'fii' ? 'FII' : 'Criptomoeda'}
+              ativo.subtipo === 'fii' ? 'Fundo Imobiliário' : 'Criptomoeda'}
           </span>
         </div>
         <div className="text-right">

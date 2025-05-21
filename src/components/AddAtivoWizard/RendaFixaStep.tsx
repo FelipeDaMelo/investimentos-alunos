@@ -36,6 +36,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [carregandoTaxas, setCarregandoTaxas] = useState(false);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string>('');
   const [indiceSelecionado, setIndiceSelecionado] = useState<'CDI' | 'SELIC' | 'IPCA'>('CDI');
+  const [senha, setSenha] = useState('');
 
   const carregarTaxas = async () => {
     try {
@@ -70,11 +71,15 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
-
+    if (senha.length !== 6) {
+  alert('A senha deve conter 6 dígitos.');
+  return;
+}
     onSubmit(criarAtivoFixa({
       ...form,
       valorInvestido
     }));
+    senha
   };
 
   return (
@@ -310,6 +315,20 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
           </div>
         </div>
       )}
+
+<div>
+  <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>
+  <input
+    type="password"
+    value={senha}
+    maxLength={6}
+    onChange={(e) => setSenha(e.target.value)}
+    className="w-full p-3 border-2 border-gray-300 rounded-lg"
+    placeholder="******"
+    required
+  />
+</div>
+
  <div className="flex justify-between pt-4">
         <button
           type="button"

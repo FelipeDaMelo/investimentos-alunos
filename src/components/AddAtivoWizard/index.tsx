@@ -50,6 +50,7 @@ export default function AddAtivoWizard({
             onAddAtivo({
               ...dadosAtivo,
               ...dados,
+              senha: dados.senha, // ✅ ADICIONE ESTA LINHA
               id: Date.now().toString(),
               valorAtual: dados.valorInvestido,
               patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido }
@@ -67,6 +68,7 @@ export default function AddAtivoWizard({
             onAddAtivo({
               ...dadosAtivo,
               ...dados,
+              senha: dados.senha, // ✅ ADICIONE ESTA LINHA
               id: Date.now().toString(),
               valorAtual: dados.valorInvestido / (dados.quantidade || 1),
               patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido }

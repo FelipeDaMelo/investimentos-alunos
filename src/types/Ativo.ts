@@ -14,6 +14,7 @@ interface BaseAtivo {
   valorAtual: number;
   patrimonioPorDia: Record<string, number>;
   tipo: 'rendaFixa' | 'rendaVariavel';
+  senha?: string;
 }
 
 export interface RendaFixaAtivo extends BaseAtivo {
@@ -24,6 +25,7 @@ export interface RendaFixaAtivo extends BaseAtivo {
     percentualCDI?: number;
     percentualSELIC?: number;
     ipca?: number;
+    senha?: string;
   };
 }
 
@@ -34,4 +36,5 @@ export interface RendaVariavelAtivo extends BaseAtivo {
   quantidade: number;
   precoMedio: number;
   compras: Compra[];
+  senha?: string;
 }

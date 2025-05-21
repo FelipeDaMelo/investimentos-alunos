@@ -18,6 +18,7 @@ interface RendaVariavelStepProps {
 }
 
 export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }: RendaVariavelStepProps) {
+  const [senha, setSenha] = useState('');
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
@@ -156,10 +157,13 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       patrimonioPorDia: {},
       id: Date.now().toString()
     };
-
+    if (senha.length !== 6) {
+  alert('A senha deve conter 6 dígitos.');
+  return;
+}
     onSubmit(ativoCompleto as any);
   };
-
+  senha
   const exemplosTicker = {
     acao: ['PETR4', 'VALE3', 'ITUB4'],
     fii: ['MXRF11', 'HGLG11', 'KNRI11'],
@@ -183,7 +187,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           required
         >
           <option value="acao">Ação Brasileira</option>
-           <option value="fii">FII</option>
+           <option value="fii">Fundo Imobiliário</option>
           <option value="criptomoeda">Criptomoeda</option>
         </select>
       </div>
@@ -191,7 +195,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       <div>
         <label className="block mb-2 font-medium text-gray-700">
           {form.subtipo === 'acao' ? 'Código da Ação (Brasileira)' : 
-          form.subtipo === 'fii' ? 'Código do FII' : 'Código da Criptomoeda'}
+          form.subtipo === 'fii' ? 'Código do Fundo Imobiliário' : 'Código da Criptomoeda'}
           <span className="ml-2 text-sm text-gray-500">
             Exemplos: {exemplosTicker[form.subtipo].join(', ')}
           </span>
@@ -284,7 +288,18 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
           required
         />
       </div>
-
+<div>
+  <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>
+  <input
+    type="password"
+    value={senha}
+    maxLength={6}
+    onChange={(e) => setSenha(e.target.value)}
+    className="w-full p-3 border-2 border-gray-300 rounded-lg"
+    placeholder="******"
+    required
+  />
+</div>
       <div className="flex justify-between pt-4">
         <button
           type="button"

@@ -149,10 +149,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     placeholder="******"
                     required
                     />
+                    </div>
                     <p className="text-sm text-gray-500 text-left mt-4">
                      A senha será utilizada para efetivar suas transações.
                      </p>
-                    </div>
             <div className={rowClass}>
               <label className={labelClass} style={{ fontWeight: 'bold' }}>
                 Valor Total:
