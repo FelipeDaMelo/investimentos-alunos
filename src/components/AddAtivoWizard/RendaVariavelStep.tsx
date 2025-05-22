@@ -124,8 +124,13 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     return num === 0 ? '' : Math.floor(num).toString();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (senha.length !== 6) {
+    alert('A senha deve conter 6 dígitos.');
+    return;
+  }
     
     const quantidadeNumerica = getQuantidadeNumerica();
     
@@ -146,24 +151,27 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       return;
     }
 
-    const ativoCompleto = {
-      ...form,
-      quantidade: quantidadeNumerica,
-      valorInvestido: valorTotal,
-      tickerFormatado: formatarTicker(form.nome, form.subtipo),
-      precoMedio: form.precoAtual,
-      tipo: 'rendaVariavel',
-      valorAtual: valorTotal,
-      patrimonioPorDia: {},
-      id: Date.now().toString()
-    };
-    if (senha.length !== 6) {
-  alert('A senha deve conter 6 dígitos.');
-  return;
-}
-    onSubmit(ativoCompleto as any);
-  };
-  senha
+  const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
+  ...form,
+  quantidade: quantidadeNumerica,
+  valorInvestido: valorTotal,
+  tickerFormatado: formatarTicker(form.nome, form.subtipo),
+  precoMedio: form.precoAtual,
+  tipo: 'rendaVariavel',
+  valorAtual: valorTotal,
+  patrimonioPorDia: {},
+  id: Date.now().toString(),
+  senha,
+  compras: [{
+    valor: valorTotal,
+    data: new Date().toISOString()
+  }]
+};
+
+  onSubmit(ativoCompleto);
+};
+  
+
   const exemplosTicker = {
     acao: ['PETR4', 'VALE3', 'ITUB4'],
     fii: ['MXRF11', 'HGLG11', 'KNRI11'],

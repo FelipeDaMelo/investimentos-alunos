@@ -20,6 +20,7 @@ import { Ativo, RendaVariavelAtivo, RendaFixaAtivo } from './types/Ativo';
 import Button from './components/Button';
 import DepositarModal from './components/DepositarModal';
 import HistoricoModal from './components/HistoricoModal';
+import { AtivoComSenha } from '../src/types/Ativo';
 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -47,7 +48,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGrupo, senha }: MainPageProps) {
+export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGrupo }: Omit<MainPageProps, 'senha'>) {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
@@ -62,6 +63,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [totalDepositado, setTotalDepositado] = useState(0);
   const [historico, setHistorico] = useState([]);
   const [showHistorico, setShowHistorico] = useState(false);
+  const [senhaSalva, setSenhaSalva] = useState('');
 
 
   const coresAtivos = useMemo(() => {
@@ -94,6 +96,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
           setDepositoFixa(data?.depositoFixa || 0);
           setDepositoVariavel(data?.depositoVariavel || 0);
           setHistorico(data?.historico || []);
+          setSenhaSalva(data?.senha || '');
           } else {
           await setDoc(docRef, {
             ativos: [],
@@ -124,7 +127,7 @@ useEffect(() => {
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
 
 const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senhaDigitada: string) => {
-  if (senhaDigitada !== senha) {
+  if (senhaDigitada !== senhaSalva) {
     alert('Senha incorreta!');
     return;
   }
@@ -157,8 +160,20 @@ const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senha
 
 
 
-  const handleAddAtivo = async (novoAtivo: Ativo) => {
-    if (novoAtivo.senha !== senha) return alert('Senha incorreta!');
+    const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
+  if (novoAtivo.senha !== senhaSalva) {
+    alert('Senha incorreta!');
+    return;
+  }
+
+const {
+  senha: _,
+  ...resto
+} = novoAtivo;
+
+const ativoSemSenha: Ativo = {
+  ...(resto as Ativo)
+};
     try {
       let novosAtivos: Ativo[];
   
@@ -187,10 +202,10 @@ const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senha
             a.id === existente.id ? atualizado : a
           );
         } else {
-          novosAtivos = [...ativos, novoAtivo];
+          novosAtivos = [...ativos, ativoSemSenha];
         }
       } else {
-        novosAtivos = [...ativos, novoAtivo];
+        novosAtivos = [...ativos, ativoSemSenha];
       }
   
       setAtivos(novosAtivos);
@@ -221,7 +236,7 @@ const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senha
   };
 
 const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) => {
-  if (senhaDigitada !== senha) {
+  if (senhaDigitada !== senhaSalva) {
     alert('Senha incorreta!');
     return;
   }

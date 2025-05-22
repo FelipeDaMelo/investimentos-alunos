@@ -1,10 +1,14 @@
-// ✅ Atualização de types/Ativo.ts
 export type Compra = {
   valor: number;
   data: string;
 };
 
 export type Ativo = RendaFixaAtivo | RendaVariavelAtivo;
+
+// Ativo com senha obrigatória (ex: para verificação)
+export type AtivoComSenha = Omit<Ativo, 'senha'> & {
+  senha: string;
+};
 
 interface BaseAtivo {
   id: string;

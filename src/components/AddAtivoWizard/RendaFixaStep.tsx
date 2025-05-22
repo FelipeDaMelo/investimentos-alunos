@@ -71,16 +71,15 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
-    if (senha.length !== 6) {
-  alert('A senha deve conter 6 dígitos.');
-  return;
-}
-    onSubmit(criarAtivoFixa({
-      ...form,
-      valorInvestido
-    }));
-    senha
-  };
+const ativo = criarAtivoFixa({
+  ...form,
+  valorInvestido
+});
+onSubmit({
+  ...ativo,
+  senha // tipo precisa aceitar isso
+} as any); // ou defina o tipo como RendaFixaAtivo & { senha: string }
+  }
 
   return (
     <form 

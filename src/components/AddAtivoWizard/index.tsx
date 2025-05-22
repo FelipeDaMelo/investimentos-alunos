@@ -3,10 +3,11 @@ import TipoAtivoStep from './TipoAtivoStep';
 import RendaFixaStep from './RendaFixaStep';
 import RendaVariavelStep from './RendaVariavelStep';
 import { Ativo } from '../../types/Ativo';
+import { AtivoComSenha } from '../../types/Ativo';
 
 interface AddAtivoWizardProps {
   onClose: () => void;
-  onAddAtivo: (ativo: Ativo) => void;
+  onAddAtivo: (ativo: AtivoComSenha) => void;
   valorFixaDisponivel: number;
   valorVariavelDisponivel: number;
   quantidadeAtivos: number;
@@ -46,38 +47,57 @@ export default function AddAtivoWizard({
       {step === 'fixa' && (
         <RendaFixaStep
           onBack={() => setStep('tipo')}
-          onSubmit={(dados) => {
-            onAddAtivo({
-              ...dadosAtivo,
-              ...dados,
-              senha: dados.senha, // ✅ ADICIONE ESTA LINHA
-              id: Date.now().toString(),
-              valorAtual: dados.valorInvestido,
-              patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido }
-            } as Ativo);
-            onClose();
-          }}
+
+onSubmit={(dados) => {
+  if (!dados.senha || dados.senha.length !== 6) {
+    alert('A senha deve conter 6 dígitos.');
+    return;
+  }
+
+  const { senha, ...ativoSemSenha } = dados;
+
+  onAddAtivo({
+    ...dadosAtivo,
+    ...ativoSemSenha,
+    senha, // agora garantido como string
+    id: Date.now().toString(),
+    valorAtual: dados.valorInvestido,
+    patrimonioPorDia: {
+      [new Date().toISOString().split('T')[0]]: dados.valorInvestido
+    }
+  });
+  onClose();
+}}
           saldoDisponivel={valorFixaDisponivel}
         />
       )}
       
       {step === 'variavel' && (
-        <RendaVariavelStep
-          onBack={() => setStep('tipo')}
-          onSubmit={(dados) => {
-            onAddAtivo({
-              ...dadosAtivo,
-              ...dados,
-              senha: dados.senha, // ✅ ADICIONE ESTA LINHA
-              id: Date.now().toString(),
-              valorAtual: dados.valorInvestido / (dados.quantidade || 1),
-              patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido }
-            } as Ativo);
-            onClose();
-          }}
-          saldoDisponivel={valorVariavelDisponivel}
-        />
-      )}
+  <RendaVariavelStep
+    onBack={() => setStep('tipo')}
+   onSubmit={(dados) => {
+  if (!dados.senha || dados.senha.length !== 6) {
+    alert('A senha deve conter 6 dígitos.');
+    return;
+  }
+
+  const { senha, ...ativoSemSenha } = dados;
+
+  onAddAtivo({
+    ...dadosAtivo,
+    ...ativoSemSenha,
+    senha,
+    id: Date.now().toString(),
+    valorAtual: dados.valorInvestido / (dados.quantidade || 1),
+    patrimonioPorDia: {
+      [new Date().toISOString().split('T')[0]]: dados.valorInvestido
+    }
+  });
+  onClose();
+}}
+    saldoDisponivel={valorVariavelDisponivel}
+  />
+)}
     </div>
   );
 }

@@ -28,17 +28,17 @@ const formatDate = (dateString: string) => {
 const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor }) => {
   const isRendaVariavel = ativo.tipo === 'rendaVariavel';
 
-  const rendimentoTotal = isRendaVariavel
-    ? (ativo as RendaVariavelAtivo).valorAtual - (ativo as RendaVariavelAtivo).valorInvestido
-    : 0;
+const precoMedio = isRendaVariavel && (ativo as RendaVariavelAtivo).quantidade > 0
+  ? (ativo as RendaVariavelAtivo).valorInvestido / (ativo as RendaVariavelAtivo).quantidade
+  : 0;
 
-  const rendimentoPercentual = isRendaVariavel
-    ? (rendimentoTotal / (ativo as RendaVariavelAtivo).valorInvestido) * 100
-    : 0;
+const rendimentoPercentual = isRendaVariavel && precoMedio > 0
+  ? (((ativo as RendaVariavelAtivo).valorAtual / precoMedio) - 1) * 100
+  : 0;
 
-  const precoMedio = isRendaVariavel && (ativo as RendaVariavelAtivo).quantidade > 0
-    ? (ativo as RendaVariavelAtivo).valorInvestido / (ativo as RendaVariavelAtivo).quantidade
-    : 0;
+const rendimentoTotal = isRendaVariavel
+  ? ((rendimentoPercentual / 100) * (ativo as RendaVariavelAtivo).valorInvestido)
+  : 0;
 
   return (
     <div
