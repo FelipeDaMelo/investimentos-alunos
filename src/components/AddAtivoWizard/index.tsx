@@ -7,7 +7,7 @@ import { AtivoComSenha } from '../../types/Ativo';
 
 interface AddAtivoWizardProps {
   onClose: () => void;
-  onAddAtivo: (ativo: AtivoComSenha) => void;
+  onAddAtivo: (ativo: AtivoComSenha) => Promise<boolean>;
   valorFixaDisponivel: number;
   valorVariavelDisponivel: number;
   quantidadeAtivos: number;
@@ -46,57 +46,62 @@ export default function AddAtivoWizard({
       
       {step === 'fixa' && (
         <RendaFixaStep
-          onBack={() => setStep('tipo')}
-
-onSubmit={(dados) => {
-  if (!dados.senha || dados.senha.length !== 6) {
-    alert('A senha deve conter 6 dígitos.');
-    return;
-  }
-
-  const { senha, ...ativoSemSenha } = dados;
-
-  onAddAtivo({
-    ...dadosAtivo,
-    ...ativoSemSenha,
-    senha, // agora garantido como string
-    id: Date.now().toString(),
-    valorAtual: dados.valorInvestido,
-    patrimonioPorDia: {
-      [new Date().toISOString().split('T')[0]]: dados.valorInvestido
+  onBack={() => setStep('tipo')}
+  onSubmit={async (dados) => {
+    if (!dados.senha || dados.senha.length !== 6) {
+      alert('A senha deve conter 6 dígitos.');
+      return;
     }
-  });
-  onClose();
-}}
-          saldoDisponivel={valorFixaDisponivel}
-        />
+
+    const { senha, ...ativoSemSenha } = dados;
+
+    const sucesso = await onAddAtivo({
+      ...dadosAtivo,
+      ...ativoSemSenha,
+      senha,
+      id: Date.now().toString(),
+      valorAtual: dados.valorInvestido,
+      patrimonioPorDia: {
+        [new Date().toISOString().split('T')[0]]: dados.valorInvestido
+      }
+    });
+
+    if (sucesso) {
+      onClose(); // só fecha se a senha estiver correta
+    }
+  }}
+  saldoDisponivel={valorFixaDisponivel}
+/>
       )}
       
       {step === 'variavel' && (
   <RendaVariavelStep
-    onBack={() => setStep('tipo')}
-   onSubmit={(dados) => {
-  if (!dados.senha || dados.senha.length !== 6) {
-    alert('A senha deve conter 6 dígitos.');
-    return;
-  }
-
-  const { senha, ...ativoSemSenha } = dados;
-
-  onAddAtivo({
-    ...dadosAtivo,
-    ...ativoSemSenha,
-    senha,
-    id: Date.now().toString(),
-    valorAtual: dados.valorInvestido / (dados.quantidade || 1),
-    patrimonioPorDia: {
-      [new Date().toISOString().split('T')[0]]: dados.valorInvestido
+  onBack={() => setStep('tipo')}
+  onSubmit={async (dados) => {
+    if (!dados.senha || dados.senha.length !== 6) {
+      alert('A senha deve conter 6 dígitos.');
+      return;
     }
-  });
-  onClose();
-}}
-    saldoDisponivel={valorVariavelDisponivel}
-  />
+
+    const { senha, ...ativoSemSenha } = dados;
+
+    const sucesso = await onAddAtivo({
+      ...dadosAtivo,
+      ...ativoSemSenha,
+      senha,
+      id: Date.now().toString(),
+      valorAtual: dados.valorInvestido / (dados.quantidade || 1),
+      patrimonioPorDia: {
+        [new Date().toISOString().split('T')[0]]: dados.valorInvestido
+      }
+    });
+
+    if (sucesso) {
+      onClose(); // só fecha se a senha estiver correta
+    }
+  }}
+  saldoDisponivel={valorVariavelDisponivel}
+/>
 )}
     </div>
   );

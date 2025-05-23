@@ -161,10 +161,10 @@ const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senha
 
 
     const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
-  if (novoAtivo.senha !== senhaSalva) {
-    alert('Senha incorreta!');
-    return;
-  }
+if (novoAtivo.senha !== senhaSalva) {
+  alert('Senha incorreta!');
+  return false; // <- agora retorna explicitamente false
+}
 
 const {
   senha: _,
@@ -221,9 +221,11 @@ const ativoSemSenha: Ativo = {
     data: new Date().toISOString()
   })
 });
+    return true;
     } catch (err) {
       setError('Erro ao adicionar ativo');
       console.error(err);
+      return false;
     }
   };
   
