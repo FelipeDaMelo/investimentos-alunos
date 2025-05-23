@@ -93,9 +93,9 @@ const rendimentoTotal = isRendaVariavel
         </div>
       )}
 
-      <Button onClick={() => onSell(ativo.id)} className="mt-4">
-        Vender
-      </Button>
+<Button onClick={() => onSell(ativo.id)}>
+  {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
+</Button>
     </div>
   );
 };

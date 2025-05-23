@@ -77,8 +77,8 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtiv
         </div>
 
         <Button onClick={handleConfirm} className="w-full">
-          Confirmar Venda
-        </Button>
+            {ativo.tipo === 'rendaFixa' ? 'Confirmar Resgate' : 'Confirmar Venda'}
+          </Button>
       </div>
     </div>
   );

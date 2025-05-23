@@ -3,7 +3,7 @@ import Button from './Button';
 
 interface DepositarModalProps {
   onClose: () => void;
-  onConfirm: (valor: number, destino: 'fixa' | 'variavel', senha: string) => void;
+  onConfirm: (valor: number, destino: 'fixa' | 'variavel', senha: string) => Promise<boolean>;
 }
 
 export default function DepositarModal({ onClose, onConfirm }: DepositarModalProps) {
@@ -11,14 +11,17 @@ export default function DepositarModal({ onClose, onConfirm }: DepositarModalPro
   const [destino, setDestino] = useState<'fixa' | 'variavel'>('fixa');
   const [senha, setSenha] = useState('');
 
-  const handleSubmit = () => {
-    const valorNumerico = parseFloat(valor.replace(',', '.'));
-    if (!isNaN(valorNumerico) && senha.length === 6) {
-      onConfirm(valorNumerico, destino, senha);
-    } else {
-      alert('Verifique o valor e a senha');
+const handleSubmit = async () => {
+  const valorNumerico = parseFloat(valor.replace(',', '.'));
+  if (!isNaN(valorNumerico) && senha.length === 6) {
+    const sucesso = await onConfirm(valorNumerico, destino, senha);
+    if (sucesso) {
+      onClose(); // fecha somente se for sucesso
     }
-  };
+  } else {
+    alert('Verifique o valor e a senha');
+  }
+};
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">

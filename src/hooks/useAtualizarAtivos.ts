@@ -8,12 +8,38 @@ type AtualizarAtivosCallback = (ativosAtualizados: Ativo[]) => void;
 const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosCallback) => {
   const ativosRef = useRef<Ativo[]>(ativos);
 
-  // Sempre manter a referência atualizada
   useEffect(() => {
     ativosRef.current = ativos;
   }, [ativos]);
 
   useEffect(() => {
+    const fetchDividendoFII = async (ticker: string): Promise<number> => {
+      try {
+        const url = `https://api.suno.com.br/api/open/fiis/${ticker}/dividends`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!Array.isArray(data)) return 0;
+
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth() + 1;
+        const anoAtual = hoje.getFullYear();
+
+        const dividendoAtual = data.find((item: any) => {
+          const dataPagamento = new Date(item.paymentDate);
+          return (
+            dataPagamento.getMonth() + 1 === mesAtual &&
+            dataPagamento.getFullYear() === anoAtual
+          );
+        });
+
+        return dividendoAtual ? parseFloat(dividendoAtual.dividend) : 0;
+      } catch (error) {
+        console.error('Erro ao buscar dividendo do FII:', error);
+        return 0;
+      }
+    };
+
     const atualizar = async () => {
       if (ativosRef.current.length === 0) return;
 
@@ -38,7 +64,13 @@ const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosC
             const ativoVar = ativo as RendaVariavelAtivo;
             const valorAtualString = await fetchValorAtual(ativoVar.tickerFormatado);
             const valorAtual = parseFloat(valorAtualString);
-            const updatedPatrimonio = ativoVar.quantidade * valorAtual;
+            let updatedPatrimonio = ativoVar.quantidade * valorAtual;
+
+            if (ativoVar.subtipo === 'fii') {
+              const dividendo = await fetchDividendoFII(ativoVar.tickerFormatado);
+              const totalDividendos = dividendo * ativoVar.quantidade;
+              updatedPatrimonio += totalDividendos;
+            }
 
             return {
               ...ativo,
@@ -57,7 +89,6 @@ const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosC
 
     const agendarPrimeiraAtualizacao = () => {
       const agora = new Date();
-
       const horarioBrasilia = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000 - (3 * 3600000));
       const proximoMeioDia = new Date(horarioBrasilia);
       proximoMeioDia.setHours(12, 0, 0, 0);
@@ -78,8 +109,8 @@ const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosC
 
     const limparTimeout = agendarPrimeiraAtualizacao();
     return limparTimeout;
-    
-  }, [atualizarCallback]); // 🚨 apenas atualizarCallback, não ativos
+
+  }, [atualizarCallback]);
 };
 
 export default useAtualizarAtivos;

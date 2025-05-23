@@ -75,6 +75,7 @@ const ativo = criarAtivoFixa({
   ...form,
   valorInvestido
 });
+
 onSubmit({
   ...ativo,
   senha // tipo precisa aceitar isso

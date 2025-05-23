@@ -19,7 +19,9 @@ interface RendaVariavelStepProps {
 
 export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }: RendaVariavelStepProps) {
   const [senha, setSenha] = useState('');
+  const [dividendoFII, setDividendoFII] = useState<number | null>(null);
   const [form, setForm] = useState({
+    
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
     subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda',
@@ -40,42 +42,73 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   const valorTotal = getQuantidadeNumerica() * form.precoAtual;
 
   useEffect(() => {
-    const buscarPrecoComDebounce = setTimeout(() => {
-      if (form.nome.trim().length >= 2) {
-        buscarPreco();
-      }
-    }, 800);
+  const buscarPrecoComDebounce = setTimeout(() => {
+    if (form.nome.trim().length >= 2) {
+      buscarPreco();
+    }
+  }, 800);
 
-    return () => clearTimeout(buscarPrecoComDebounce);
-  }, [form.nome, form.subtipo]);
+  return () => clearTimeout(buscarPrecoComDebounce);
+}, [form.nome, form.subtipo]);
 
   const buscarPreco = async () => {
-    try {
-      setForm(prev => ({...prev, loadingPreco: true, errorPreco: ''}));
-      
-      const tickerFormatado = formatarTicker(form.nome, form.subtipo);
-      const precoString = await fetchValorAtual(tickerFormatado);
-      
-      if (precoString === 'Erro ao carregar') {
-        throw new Error('Não foi possível obter o preço');
-      }
+  try {
+    setForm(prev => ({ ...prev, loadingPreco: true, errorPreco: '' }));
+    setDividendoFII(null); // resetar dividendo ao buscar novo ativo
 
-      const preco = parseFloat(precoString);
-      
-      setForm(prev => ({
-        ...prev, 
-        precoAtual: preco, 
-        loadingPreco: false,
-        nome: formatarTickerParaExibicao(prev.nome, prev.subtipo)
-      }));
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      setForm(prev => ({...prev, 
-        loadingPreco: false, 
-        errorPreco: errorMessage
-      }));
+    const tickerFormatado = formatarTicker(form.nome, form.subtipo);
+    const precoString = await fetchValorAtual(tickerFormatado);
+
+    if (precoString === 'Erro ao carregar') {
+      throw new Error('Não foi possível obter o preço');
     }
-  };
+
+    const preco = parseFloat(precoString);
+
+    setForm(prev => ({
+      ...prev,
+      precoAtual: preco,
+      loadingPreco: false,
+      nome: formatarTickerParaExibicao(prev.nome, prev.subtipo),
+    }));
+
+    // ✅ Se for FII, buscar o último dividendo
+    if (form.subtipo === 'fii') {
+      const dividendo = await fetchDividendoFII(tickerFormatado);
+      setDividendoFII(dividendo);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    setForm(prev => ({ ...prev, loadingPreco: false, errorPreco: errorMessage }));
+  }
+};
+
+const fetchDividendoFII = async (ticker: string): Promise<number> => {
+  try {
+    const url = `https://api.suno.com.br/api/open/fiis/${ticker}/dividends`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!Array.isArray(data)) return 0;
+
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth() + 1;
+    const anoAtual = hoje.getFullYear();
+
+    const dividendoAtual = data.find((item: any) => {
+      const dataPagamento = new Date(item.paymentDate);
+      return (
+        dataPagamento.getMonth() + 1 === mesAtual &&
+        dataPagamento.getFullYear() === anoAtual
+      );
+    });
+
+    return dividendoAtual ? parseFloat(dividendoAtual.dividend) : 0;
+  } catch (error) {
+    console.error('Erro ao buscar dividendo do FII:', error);
+    return 0;
+  }
+};
 
   const formatarTicker = (ticker: string, tipo: string) => {
     const tickerLimpo = ticker.toUpperCase().trim();
@@ -151,7 +184,7 @@ const handleSubmit = (e: React.FormEvent) => {
       return;
     }
 
-  const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
+const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
   ...form,
   quantidade: quantidadeNumerica,
   valorInvestido: valorTotal,
@@ -165,7 +198,8 @@ const handleSubmit = (e: React.FormEvent) => {
   compras: [{
     valor: valorTotal,
     data: new Date().toISOString()
-  }]
+  }],
+  dividendo: dividendoFII ?? 0  // ✅ esta linha corrige o erro
 };
 
   onSubmit(ativoCompleto);
@@ -232,6 +266,15 @@ const handleSubmit = (e: React.FormEvent) => {
           </p>
         )}
       </div>
+
+      {form.subtipo === 'fii' && dividendoFII !== null && (
+  <p className="text-sm text-indigo-600">
+    Último dividendo (mês atual): {dividendoFII.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    })}
+  </p>
+)}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

@@ -41,4 +41,5 @@ export interface RendaVariavelAtivo extends BaseAtivo {
   precoMedio: number;
   compras: Compra[];
   senha?: string;
+  dividendo: number;
 }

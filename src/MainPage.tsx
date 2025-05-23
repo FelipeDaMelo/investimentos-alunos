@@ -126,10 +126,14 @@ useEffect(() => {
   setValorVariavelDisponivel(totalVariavel - calcularTotalInvestido('rendaVariavel'));
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
 
-const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senhaDigitada: string) => {
+const handleDeposito = async (
+  valor: number,
+  destino: 'fixa' | 'variavel',
+  senhaDigitada: string
+): Promise<boolean> => {
   if (senhaDigitada !== senhaSalva) {
     alert('Senha incorreta!');
-    return;
+    return false;
   }
   const docRef = doc(db, 'usuarios', login);
 
@@ -144,6 +148,7 @@ const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senha
     data: new Date().toISOString()
   }),
     });
+    
   } else {
     setDepositoVariavel(prev => prev + valor);
     await updateDoc(docRef, {
@@ -156,6 +161,7 @@ const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senha
   }),
     });
   }
+  return true;
 };
 
 
