@@ -8,8 +8,9 @@ const fetchDividendoFII = async (ticker: string): Promise<number> => {
       headers: {
         'User-Agent': 'Mozilla/5.0'
       }
+      
     });
-
+    console.log('HTML recebido:', data);
     const $ = cheerio.load(data);
     const texto = $('strong:contains("Último Rendimento")').parent().text();
     const match = texto.match(/R\$ ?([\d,]+)/);
