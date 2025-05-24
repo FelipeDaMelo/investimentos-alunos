@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 import fetchValorAtual from '../../fetchValorAtual';
-
+import fetchDividendoFII from '../../utils/fetchDividendoFII';
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
   precoMedio: number;
 };
@@ -83,34 +83,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
   }
 };
 
-const fetchDividendoFII = async (ticker: string): Promise<number> => {
-  try {
-    const url = `https://api.suno.com.br/api/open/fiis/${ticker}/dividends`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!Array.isArray(data)) return 0;
-
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth() + 1;
-    const anoAtual = hoje.getFullYear();
-
-    const dividendoAtual = data.find((item: any) => {
-      const dataPagamento = new Date(item.paymentDate);
-      return (
-        dataPagamento.getMonth() + 1 === mesAtual &&
-        dataPagamento.getFullYear() === anoAtual
-      );
-    });
-
-    return dividendoAtual ? parseFloat(dividendoAtual.dividend) : 0;
-  } catch (error) {
-    console.error('Erro ao buscar dividendo do FII:', error);
-    return 0;
-  }
-};
-
-  const formatarTicker = (ticker: string, tipo: string) => {
+   const formatarTicker = (ticker: string, tipo: string) => {
     const tickerLimpo = ticker.toUpperCase().trim();
     
     if (tipo === 'criptomoeda') {
