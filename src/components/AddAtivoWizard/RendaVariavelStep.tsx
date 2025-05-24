@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 import fetchValorAtual from '../../fetchValorAtual';
-//import fetchDividendoFII from '../../utils/fetchDividendoFII';
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
   precoMedio: number;
 };
@@ -72,11 +71,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       nome: formatarTickerParaExibicao(prev.nome, prev.subtipo),
     }));
 
-    // ✅ Se for FII, buscar o último dividendo
-    if (form.subtipo === 'fii') {
-      const dividendo = await fetchDividendoFII(tickerFormatado);
-      setDividendoFII(dividendo);
-    }
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     setForm(prev => ({ ...prev, loadingPreco: false, errorPreco: errorMessage }));

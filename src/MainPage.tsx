@@ -71,7 +71,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [depositoFixa, setDepositoFixa] = useState(0);
   const [depositoVariavel, setDepositoVariavel] = useState(0);
   const [totalDepositado, setTotalDepositado] = useState(0);
-const [historico, setHistorico] = useState<RegistroHistorico[]>([]);  
+  const [historico, setHistorico] = useState<RegistroHistorico[]>([]);  
   const [showHistorico, setShowHistorico] = useState(false);
   const [senhaSalva, setSenhaSalva] = useState('');
 const [showDividendoModal, setShowDividendoModal] = useState(false);
@@ -107,7 +107,7 @@ const [ativoDividendo, setAtivoDividendo] = useState<RendaVariavelAtivo | null>(
           setTotalDepositado(data?.totalDepositado || 0);
           setDepositoFixa(data?.depositoFixa || 0);
           setDepositoVariavel(data?.depositoVariavel || 0);
-          setHistorico(data?.historico || []);
+          setHistorico((data?.historico || []) as RegistroHistorico[]);
           setSenhaSalva(data?.senha || '');
               } else {
           await setDoc(docRef, {
@@ -155,12 +155,13 @@ const confirmarDividendo = async (valor: number, senhaDigitada: string) => {
   const mesAtual = hoje.getMonth();
   const anoAtual = hoje.getFullYear();
 
-  const jaTemDividendoEsteMes = historico.some(
-    h => h.tipo === 'dividendo' &&
-         h.nome === ativoDividendo.nome &&
-         new Date(h.data).getMonth() === mesAtual &&
-         new Date(h.data).getFullYear() === anoAtual
-  );
+const jaTemDividendoEsteMes = historico.some(
+  (h: RegistroHistorico) =>
+    h.tipo === 'dividendo' &&
+    h.nome === ativoDividendo.nome &&
+    new Date(h.data).getMonth() === mesAtual &&
+    new Date(h.data).getFullYear() === anoAtual
+);
 
   if (jaTemDividendoEsteMes) {
     alert('Dividendo já registrado para este FII neste mês.');
@@ -348,6 +349,15 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) 
 
         const docRef = doc(db, 'usuarios', login);
         await updateDoc(docRef, { ativos: ativosRestantes });
+await updateDoc(docRef, {
+  historico: arrayUnion({
+    tipo: 'venda',
+    valor: quantidadeVendida * ativoSelecionado.valorAtual,
+    nome: ativoSelecionado.nome,
+    categoria: ativoSelecionado.tipo,
+    data: new Date().toISOString()
+  })
+});
       } else {
         // Venda parcial
         const ativosAtualizados = ativos.map(a => {

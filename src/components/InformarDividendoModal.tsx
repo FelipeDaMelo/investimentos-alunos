@@ -47,7 +47,7 @@ export default function InformarDividendoModal({ ativo, nome, ticker, onConfirm,
       <p className="text-sm mb-3 text-center">
         Consulte o dividendo mais recente de <strong>{nome}</strong> em:<br />
         <a
-          href={`https://statusinvest.com.br/fundos-imobiliarios/${ticker.toLowerCase()}`}
+            href={`https://statusinvest.com.br/fundos-imobiliarios/${ticker.toLowerCase().replace('.sa', '')}`}
           className="text-blue-600 underline"
           target="_blank" rel="noopener noreferrer"
         >
