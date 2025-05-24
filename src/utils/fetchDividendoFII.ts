@@ -3,7 +3,7 @@ import * as cheerio from 'cheerio';
 
 const fetchDividendoFII = async (ticker: string): Promise<number> => {
   try {
-    const url = `https://www.fundsexplorer.com.br/funds/${ticker.toLowerCase()}`;
+    const url = `https://statusinvest.com.br/fundos-imobiliarios/${ticker.toLowerCase()}`;
     const { data } = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0'
