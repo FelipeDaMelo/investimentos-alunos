@@ -7,6 +7,7 @@ interface AtivoCardProps {
   ativo: Ativo;
   onSell: (id: string) => void;
   cor: string;
+  onInformarDividendo?: (ativo: RendaVariavelAtivo) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -25,7 +26,7 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR', options);
 };
 
-const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor }) => {
+const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor, onInformarDividendo }) => {
   const isRendaVariavel = ativo.tipo === 'rendaVariavel';
 
 const precoMedio = isRendaVariavel && (ativo as RendaVariavelAtivo).quantidade > 0
@@ -96,7 +97,14 @@ const rendimentoTotal = isRendaVariavel
 <Button onClick={() => onSell(ativo.id)}>
   {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
 </Button>
-    </div>
+
+
+{onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
+  <Button onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)}>
+    Informar Dividendo
+  </Button>
+)}
+   </div>
   );
 };
 

@@ -20,6 +20,7 @@ import { Ativo, RendaVariavelAtivo, RendaFixaAtivo } from './types/Ativo';
 import Button from './components/Button';
 import DepositarModal from './components/DepositarModal';
 import HistoricoModal from './components/HistoricoModal';
+import InformarDividendoModal from './components/InformarDividendoModal';
 import { AtivoComSenha } from '../src/types/Ativo';
 
 
@@ -39,6 +40,15 @@ interface MainPageProps {
   variavel: number;
   nomeGrupo: string;
   senha: string;
+}
+
+interface RegistroHistorico {
+  tipo: 'compra' | 'venda' | 'deposito' | 'dividendo';
+  valor: number;
+  nome?: string;
+  destino?: 'fixa' | 'variavel';
+  categoria?: 'rendaFixa' | 'rendaVariavel';
+  data: string;
 }
 
 const formatCurrency = (value: number) => {
@@ -61,9 +71,11 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [depositoFixa, setDepositoFixa] = useState(0);
   const [depositoVariavel, setDepositoVariavel] = useState(0);
   const [totalDepositado, setTotalDepositado] = useState(0);
-  const [historico, setHistorico] = useState([]);
+const [historico, setHistorico] = useState<RegistroHistorico[]>([]);  
   const [showHistorico, setShowHistorico] = useState(false);
   const [senhaSalva, setSenhaSalva] = useState('');
+const [showDividendoModal, setShowDividendoModal] = useState(false);
+const [ativoDividendo, setAtivoDividendo] = useState<RendaVariavelAtivo | null>(null);
 
 
   const coresAtivos = useMemo(() => {
@@ -97,7 +109,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
           setDepositoVariavel(data?.depositoVariavel || 0);
           setHistorico(data?.historico || []);
           setSenhaSalva(data?.senha || '');
-          } else {
+              } else {
           await setDoc(docRef, {
             ativos: [],
             porcentagemFixa: fixo,
@@ -125,6 +137,60 @@ useEffect(() => {
   setValorFixaDisponivel(totalFixa - calcularTotalInvestido('rendaFixa'));
   setValorVariavelDisponivel(totalVariavel - calcularTotalInvestido('rendaVariavel'));
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
+
+const handleInformarDividendo = (ativo: RendaVariavelAtivo) => {
+  setAtivoDividendo(ativo);
+  setShowDividendoModal(true);
+};
+
+const confirmarDividendo = async (valor: number, senhaDigitada: string) => {
+  if (senhaDigitada !== senhaSalva) {
+    alert('Senha incorreta!');
+    return;
+  }
+
+  if (!ativoDividendo) return;
+
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth();
+  const anoAtual = hoje.getFullYear();
+
+  const jaTemDividendoEsteMes = historico.some(
+    h => h.tipo === 'dividendo' &&
+         h.nome === ativoDividendo.nome &&
+         new Date(h.data).getMonth() === mesAtual &&
+         new Date(h.data).getFullYear() === anoAtual
+  );
+
+  if (jaTemDividendoEsteMes) {
+    alert('Dividendo já registrado para este FII neste mês.');
+    return;
+  }
+
+  if (hoje.getDate() < 15) {
+    alert('Os dividendos só podem ser informados após o dia 15 do mês.');
+    return;
+  }
+
+  const docRef = doc(db, 'usuarios', login);
+  const total = valor * ativoDividendo.quantidade;
+
+  setValorVariavelDisponivel(prev => prev + total);
+
+  await updateDoc(docRef, {
+    depositoVariavel: depositoVariavel + total,
+    historico: arrayUnion({
+      tipo: 'dividendo',
+      valor: total,
+      nome: ativoDividendo.nome,
+      data: hoje.toISOString()
+    })
+  });
+
+  setShowDividendoModal(false);
+  setAtivoDividendo(null);
+};
+
 
 const handleDeposito = async (
   valor: number,
@@ -408,6 +474,12 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) 
                 ativo={ativo} 
                 onSell={handleSellAtivo} 
                 cor={getCorAtivo(ativo.id)}
+                onInformarDividendo={
+    ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii'
+      ? () => handleInformarDividendo(ativo as RendaVariavelAtivo)
+      : undefined
+  }
+
               />
             ))}
           </div>
@@ -477,6 +549,25 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) 
     <HistoricoModal
       historico={historico}
       onClose={() => setShowHistorico(false)}
+    />
+  </div>
+)}
+{showDividendoModal && ativoDividendo && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <InformarDividendoModal
+      ativo={ativoDividendo}
+      nome={ativoDividendo.nome}
+      ticker={ativoDividendo.tickerFormatado}
+      jaInformadoEsteMes={
+        historico.some(h =>
+          h.tipo === 'dividendo' &&
+          h.nome === ativoDividendo.nome &&
+          new Date(h.data).getMonth() === new Date().getMonth() &&
+          new Date(h.data).getFullYear() === new Date().getFullYear()
+        )
+      }
+      onClose={() => setShowDividendoModal(false)}
+      onConfirm={confirmarDividendo}
     />
   </div>
 )}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 import fetchValorAtual from '../../fetchValorAtual';
-import fetchDividendoFII from '../../utils/fetchDividendoFII';
+//import fetchDividendoFII from '../../utils/fetchDividendoFII';
 type RendaVariavelAtivoCompleto = RendaVariavelAtivo & {
   precoMedio: number;
 };
