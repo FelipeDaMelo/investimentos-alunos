@@ -216,27 +216,33 @@ const handleDeposito = async (
 
   if (destino === 'fixa') {
     setDepositoFixa(prev => prev + valor);
-    await updateDoc(docRef, {
-      depositoFixa: depositoFixa + valor,
-      historico: arrayUnion({
-    tipo: 'deposito',
-    valor,
-    destino,
-    data: new Date().toISOString()
-  }),
-    });
+   const novoRegistro: RegistroHistorico = {
+  tipo: 'deposito',
+  valor,
+  destino,
+  data: new Date().toISOString()
+};
+
+await updateDoc(docRef, {
+  depositoFixa: depositoFixa + valor,
+  historico: arrayUnion(novoRegistro)
+});
+setHistorico(prev => [...prev, novoRegistro]);
     
   } else {
     setDepositoVariavel(prev => prev + valor);
-    await updateDoc(docRef, {
-      depositoVariavel: depositoVariavel + valor,
-      historico: arrayUnion({
-    tipo: 'deposito',
-    valor,
-    destino,
-    data: new Date().toISOString()
-  }),
-    });
+const novoRegistro: RegistroHistorico = {
+  tipo: 'deposito',
+  valor,
+  destino,
+  data: new Date().toISOString()
+};
+
+await updateDoc(docRef, {
+  depositoFixa: depositoFixa + valor,
+  historico: arrayUnion(novoRegistro)
+});
+setHistorico(prev => [...prev, novoRegistro]);
   }
   return true;
 };
@@ -295,16 +301,23 @@ const ativoSemSenha: Ativo = {
   
       const docRef = doc(db, 'usuarios', login);
       await updateDoc(docRef, { ativos: novosAtivos });
-      await updateDoc(docRef, {
-  historico: arrayUnion({
-    tipo: 'compra',
-    valor: novoAtivo.valorInvestido,
-    nome: novoAtivo.nome,
-    categoria: novoAtivo.tipo,
-    data: new Date().toISOString()
-  })
+
+const novoRegistro: RegistroHistorico = {
+  tipo: 'compra',
+  valor: novoAtivo.valorInvestido,
+  nome: novoAtivo.nome,
+  categoria: novoAtivo.tipo,
+  data: new Date().toISOString()
+};
+
+await updateDoc(docRef, {
+  historico: arrayUnion(novoRegistro)
 });
+setHistorico(prev => [...prev, novoRegistro]);
+
+
     return true;
+
     } catch (err) {
       setError('Erro ao adicionar ativo');
       console.error(err);
@@ -344,7 +357,17 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) 
     categoria: ativoSelecionado.tipo,
     data: new Date().toISOString()
   })
+  
 });
+const novoRegistro: RegistroHistorico = {
+  tipo: 'venda',
+  valor: quantidadeVendida * ativoSelecionado.valorAtual,
+  nome: ativoSelecionado.nome,
+  categoria: ativoSelecionado.tipo,
+  data: new Date().toISOString()
+};
+setHistorico(prev => [...prev, novoRegistro]);
+
     } else {
       // Venda parcial ou total de renda variável
       const ativoVar = ativoSelecionado;
@@ -369,7 +392,16 @@ if (Math.abs(novaQuantidade) < 1e-8) {
       categoria: ativoSelecionado.tipo,
       data: new Date().toISOString()
     })
-  });
+      });
+      const novoRegistro: RegistroHistorico = {
+  tipo: 'venda',
+  valor: quantidadeVendida * ativoSelecionado.valorAtual,
+  nome: ativoSelecionado.nome,
+  categoria: ativoSelecionado.tipo,
+  data: new Date().toISOString()
+};
+setHistorico(prev => [...prev, novoRegistro]);
+      
 } else {
   // Venda parcial
   const ativosAtualizados = ativos.map(a => {
@@ -397,7 +429,17 @@ if (Math.abs(novaQuantidade) < 1e-8) {
       categoria: ativoSelecionado.tipo,
       data: new Date().toISOString()
     })
+    
   });
+  
+  const novoRegistro: RegistroHistorico = {
+  tipo: 'venda',
+  valor: quantidadeVendida * ativoSelecionado.valorAtual,
+  nome: ativoSelecionado.nome,
+  categoria: ativoSelecionado.tipo,
+  data: new Date().toISOString()
+};
+setHistorico(prev => [...prev, novoRegistro]);
 }
     }
 
