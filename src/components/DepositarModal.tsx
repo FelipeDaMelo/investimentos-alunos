@@ -57,6 +57,7 @@ const handleSubmit = async () => {
           value={senha}
           maxLength={6}
           onChange={(e) => setSenha(e.target.value)}
+          placeholder="******"
           className="w-full p-3 border-2 border-gray-300 rounded-lg"
         />
       </div>

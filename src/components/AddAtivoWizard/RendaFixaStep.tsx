@@ -151,15 +151,12 @@ onSubmit({
       </div>
 
       {/* 🔵 Taxas e botão quando for Pós-fixada */}
-{(form.categoriaFixa === 'posFixada' || form.categoriaFixa === 'hibrida') && (
+{form.categoriaFixa === 'posFixada' && (
   <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
     <div>
       <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
       <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-      {form.categoriaFixa === 'hibrida' && (
-        <p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-      )}
-      {ultimaAtualizacao && (
+        {ultimaAtualizacao && (
         <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
       )}
     </div>
@@ -169,7 +166,7 @@ onSubmit({
       onClick={carregarTaxas}
       disabled={carregandoTaxas}
     >
-      {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC/IPCA'}
+      {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
     </Button>
 
     {/* 🔽 Novo bloco: escolha de índice e percentual */}
@@ -251,7 +248,26 @@ onSubmit({
       )}
 
       {form.categoriaFixa === 'hibrida' && (
-        <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
+     <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
+    <div>
+      <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+      <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+      <p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+        {ultimaAtualizacao && (
+        <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
+      )}
+      
+    </div>
+
+    <Button
+      type="button"
+      onClick={carregarTaxas}
+      disabled={carregandoTaxas}
+    >
+      {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
+    </Button>
+
+        
           <div>
             <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
             <input
@@ -317,7 +333,8 @@ onSubmit({
             />
           </div>
         </div>
-      )}
+      )
+      }
 
 <div>
   <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>

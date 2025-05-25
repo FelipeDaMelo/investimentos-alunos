@@ -73,6 +73,7 @@ export default function InformarDividendoModal({ ativo, nome, ticker, onConfirm,
           maxLength={6}
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
+          placeholder="******"
           className="w-full p-3 border-2 border-gray-300 rounded-lg"
         />
       </div>

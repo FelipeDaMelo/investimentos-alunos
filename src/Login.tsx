@@ -138,7 +138,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         {grupoExistente === false && (
           <form onSubmit={handleSubmit} className="mt-6">
                     <div className={rowClass}>
-                     <label className={labelClass}>Senha (6 dígitos):</label>
+                     <label className={labelClass}>Senha Numérica (6 dígitos):</label>
                     <input
                     type="password"
                     pattern="\d{6}"
