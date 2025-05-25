@@ -47,7 +47,7 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtiv
         {isRendaVariavel ? (
           <>
             <p className="text-sm text-gray-600">
-              Quantidade disponível: {(ativo as any).quantidade.toFixed(2)}
+              Quantidade disponível: {(ativo as any).quantidade.toFixed(8)}
             </p>
             <input
               type="text"
