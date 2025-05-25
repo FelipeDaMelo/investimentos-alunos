@@ -22,6 +22,7 @@ import DepositarModal from './components/DepositarModal';
 import HistoricoModal from './components/HistoricoModal';
 import InformarDividendoModal from './components/InformarDividendoModal';
 import { AtivoComSenha } from '../src/types/Ativo';
+import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -76,6 +77,17 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [senhaSalva, setSenhaSalva] = useState('');
 const [showDividendoModal, setShowDividendoModal] = useState(false);
 const [ativoDividendo, setAtivoDividendo] = useState<RendaVariavelAtivo | null>(null);
+
+
+useEffect(() => {
+  if (ativos.length === 0) return;
+
+  useAtualizarAtivos(ativos, async (ativosAtualizados) => {
+    setAtivos(ativosAtualizados);
+    const docRef = doc(db, 'usuarios', login);
+    await updateDoc(docRef, { ativos: ativosAtualizados });
+  }, login);
+}, [login]);
 
 
   const coresAtivos = useMemo(() => {
@@ -239,7 +251,7 @@ const novoRegistro: RegistroHistorico = {
 };
 
 await updateDoc(docRef, {
-  depositoFixa: depositoFixa + valor,
+  depositoFixa: depositoVariavel + valor,
   historico: arrayUnion(novoRegistro)
 });
 setHistorico(prev => [...prev, novoRegistro]);

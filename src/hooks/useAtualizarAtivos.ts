@@ -2,10 +2,18 @@ import { useEffect, useRef } from 'react';
 import fetchValorAtual from '../fetchValorAtual';
 import { Ativo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
 import calcularRendimentoFixa from './calcularRendimentoFixa';
+import { db } from '.././firebaseConfig';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 type AtualizarAtivosCallback = (ativosAtualizados: Ativo[]) => void;
 
-const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosCallback) => {
+
+
+const useAtualizarAtivos = (
+  ativos: Ativo[],
+  atualizarCallback: AtualizarAtivosCallback,
+  login: string // ⬅ aqui
+) => {
   const ativosRef = useRef<Ativo[]>(ativos);
 
   useEffect(() => {
@@ -37,7 +45,7 @@ const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosC
             const ativoVar = ativo as RendaVariavelAtivo;
             const valorAtualString = await fetchValorAtual(ativoVar.tickerFormatado);
             const valorAtual = parseFloat(valorAtualString);
-            let updatedPatrimonio = ativoVar.quantidade * valorAtual;
+            const updatedPatrimonio = ativoVar.quantidade * valorAtual;
 
             return {
               ...ativo,
@@ -51,7 +59,14 @@ const useAtualizarAtivos = (ativos: Ativo[], atualizarCallback: AtualizarAtivosC
         })
       );
 
-      atualizarCallback(updatedAtivos);
+      // 🔵 Salva no Firestore
+      try {
+        const docRef = doc(db, 'usuarios', login);
+        await updateDoc(docRef, { ativos: updatedAtivos });
+        atualizarCallback(updatedAtivos); // Atualiza o estado local após sucesso
+      } catch (error) {
+        console.error('Erro ao salvar patrimônio atualizado no Firebase:', error);
+      }
     };
 
     const agendarPrimeiraAtualizacao = () => {
