@@ -179,14 +179,24 @@ const jaTemDividendoEsteMes = historico.some(
   setValorVariavelDisponivel(prev => prev + total);
 
   await updateDoc(docRef, {
-    depositoVariavel: depositoVariavel + total,
-    historico: arrayUnion({
-      tipo: 'dividendo',
-      valor: total,
-      nome: ativoDividendo.nome,
-      data: hoje.toISOString()
-    })
-  });
+  depositoVariavel: depositoVariavel + total,
+  historico: arrayUnion({
+    tipo: 'dividendo',
+    valor: total,
+    nome: ativoDividendo.nome,
+    data: hoje.toISOString()
+  })
+});
+
+setHistorico(prev => [
+  ...prev,
+  {
+    tipo: 'dividendo',
+    valor: total,
+    nome: ativoDividendo.nome,
+    data: hoje.toISOString()
+  }
+]);
 
   setShowDividendoModal(false);
   setAtivoDividendo(null);
@@ -342,51 +352,53 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) 
       const valorVenda = quantidadeVendida * ativoVar.valorAtual;
       setValorVariavelDisponivel(prev => prev + valorVenda);
 
-      if (quantidadeVendida === ativoVar.quantidade) {
-        // Venda total
-        const ativosRestantes = ativos.filter(a => a.id !== ativoVar.id);
-        setAtivos(ativosRestantes);
+const novaQuantidade = ativoVar.quantidade - quantidadeVendida;
 
-        const docRef = doc(db, 'usuarios', login);
-        await updateDoc(docRef, { ativos: ativosRestantes });
-await updateDoc(docRef, {
-  historico: arrayUnion({
-    tipo: 'venda',
-    valor: quantidadeVendida * ativoSelecionado.valorAtual,
-    nome: ativoSelecionado.nome,
-    categoria: ativoSelecionado.tipo,
-    data: new Date().toISOString()
-  })
-});
-      } else {
-        // Venda parcial
-        const ativosAtualizados = ativos.map(a => {
-          if (a.id === ativoVar.id && a.tipo === 'rendaVariavel') {
-            const ativoVariavel = a as RendaVariavelAtivo; // forçando tipo seguro
-            const novaQuantidade = ativoVariavel.quantidade - quantidadeVendida;
-            const novoValorInvestido = novaQuantidade * ativoVariavel.valorAtual;
-            return {
-              ...ativoVariavel,
-              quantidade: novaQuantidade,
-              valorInvestido: novoValorInvestido,
-            };
-          }
-          return a;
-        });
-        setAtivos(ativosAtualizados);
+if (Math.abs(novaQuantidade) < 1e-8) {
+  // Venda total (inclusive se restar ~0)
+  const ativosRestantes = ativos.filter(a => a.id !== ativoVar.id);
+  setAtivos(ativosRestantes);
 
-        const docRef = doc(db, 'usuarios', login);
-        await updateDoc(docRef, { ativos: ativosAtualizados });
-        await updateDoc(docRef, {
-  historico: arrayUnion({
-    tipo: 'venda',
-    valor: quantidadeVendida * ativoSelecionado.valorAtual,
-    nome: ativoSelecionado.nome,
-    categoria: ativoSelecionado.tipo,
-    data: new Date().toISOString()
-  })
-});
-      }
+  const docRef = doc(db, 'usuarios', login);
+  await updateDoc(docRef, { ativos: ativosRestantes });
+  await updateDoc(docRef, {
+    historico: arrayUnion({
+      tipo: 'venda',
+      valor: quantidadeVendida * ativoSelecionado.valorAtual,
+      nome: ativoSelecionado.nome,
+      categoria: ativoSelecionado.tipo,
+      data: new Date().toISOString()
+    })
+  });
+} else {
+  // Venda parcial
+  const ativosAtualizados = ativos.map(a => {
+    if (a.id === ativoVar.id && a.tipo === 'rendaVariavel') {
+      const ativoVariavel = a as RendaVariavelAtivo;
+      const novoValorInvestido = novaQuantidade * ativoVariavel.valorAtual;
+      return {
+        ...ativoVariavel,
+        quantidade: novaQuantidade,
+        valorInvestido: novoValorInvestido,
+      };
+    }
+    return a;
+  });
+
+  setAtivos(ativosAtualizados);
+
+  const docRef = doc(db, 'usuarios', login);
+  await updateDoc(docRef, { ativos: ativosAtualizados });
+  await updateDoc(docRef, {
+    historico: arrayUnion({
+      tipo: 'venda',
+      valor: quantidadeVendida * ativoSelecionado.valorAtual,
+      nome: ativoSelecionado.nome,
+      categoria: ativoSelecionado.tipo,
+      data: new Date().toISOString()
+    })
+  });
+}
     }
 
     setShowVendaModal(false);

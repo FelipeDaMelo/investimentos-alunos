@@ -68,7 +68,7 @@ const rendimentoTotal = isRendaVariavel
         {isRendaVariavel && (
           <>
             <div>Quantidade:</div>
-            <div>{(ativo as RendaVariavelAtivo).quantidade.toFixed(2)}</div>
+            <div>{(ativo as RendaVariavelAtivo).quantidade.toFixed(8)}</div>
 
             <div>Preço médio:</div>
             <div>{formatCurrency(precoMedio)}</div>

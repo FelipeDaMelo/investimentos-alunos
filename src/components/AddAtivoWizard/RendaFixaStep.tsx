@@ -151,11 +151,12 @@ onSubmit({
       </div>
 
       {/* 🔵 Taxas e botão quando for Pós-fixada */}
-{form.categoriaFixa === 'posFixada' && (
+{form.categoriaFixa === 'posFixada' || form.categoriaFixa === 'hibrida' && (
   <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
     <div>
       <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
       <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+      {form.categoriaFixa === 'hibrida' && (<p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>)}
       {ultimaAtualizacao && (
         <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
       )}

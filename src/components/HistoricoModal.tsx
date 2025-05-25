@@ -66,13 +66,13 @@ export default function HistoricoModal({ historico, onClose }: Props) {
                 className={`font-medium ${corPorTipo[item.tipo]} whitespace-nowrap`}
               >
                 {item.tipo === 'deposito' &&
-                  `Depósito: ${item.valor} reais em Renda ${item.destino === 'fixa' ? 'Fixa' : 'Variável'} no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
+                  `Depósito: ${item.valor.toFixed(2)} reais em Renda ${item.destino === 'fixa' ? 'Fixa' : 'Variável'} no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
                 {item.tipo === 'compra' &&
-                  `Compra: ${item.valor} reais em "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
+                  `Compra: ${item.valor.toFixed(2)} reais em "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
                 {item.tipo === 'venda' &&
-                  `Venda: ${item.valor} reais em "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
+                  `Venda: ${item.valor.toFixed(2)} reais em "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
                   {item.tipo === 'dividendo' &&
-                  `Dividendo: ${item.valor} reais recebidos de "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
+                  `Dividendo: ${item.valor.toFixed(2)} reais recebidos de "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
               </li>
             ))}
           </ul>
