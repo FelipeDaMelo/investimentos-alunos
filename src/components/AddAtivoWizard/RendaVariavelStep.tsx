@@ -181,7 +181,9 @@ const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} 
+    className="space-y-4 overflow-y-auto max-h-[calc(100vh-120px)] px-2"
+    >
       <div>
         <label className="block mb-2 font-medium text-gray-700">Tipo</label>
         <select

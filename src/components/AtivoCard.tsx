@@ -94,16 +94,18 @@ const rendimentoTotal = isRendaVariavel
         </div>
       )}
 
-<Button onClick={() => onSell(ativo.id)}>
-  {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
-</Button>
 
+    <div className="flex justify-between mt-4">
+    <Button onClick={() => onSell(ativo.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
+      {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
+    </Button>
 
 {onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
-  <Button onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)}>
+  <Button onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)} className="bg-blue-600 hover:bg-blue-700 text-white">
     Informar Dividendo
   </Button>
 )}
+   </div>
    </div>
   );
 };
