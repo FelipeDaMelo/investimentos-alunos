@@ -5,6 +5,7 @@ import useMoneyInput from '../../hooks/useMoneyInput';
 import fetchValorAtual from '../../fetchValorAtual';
 import Button from '../Button';
 
+
 interface RendaFixaStepProps {
   onBack: () => void;
   onSubmit: (ativo: RendaFixaAtivo) => void;
@@ -26,7 +27,11 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       taxaPrefixada: 0,
       percentualCDI: 0,
       percentualSELIC: 0,
-      ipca: 0
+      ipca: 0,
+      cdiUsado: 0,
+      selicUsado: 0,
+      ipcaUsado: 0
+
     }
   });
 
@@ -71,17 +76,40 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`);
       return;
     }
+
+let taxaReferencia = 0;
+
+if (form.categoriaFixa === 'posFixada') {
+  taxaReferencia =
+    form.parametrosFixa.percentualCDI > 0
+      ? cdiAtual || 0
+      : selicAtual || 0;
+} else if (form.categoriaFixa === 'hibrida') {
+  if (form.parametrosFixa.percentualCDI > 0) {
+    taxaReferencia = cdiAtual || 0;
+  } else if (form.parametrosFixa.percentualSELIC > 0) {
+    taxaReferencia = selicAtual || 0;
+  } else if (form.parametrosFixa.ipca > 0) {
+    taxaReferencia = IPCAAtual || 0;
+  }
+}
+
 const ativo = criarAtivoFixa({
   ...form,
-  valorInvestido
+  valorInvestido,
+  parametrosFixa: {
+    ...form.parametrosFixa,
+    cdiUsado: cdiAtual ?? 0,
+    selicUsado: selicAtual ?? 0,
+    ipcaUsado: IPCAAtual ?? 0,
+  }
 });
 
 onSubmit({
   ...ativo,
-  senha // tipo precisa aceitar isso
-} as any); // ou defina o tipo como RendaFixaAtivo & { senha: string }
+  senha, // se necessário no tipo
+} as any);
   }
-
   return (
     <form 
     onSubmit={handleSubmit} 

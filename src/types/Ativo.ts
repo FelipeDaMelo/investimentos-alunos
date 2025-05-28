@@ -30,7 +30,12 @@ export interface RendaFixaAtivo extends BaseAtivo {
     percentualSELIC?: number;
     ipca?: number;
     senha?: string;
+    cdiUsado?: number;
+    selicUsado?: number;
+    ipcaUsado?: number;
+    
   };
+  taxaReferencia?: number;
 }
 
 export interface RendaVariavelAtivo extends BaseAtivo {

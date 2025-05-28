@@ -5,7 +5,7 @@ const calcularRendimentoFixa = async (ativo: RendaFixaAtivo, diasPassados: numbe
   let rendimento = ativo.valorInvestido;
 
   if (ativo.categoriaFixa === 'prefixada' && ativo.parametrosFixa?.taxaPrefixada) {
-    const diaria = ativo.parametrosFixa.taxaPrefixada / 100 / 252;
+    const diaria = ativo.parametrosFixa.taxaPrefixada / 100 / 365;
     rendimento *= Math.pow(1 + diaria, diasPassados);
   }
 
@@ -25,7 +25,7 @@ const calcularRendimentoFixa = async (ativo: RendaFixaAtivo, diasPassados: numbe
       }
 
   if (ativo.categoriaFixa === 'hibrida') {
-    const diariaPrefixada = (ativo.parametrosFixa?.taxaPrefixada || 0) / 100 / 252;
+    const diariaPrefixada = (ativo.parametrosFixa?.taxaPrefixada || 0) / 100 / 365;
 
     let diariaIndexada = 0;
 

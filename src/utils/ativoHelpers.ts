@@ -6,7 +6,8 @@ export const criarAtivoFixa = (
 ): RendaFixaAtivo => ({
   id: Date.now().toString(),
   valorAtual: dados.valorInvestido,
-  patrimonioPorDia: { [new Date().toISOString().split('T')[0]]: dados.valorInvestido },
+  patrimonioPorDia: 
+  { [new Date().toISOString().split('T')[0]]: dados.valorInvestido },
   ...dados,
   tipo: 'rendaFixa'
 });

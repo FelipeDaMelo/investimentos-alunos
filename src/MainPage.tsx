@@ -21,8 +21,11 @@ import Button from './components/Button';
 import DepositarModal from './components/DepositarModal';
 import HistoricoModal from './components/HistoricoModal';
 import InformarDividendoModal from './components/InformarDividendoModal';
+import AtualizarInvestimentosModal from './components/AtualizarInvestimentosModal';
 import { AtivoComSenha } from '../src/types/Ativo';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
+import { atualizarAtivos } from './utils/atualizarAtivos';
+
 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -77,7 +80,8 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [senhaSalva, setSenhaSalva] = useState('');
 const [showDividendoModal, setShowDividendoModal] = useState(false);
 const [ativoDividendo, setAtivoDividendo] = useState<RendaVariavelAtivo | null>(null);
-
+const [bloqueado, setBloqueado] = useState(false);
+const [showAtualizarModal, setShowAtualizarModal] = useState(false);
 
 useEffect(() => {
   if (ativos.length === 0) return;
@@ -100,7 +104,7 @@ useEffect(() => {
 
   const getCorAtivo = (ativoId: string) => coresAtivos[ativoId] || CORES_UNICAS[0];
 
-  const calcularTotalInvestido = (tipo: 'rendaFixa' | 'rendaVariavel') => {
+   const calcularTotalInvestido = (tipo: 'rendaFixa' | 'rendaVariavel') => {
     return ativos
       .filter(a => a.tipo === tipo)
       .reduce((total, a) => total + a.valorInvestido, 0);
@@ -259,7 +263,25 @@ setHistorico(prev => [...prev, novoRegistro]);
   return true;
 };
 
+ const handleAtualizarValores = async () => {
+  const senha = prompt('Digite sua senha para atualizar os valores:');
+  if (senha !== senhaSalva) {
+    alert('Senha incorreta!');
+    return;
+  }
 
+  const hoje = new Date().toISOString().split('T')[0];
+  const atualizados = await atualizarAtivos(ativos, hoje);
+
+  setAtivos(atualizados);
+  await updateDoc(doc(db, 'usuarios', login), {
+    ativos: atualizados,
+    ultimaAtualizacao: hoje
+  });
+
+  setBloqueado(true);
+  setTimeout(() => setBloqueado(false), 30 * 60 * 1000);
+};
 
     const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
 if (novoAtivo.senha !== senhaSalva) {
@@ -535,12 +557,18 @@ setHistorico(prev => [...prev, novoRegistro]);
   </div>
 </div>
   
-      <div className="text-center">
-        <Button onClick={() => setShowWizard(true)} className="mb-6">
-          + Adicionar Ativo
-        </Button>
-      </div>
-
+      <div className="flex justify-center gap-4 mb-6 flex-wrap">
+  <Button onClick={() => setShowWizard(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow">
+    + Adicionar Ativo
+  </Button>
+<Button
+  onClick={() => setShowAtualizarModal(true)}
+  disabled={bloqueado}
+  className="bg-red-600 hover:bg-red-700 text-white shadow"
+>
+  Atualizar Investimentos
+</Button>
+</div>
       {ativos.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -646,6 +674,32 @@ setHistorico(prev => [...prev, novoRegistro]);
       onConfirm={confirmarDividendo}
     />
   </div>
+)}
+
+{showAtualizarModal && (
+  <AtualizarInvestimentosModal
+    onClose={() => setShowAtualizarModal(false)}
+    onConfirm={async (senhaDigitada) => {
+      if (senhaDigitada !== senhaSalva) {
+        alert('Senha incorreta!');
+        return;
+      }
+
+      const hoje = new Date().toISOString().split('T')[0];
+      const atualizados = await atualizarAtivos(ativos, hoje);
+
+      setAtivos(atualizados);
+      await updateDoc(doc(db, 'usuarios', login), {
+        ativos: atualizados,
+        ultimaAtualizacao: hoje
+      });
+
+      setBloqueado(true);
+      setTimeout(() => setBloqueado(false), 30 * 60 * 1000);
+
+      setShowAtualizarModal(false);
+    }}
+  />
 )}
     </div>
    );

@@ -27,19 +27,20 @@ const formatDate = (dateString: string) => {
 };
 
 const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor, onInformarDividendo }) => {
+
   const isRendaVariavel = ativo.tipo === 'rendaVariavel';
 
-const precoMedio = isRendaVariavel && (ativo as RendaVariavelAtivo).quantidade > 0
-  ? (ativo as RendaVariavelAtivo).valorInvestido / (ativo as RendaVariavelAtivo).quantidade
-  : 0;
+  const precoMedio = isRendaVariavel && (ativo as RendaVariavelAtivo).quantidade > 0
+    ? (ativo as RendaVariavelAtivo).valorInvestido / (ativo as RendaVariavelAtivo).quantidade
+    : 0;
 
-const rendimentoPercentual = isRendaVariavel && precoMedio > 0
-  ? (((ativo as RendaVariavelAtivo).valorAtual / precoMedio) - 1) * 100
-  : 0;
+  const rendimentoPercentual = isRendaVariavel && precoMedio > 0
+    ? (((ativo as RendaVariavelAtivo).valorAtual / precoMedio) - 1) * 100
+    : 0;
 
-const rendimentoTotal = isRendaVariavel
-  ? ((rendimentoPercentual / 100) * (ativo as RendaVariavelAtivo).valorInvestido)
-  : 0;
+  const rendimentoTotal = isRendaVariavel
+    ? ((rendimentoPercentual / 100) * (ativo as RendaVariavelAtivo).valorInvestido)
+    : 0;
 
   return (
     <div
@@ -65,6 +66,90 @@ const rendimentoTotal = isRendaVariavel
         <div>Investido:</div>
         <div className="font-medium">{formatCurrency(ativo.valorInvestido)}</div>
 
+        {/* Renda Fixa */}
+  {ativo.tipo === 'rendaFixa' && (
+  <>
+    <div>Rendimento:</div>
+    <div className={ativo.valorAtual - ativo.valorInvestido >= 0 ? 'text-green-600' : 'text-red-600'}>
+      {formatCurrency(ativo.valorAtual - ativo.valorInvestido)} ({((ativo.valorAtual - ativo.valorInvestido) / ativo.valorInvestido * 100).toFixed(2)}%)
+    </div>
+
+    <div>Tipo de Rendimento:</div>
+    <div className="capitalize">{ativo.categoriaFixa}</div>
+
+    {ativo.categoriaFixa === 'prefixada' && (
+      <>
+        <div>Taxa Prefixada (a.a):</div>
+        <div>{(ativo.parametrosFixa.taxaPrefixada ?? 0).toFixed(2)}%</div>
+      </>
+    )}
+
+    {ativo.categoriaFixa === 'posFixada' && (
+      <>
+        {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
+          <>
+            <div>Índice:</div>
+            <div>CDI</div>
+            <div>Percentual:</div>
+            <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
+            <div>Taxa CDI usada:</div>
+            <div>{(ativo.parametrosFixa.cdiUsado ?? 0) .toFixed(4)}% a.d.</div>
+          </>
+        )}
+        {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
+          <>
+            <div>Índice:</div>
+            <div>SELIC</div>
+            <div>Percentual:</div>
+            <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
+            <div>Taxa SELIC usada:</div>
+            <div>{(ativo.parametrosFixa.selicUsado ?? 0) .toFixed(4)}% a.d.</div>
+          </>
+        )}
+      </>
+    )}
+
+    {ativo.categoriaFixa === 'hibrida' && (
+      <>
+        <div>Taxa Prefixada:</div>
+        <div>{(ativo.parametrosFixa.taxaPrefixada ?? 0).toFixed(2)}%</div>
+
+        {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
+          <>
+            <div>Índice:</div>
+            <div>CDI</div>
+            <div>Percentual:</div>
+            <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
+            <div>Taxa CDI usada:</div>
+            <div>{(ativo.parametrosFixa.cdiUsado ?? 0) .toFixed(4)}% a.d.</div>
+          </>
+        )}
+        {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
+          <>
+            <div>Índice:</div>
+            <div>SELIC</div>
+            <div>Percentual:</div>
+            <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
+             <div>Taxa SELIC usada:</div>
+            <div>{(ativo.parametrosFixa.selicUsado ?? 0) .toFixed(4)}% a.d.</div>
+          </>
+        )}
+        {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
+          <>
+            <div>Índice:</div>
+            <div>IPCA</div>
+            <div>Percentual:</div>
+            <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}%</div>
+            <div>Taxa IPCA usada:</div>
+            <div>{(ativo.parametrosFixa.ipcaUsado ?? 0) .toFixed(4)}% a.d.</div>
+          </>
+        )}
+      </>
+    )}
+  </>
+)}
+
+        {/* Renda Variável */}
         {isRendaVariavel && (
           <>
             <div>Quantidade:</div>
@@ -81,6 +166,7 @@ const rendimentoTotal = isRendaVariavel
         )}
       </div>
 
+      {/* Histórico de compras */}
       {isRendaVariavel && (ativo as RendaVariavelAtivo).compras?.length > 1 && (
         <div className="mt-3">
           <h4 className="font-semibold text-sm">Histórico de Compras:</h4>
@@ -94,19 +180,22 @@ const rendimentoTotal = isRendaVariavel
         </div>
       )}
 
+      {/* Botões */}
+      <div className="flex justify-between mt-4">
+        <Button onClick={() => onSell(ativo.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
+        </Button>
 
-    <div className="flex justify-between mt-4">
-    <Button onClick={() => onSell(ativo.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
-      {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
-    </Button>
-
-{onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
-  <Button onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)} className="bg-blue-600 hover:bg-blue-700 text-white">
-    Informar Dividendo
-  </Button>
-)}
-   </div>
-   </div>
+        {onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
+          <Button
+            onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Informar Dividendo
+          </Button>
+        )}
+      </div>
+    </div>
   );
 };
 
