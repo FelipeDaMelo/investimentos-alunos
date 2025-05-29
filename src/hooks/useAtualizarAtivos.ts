@@ -23,25 +23,19 @@ const useAtualizarAtivos = (
       if (ativosRef.current.length === 0) return;
 
       const agora = new Date();
-      const horarioAtual = agora.getHours();
-      const hoje = agora.toISOString().split('T')[0];
+      const agoraBrasilia = new Date(agora.getTime() - 3 * 60 * 60 * 1000); // UTC-3 
+      
+      const hoje = agoraBrasilia.toISOString().split('T')[0];
 
       const docRef = doc(db, 'usuarios', login);
       const docSnap = await getDoc(docRef);
-      const ultimaAtualizacao = docSnap.data()?.ultimaAtualizacao || '';
-      const ultimaData = ultimaAtualizacao || hoje;
-const t = Math.max(
-  1,
-  Math.floor(
-    (new Date(hoje).getTime() - new Date(ultimaData).getTime()) /
-    (1000 * 60 * 60 * 24)
-  )
+const ultimaData = docSnap.data()?.ultimaAtualizacao || hoje;
+const t = Math.floor(
+  (new Date(hoje).getTime() - new Date(ultimaData).getTime()) / (1000 * 60 * 60 * 24)
 );
-
-      // ⚠️ Se já atualizou hoje ou ainda não passou das 12h, não faz nada
-      const ultimaHora = docSnap.data()?.ultimaHoraAtualizacao || 0;
-const agoraMs = agora.getTime();
-const ultimaHoraMs = new Date(`${hoje}T${ultimaHora}:00`).getTime();
+const ultimaHoraStr = docSnap.data()?.ultimaHoraAtualizacao ?? '00:00';
+const agoraMs = agoraBrasilia.getTime();
+const ultimaHoraMs = new Date(`${hoje}T${ultimaHoraStr}`).getTime();
 
 if (agoraMs - ultimaHoraMs < 30 * 60 * 1000) return; // menos de 30 minutos
 
@@ -80,7 +74,7 @@ if (agoraMs - ultimaHoraMs < 30 * 60 * 1000) return; // menos de 30 minutos
         await updateDoc(docRef, {
   ativos: ativosAtualizados,
   ultimaAtualizacao: hoje,
-  ultimaHoraAtualizacao: agora.getHours().toString().padStart(2, '0') + ':' + agora.getMinutes().toString().padStart(2, '0')
+  ultimaHoraAtualizacao: agoraBrasilia.getHours().toString().padStart(2, '0') + ':' + agoraBrasilia.getMinutes().toString().padStart(2, '0')
 });
         atualizarCallback(ativosAtualizados); // atualiza o estado local (gráfico, cards, etc.)
       } catch (error) {

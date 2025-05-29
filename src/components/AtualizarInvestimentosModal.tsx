@@ -25,6 +25,7 @@ export default function AtualizarInvestimentosModal({ onClose, onConfirm }: Prop
           type="password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
+          placeholder="******"
           className="w-full border rounded px-3 py-2 mb-4"
         />
         <div className="flex justify-end gap-3">

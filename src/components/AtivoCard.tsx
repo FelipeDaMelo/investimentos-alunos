@@ -1,6 +1,7 @@
 // ✅ AtivoCard.tsx
 import { Ativo } from '../types/Ativo';
 import { RendaVariavelAtivo } from '../types/Ativo';
+import { RendaFixaAtivo } from '../types/Ativo';
 import Button from './Button';
 
 interface AtivoCardProps {
@@ -8,6 +9,7 @@ interface AtivoCardProps {
   onSell: (id: string) => void;
   cor: string;
   onInformarDividendo?: (ativo: RendaVariavelAtivo) => void;
+  onInvestir?: (ativo: RendaFixaAtivo) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -185,7 +187,6 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor, onInformarDiv
         <Button onClick={() => onSell(ativo.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
           {ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}
         </Button>
-
         {onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
           <Button
             onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)}

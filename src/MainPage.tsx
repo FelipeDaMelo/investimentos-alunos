@@ -27,7 +27,6 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 
 
-
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const CORES_UNICAS = [
@@ -82,6 +81,8 @@ const [showDividendoModal, setShowDividendoModal] = useState(false);
 const [ativoDividendo, setAtivoDividendo] = useState<RendaVariavelAtivo | null>(null);
 const [bloqueado, setBloqueado] = useState(false);
 const [showAtualizarModal, setShowAtualizarModal] = useState(false);
+const [ativoInvestimento, setAtivoInvestimento] = useState<RendaFixaAtivo | null>(null);
+const [showInvestirModal, setShowInvestirModal] = useState(false);
 
 useEffect(() => {
   if (ativos.length === 0) return;
@@ -153,6 +154,11 @@ useEffect(() => {
   setValorFixaDisponivel(totalFixa - calcularTotalInvestido('rendaFixa'));
   setValorVariavelDisponivel(totalVariavel - calcularTotalInvestido('rendaVariavel'));
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
+
+const handleInvestir = (ativo: RendaFixaAtivo) => {
+  setAtivoInvestimento(ativo);
+  setShowInvestirModal(true);
+};
 
 const handleInformarDividendo = (ativo: RendaVariavelAtivo) => {
   setAtivoDividendo(ativo);
@@ -583,7 +589,6 @@ setHistorico(prev => [...prev, novoRegistro]);
       ? () => handleInformarDividendo(ativo as RendaVariavelAtivo)
       : undefined
   }
-
               />
             ))}
           </div>
@@ -591,25 +596,27 @@ setHistorico(prev => [...prev, novoRegistro]);
           <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
             <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
             <div className="h-64">
-              <Line data={chartData} options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: (context) => ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`
-                    }
-                  }
-                },
-                scales: {
-                  y: {
-                    ticks: {
-                      callback: (value) => formatCurrency(Number(value))
-                    }
-                  }
-                }
-              }} />
+ <Line data={chartData} options={{
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: true },
+    tooltip: {
+      callbacks: {
+        label: (context) => ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      type: 'logarithmic',
+      min: 1, // para evitar log(0)
+      ticks: {
+        callback: (value) => formatCurrency(Number(value))
+      }
+    }
+  }
+}} />
             </div>
           </div>
         </>

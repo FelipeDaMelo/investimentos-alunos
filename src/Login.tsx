@@ -17,7 +17,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [erro, setErro] = useState('');
   const [verificando, setVerificando] = useState(false);
   const [grupoExistente, setGrupoExistente] = useState<boolean | null>(null);
-   const [senha, setSenha] = useState('');
+  const [senha, setSenha] = useState('');
+
   const verificarGrupo = async () => {
     if (!nomeGrupo.trim()) {
       setErro('Informe o nome do grupo');
@@ -107,8 +108,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         className="text-4xl mb-10 text-center drop-shadow-sm"
         style={{ fontWeight: 'bold', color: '#1e40af', fontSize: '2.0rem' }}
       >
-        Bem-vindo ao Simulador de Investimentos
+        🎓 Bem-vindo à Plataforma de Simulação de Investimentos
       </h2>
+<div className="bg-gray-50 border-l-4 border-blue-400 p-5 text-sm text-gray-800 rounded mt-4">
+  <p className="mb-4 text-justify leading-relaxed">
+    Este ambiente foi desenvolvido para <strong>fins educacionais</strong>, permitindo que você simule investimentos em diferentes tipos de ativos e acompanhe sua evolução ao longo do tempo — tudo de forma prática, interativa e em tempo real.
+  </p>
+
+  <h3 className="font-bold text-center text-blue-900 text-lg mb-3">
+    O que você pode fazer aqui:
+  </h3>
+
+  <ul className="list-disc list-inside space-y-2 px-4 text-justify">
+    <li>
+      Simular aplicações em <strong>Renda Fixa</strong> e <strong>Renda Variável</strong> com valores reais de mercado:
+      <ul className="list-disc list-inside pl-6 text-sm mt-1 text-gray-600">
+        <li className="italic font-medium">Renda Fixa: Pré-fixada, Pós-fixada e Híbrida.</li>
+        <li className="italic font-medium">Renda Variável: Ações, Fundos Imobiliários e Criptomoedas.</li>
+      </ul>
+    </li>
+
+    <li>
+      Acompanhar diariamente a <strong>valorização dos ativos</strong> e analisar o gráfico de desempenho.
+    </li>
+
+    <li>
+      Realizar <strong>operações fictícias</strong> como compras, vendas, depósitos e lançamento de dividendos.
+    </li>
+  </ul>
+
+  <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 rounded mt-4">
+    ⚠️ <strong>Atenção:</strong> Este sistema é uma <strong>simulação</strong>. Não utiliza dinheiro real, cartões de crédito nem realiza transações financeiras verdadeiras. Todos os valores e operações são destinados ao <strong>aprendizado seguro</strong>.
+  </div>
+</div>
 
       <div>
         <div className={rowClass}>
@@ -126,33 +158,38 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {grupoExistente === null && (
-          <Button
-            onClick={verificarGrupo}
-            disabled={verificando}
-            className="w-full mt-2"
-          >
-            {verificando ? 'Verificando...' : 'Verificar Grupo'}
-          </Button>
+          <>
+            <Button
+              onClick={verificarGrupo}
+              disabled={verificando}
+              className="w-full mt-2"
+            >
+              {verificando ? 'Verificando...' : 'Verificar Grupo'}
+            </Button>
+
+
+          </>
         )}
 
         {grupoExistente === false && (
           <form onSubmit={handleSubmit} className="mt-6">
-                    <div className={rowClass}>
-                     <label className={labelClass}>Senha Numérica (6 dígitos):</label>
-                    <input
-                    type="password"
-                    pattern="\d{6}"
-                    inputMode="numeric"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    className={inputClass}
-                    placeholder="******"
-                    required
-                    />
-                    </div>
-                    <p className="text-sm text-gray-500 text-left mt-4">
-                     A senha será utilizada para efetivar suas transações.
-                     </p>
+            <div className={rowClass}>
+              <label className={labelClass}>Senha Numérica (6 dígitos):</label>
+              <input
+                type="password"
+                pattern="\d{6}"
+                inputMode="numeric"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                className={inputClass}
+                placeholder="******"
+                required
+              />
+            </div>
+            <p className="text-sm text-gray-500 text-left mt-4">
+              A senha será utilizada para efetivar suas transações.
+            </p>
+
             <div className={rowClass}>
               <label className={labelClass} style={{ fontWeight: 'bold' }}>
                 Valor Total:
