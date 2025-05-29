@@ -498,7 +498,7 @@ setHistorico(prev => [...prev, novoRegistro]);
     }),
     datasets: ativos.map(ativo => ({
       label: ativo.nome,
-      data: allDates.map(date => ativo.patrimonioPorDia[date] || 0),
+      data: allDates.map(date => ativo.patrimonioPorDia?.[date] ?? 0),
       borderColor: getCorAtivo(ativo.id),
       backgroundColor: getCorAtivo(ativo.id) + '80',
       borderWidth: 2,
