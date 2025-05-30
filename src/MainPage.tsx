@@ -603,7 +603,7 @@ setHistorico(prev => [...prev, novoRegistro]);
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { display: true },
+    legend: { display: false },
     tooltip: {
       callbacks: {
         label: (context) => ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`
