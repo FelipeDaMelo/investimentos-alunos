@@ -7,12 +7,16 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  LogarithmicScale, // ✅ Corrigir este import
   PointElement,
   LineElement,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js';
+
+
+
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
 import VendaAtivoModal from './components/VendaAtivoModal'; // Importando o modal de venda
@@ -26,8 +30,7 @@ import { AtivoComSenha } from '../src/types/Ativo';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const CORES_UNICAS = [
   '#2E86AB', '#F18F01', '#73BA9B', '#D95D39', '#587B7F',
