@@ -29,6 +29,8 @@ import AtualizarInvestimentosModal from './components/AtualizarInvestimentosModa
 import { AtivoComSenha } from '../src/types/Ativo';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
+import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from './hooks/useAtualizarAtivos';
+
 
 ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -158,10 +160,21 @@ useEffect(() => {
   setValorVariavelDisponivel(totalVariavel - calcularTotalInvestido('rendaVariavel'));
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
 
-const handleInvestir = (ativo: RendaFixaAtivo) => {
-  setAtivoInvestimento(ativo);
-  setShowInvestirModal(true);
-};
+useEffect(() => {
+  async function verificarBloqueio() {
+    const ultima = await obterUltimaAtualizacaoManual(login);
+    if (ultima) {
+      const agora = new Date();
+      const diff = (agora.getTime() - ultima.getTime()) / 60000;
+      if (diff < 30) {
+        setBloqueado(true);
+        setTimeout(() => setBloqueado(false), (30 - diff) * 60000);
+      }
+    }
+  }
+
+  verificarBloqueio();
+}, [login]);
 
 const handleInformarDividendo = (ativo: RendaVariavelAtivo) => {
   setAtivoDividendo(ativo);
@@ -270,26 +283,6 @@ await updateDoc(docRef, {
 setHistorico(prev => [...prev, novoRegistro]);
   }
   return true;
-};
-
- const handleAtualizarValores = async () => {
-  const senha = prompt('Digite sua senha para atualizar os valores:');
-  if (senha !== senhaSalva) {
-    alert('Senha incorreta!');
-    return;
-  }
-
-  const hoje = new Date().toISOString().split('T')[0];
-  const atualizados = await atualizarAtivos(ativos, hoje);
-
-  setAtivos(atualizados);
-  await updateDoc(doc(db, 'usuarios', login), {
-    ativos: atualizados,
-    ultimaAtualizacao: hoje
-  });
-
-  setBloqueado(true);
-  setTimeout(() => setBloqueado(false), 30 * 60 * 1000);
 };
 
     const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
@@ -513,8 +506,8 @@ setHistorico(prev => [...prev, novoRegistro]);
   return (
     
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-8 text-center">
-        Monitoramento de Ativos - Grupo: {nomeGrupo}
+      <h1 className="text-xl md:text-2xl font-bold mb-8 text-center">
+        Painel de Investimentos - Grupo: {nomeGrupo}
       </h1>
   
       {error && (
@@ -534,13 +527,13 @@ setHistorico(prev => [...prev, novoRegistro]);
 
   <div className="space-y-3">
     <div className="flex justify-start items-center gap-4">
-      <span className="font-medium text-gray-700 w-72">Renda Fixa</span>
+      <span className="font-medium text-gray-700 w-full md:w-72">Renda Fixa</span>
       <span className="text-lg font-bold text-gray-800">
         {formatCurrency(valorFixaDisponivel)}
       </span>
     </div>
     <div className="flex justify-start items-center gap-4">
-      <span className="font-medium text-gray-700 w-72">Renda Variável / Criptomoedas</span>
+      <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
       <span className="text-lg font-bold text-gray-800">
         {formatCurrency(valorVariavelDisponivel)}
       </span>
@@ -598,7 +591,7 @@ setHistorico(prev => [...prev, novoRegistro]);
   
           <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
             <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
-            <div className="h-64">
+            <div className="h-64 overflow-x-auto min-w-[600px]">
  <Line data={chartData} options={{
   responsive: true,
   maintainAspectRatio: false,
@@ -613,7 +606,7 @@ setHistorico(prev => [...prev, novoRegistro]);
   scales: {
     y: {
       type: 'logarithmic',
-      min: 1, // para evitar log(0)
+      min: 0.001, // para evitar log(0)
       ticks: {
         callback: (value) => formatCurrency(Number(value))
       }
@@ -699,10 +692,11 @@ setHistorico(prev => [...prev, novoRegistro]);
       const atualizados = await atualizarAtivos(ativos, hoje);
 
       setAtivos(atualizados);
-      await updateDoc(doc(db, 'usuarios', login), {
-        ativos: atualizados,
-        ultimaAtualizacao: hoje
-      });
+await updateDoc(doc(db, 'usuarios', login), {
+  ativos: atualizados,
+  ultimaAtualizacao: hoje
+});
+await salvarUltimaAtualizacaoManual(login);
 
       setBloqueado(true);
       setTimeout(() => setBloqueado(false), 30 * 60 * 1000);

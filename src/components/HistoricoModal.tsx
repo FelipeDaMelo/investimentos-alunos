@@ -55,7 +55,7 @@ export default function HistoricoModal({ historico, onClose }: Props) {
 };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+    <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg shadow-lg">
       <div ref={modalRef}>
         <h2 className="text-xl font-semibold mb-4 text-center">Histórico de Transações</h2>
         <div className="max-h-[400px] overflow-y-auto overflow-x-auto px-2 historico-scroll">

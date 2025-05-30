@@ -86,4 +86,20 @@ if (agoraMs - ultimaHoraMs < 30 * 60 * 1000) return; // menos de 30 minutos
   }, [atualizarCallback, login]);
 };
 
+export async function salvarUltimaAtualizacaoManual(usuarioId: string) {
+  const ref = doc(db, 'usuarios', usuarioId);
+  await updateDoc(ref, {
+    ultimaAtualizacaoManual: new Date().toISOString()
+  });
+}
+
+export async function obterUltimaAtualizacaoManual(usuarioId: string): Promise<Date | null> {
+  const ref = doc(db, 'usuarios', usuarioId);
+  const docSnap = await getDoc(ref);
+  if (docSnap.exists() && docSnap.data().ultimaAtualizacaoManual) {
+    return new Date(docSnap.data().ultimaAtualizacaoManual);
+  }
+  return null;
+}
+
 export default useAtualizarAtivos;

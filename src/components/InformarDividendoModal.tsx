@@ -41,7 +41,7 @@ export default function InformarDividendoModal({ ativo, nome, ticker, onConfirm,
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+   <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg shadow-lg">
       <h2 className="text-xl font-semibold mb-4 text-center">Informar Dividendo</h2>
 
       <p className="text-sm mb-3 text-center">

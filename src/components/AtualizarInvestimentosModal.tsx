@@ -11,7 +11,7 @@ export default function AtualizarInvestimentosModal({ onClose, onConfirm }: Prop
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+      <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg shadow-lg">
         <h2 className="text-xl font-bold mb-4">Atualizar Investimentos</h2>
         <p className="mb-4 text-gray-700">
           Esta ação atualizará os valores dos ativos. <br />
