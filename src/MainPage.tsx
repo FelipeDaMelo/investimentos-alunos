@@ -30,6 +30,7 @@ import { AtivoComSenha } from '../src/types/Ativo';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from './hooks/useAtualizarAtivos';
+import FotoGrupoUploader from './components/FotoGrupoUploader';
 
 
 ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -88,6 +89,7 @@ const [bloqueado, setBloqueado] = useState(false);
 const [showAtualizarModal, setShowAtualizarModal] = useState(false);
 const [ativoInvestimento, setAtivoInvestimento] = useState<RendaFixaAtivo | null>(null);
 const [showInvestirModal, setShowInvestirModal] = useState(false);
+const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
 
 useEffect(() => {
   if (ativos.length === 0) return;
@@ -125,6 +127,7 @@ useEffect(() => {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
+          setFotoGrupo(data?.fotoGrupo || null);
           setAtivos(data?.ativos || []);
           setTotalDepositado(data?.totalDepositado || 0);
           setDepositoFixa(data?.depositoFixa || 0);
@@ -512,6 +515,9 @@ const maxY: number = maiorValor * 1.2;
   return (
     
     <div className="p-4 max-w-6xl mx-auto">
+      <div className="flex items-center justify-center mb-4">
+  <FotoGrupoUploader login={login} fotoUrlAtual={fotoGrupo || undefined} />
+</div>
       <h1 className="text-xl md:text-2xl font-bold mb-8 text-center">
         Painel de Investimentos - Grupo: {nomeGrupo}
       </h1>
