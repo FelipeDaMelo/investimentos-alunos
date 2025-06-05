@@ -503,6 +503,12 @@ setHistorico(prev => [...prev, novoRegistro]);
     }))
   };
 
+const todosValores = chartData.datasets.flatMap(ds => ds.data).filter(v => v > 0);
+const menorValor = Math.min(...todosValores);
+const maiorValor = Math.max(...todosValores);
+const minY: number = Math.max(menorValor * 0.5, 0.01);
+const maxY: number = maiorValor * 1.2;
+
   return (
     
     <div className="p-4 max-w-6xl mx-auto">
@@ -592,6 +598,9 @@ setHistorico(prev => [...prev, novoRegistro]);
           <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
             <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
             <div className="h-64 overflow-x-auto min-w-[600px]">
+
+
+
  <Line data={chartData} options={{
   responsive: true,
   maintainAspectRatio: false,
@@ -603,15 +612,16 @@ setHistorico(prev => [...prev, novoRegistro]);
       }
     }
   },
-  scales: {
-    y: {
-      type: 'logarithmic',
-      min: 0.001, // para evitar log(0)
-      ticks: {
-        callback: (value) => formatCurrency(Number(value))
-      }
+scales: {
+  y: {
+    type: 'logarithmic',
+    min: minY,
+    max: maxY,
+    ticks: {
+      callback: (value) => formatCurrency(Number(value))
     }
   }
+}
 }} />
             </div>
           </div>
