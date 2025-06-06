@@ -558,7 +558,7 @@ const maxY: number = maiorValor * 1.2;
   </div>
 
   {/* Botão fixo no canto superior direito do box */}
-<div className="absolute right-4 top-4 flex flex-col items-end space-y-2">
+<div className="mt-4 flex flex-col md:flex-row md:justify-end md:items-center gap-2">
   <Button className="bg-green-600 hover:bg-green-700 text-white shadow">
     + Depositar
   </Button>
