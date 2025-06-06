@@ -23,6 +23,7 @@ import VendaAtivoModal from './components/VendaAtivoModal'; // Importando o moda
 import { Ativo, RendaVariavelAtivo, RendaFixaAtivo } from './types/Ativo';
 import Button from './components/Button';
 import DepositarModal from './components/DepositarModal';
+import TransferenciaModal from './components/TransferenciaModal';
 import HistoricoModal from './components/HistoricoModal';
 import InformarDividendoModal from './components/InformarDividendoModal';
 import AtualizarInvestimentosModal from './components/AtualizarInvestimentosModal';
@@ -52,7 +53,7 @@ interface MainPageProps {
 }
 
 interface RegistroHistorico {
-  tipo: 'compra' | 'venda' | 'deposito' | 'dividendo';
+  tipo: 'compra' | 'venda' | 'deposito' | 'dividendo' | 'transferencia';
   valor: number;
   nome?: string;
   destino?: 'fixa' | 'variavel';
@@ -90,6 +91,7 @@ const [showAtualizarModal, setShowAtualizarModal] = useState(false);
 const [ativoInvestimento, setAtivoInvestimento] = useState<RendaFixaAtivo | null>(null);
 const [showInvestirModal, setShowInvestirModal] = useState(false);
 const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
+const [showTransferencia, setShowTransferencia] = useState(false);
 
 useEffect(() => {
   if (ativos.length === 0) return;
@@ -515,12 +517,15 @@ const maxY: number = maiorValor * 1.2;
   return (
     
     <div className="p-4 max-w-6xl mx-auto">
-      <div className="flex items-center justify-center mb-4">
+<div className="flex items-center justify-between mb-8 flex-wrap">
   <FotoGrupoUploader login={login} fotoUrlAtual={fotoGrupo || undefined} />
+
+  <h1 className="text-xl md:text-2xl font-bold text-center flex-1">
+    Painel de Investimentos - Grupo: {nomeGrupo}
+  </h1>
+
+  <div className="w-20" /> {/* Espaço vazio para alinhar como a imagem */}
 </div>
-      <h1 className="text-xl md:text-2xl font-bold mb-8 text-center">
-        Painel de Investimentos - Grupo: {nomeGrupo}
-      </h1>
   
       {error && (
         <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -534,7 +539,7 @@ const maxY: number = maiorValor * 1.2;
         </div>
       )}
   
-<div className="relative bg-white p-4 rounded-lg shadow-lg mb-6 border-2 border-gray-200 text-left">
+<div className="relative bg-white p-6 rounded-lg shadow-lg mb-6 border-2 border-gray-200 text-left min-h-[220px]">
   <h2 className="text-xl font-semibold mb-4">Disponível para Investimento</h2>
 
   <div className="space-y-3">
@@ -553,22 +558,23 @@ const maxY: number = maiorValor * 1.2;
   </div>
 
   {/* Botão fixo no canto superior direito do box */}
-  <div className="absolute top-4 right-4">
-    <Button
-      onClick={() => setShowDepositar(true)}
-      className="bg-green-600 hover:bg-green-700 text-white shadow"
-    >
-      + Depositar
-    </Button>
-  </div>
-  <div className="absolute bottom-4 right-4">
-    <Button
-      onClick={() => setShowHistorico(true)}
-      className="bg-red-600 hover:bg-red-700 text-white shadow"
-    >
-      + Ver Extrato
-    </Button>
-  </div>
+<div className="absolute right-4 top-4 flex flex-col items-end space-y-2">
+  <Button className="bg-green-600 hover:bg-green-700 text-white shadow">
+    + Depositar
+  </Button>
+  <Button
+    onClick={() => setShowTransferencia(true)}
+    className="bg-yellow-500 hover:bg-yellow-600 text-white shadow"
+  >
+    ↔ Transferir
+  </Button>
+  <Button
+    onClick={() => setShowHistorico(true)}
+    className="bg-red-600 hover:bg-red-700 text-white shadow"
+  >
+    + Ver Extrato
+  </Button>
+</div>
 </div>
   
       <div className="flex justify-center gap-4 mb-6 flex-wrap">
@@ -666,6 +672,65 @@ scales: {
           />
         </div>
       )}
+
+ {showTransferencia && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <TransferenciaModal
+      onClose={() => setShowTransferencia(false)}
+      onConfirm={async (valor, direcao, senhaDigitada) => {
+        if (senhaDigitada !== senhaSalva) {
+          alert('Senha incorreta!');
+          return;
+        }
+
+        if (valor <= 0) {
+          alert('Digite um valor válido.');
+          return;
+        }
+
+        const docRef = doc(db, 'usuarios', login);
+        const dataAtual = new Date().toISOString();
+
+        if (direcao === 'fixa-variavel') {
+          if (valorFixaDisponivel < valor) {
+            alert('Saldo insuficiente em Renda Fixa.');
+            return;
+          }
+          setValorFixaDisponivel(prev => prev - valor);
+          setValorVariavelDisponivel(prev => prev + valor);
+          setDepositoFixa(prev => prev - valor);
+          setDepositoVariavel(prev => prev + valor);
+        } else {
+          if (valorVariavelDisponivel < valor) {
+            alert('Saldo insuficiente em Renda Variável.');
+            return;
+          }
+          setValorVariavelDisponivel(prev => prev - valor);
+          setValorFixaDisponivel(prev => prev + valor);
+          setDepositoVariavel(prev => prev - valor);
+          setDepositoFixa(prev => prev + valor);
+        }
+
+        const novoRegistro: RegistroHistorico = {
+          tipo: 'transferencia',
+          valor,
+          data: dataAtual,
+          destino: direcao === 'fixa-variavel' ? 'variavel' : 'fixa'
+        };
+
+        await updateDoc(docRef, {
+          historico: arrayUnion(novoRegistro),
+          depositoFixa: direcao === 'fixa-variavel' ? depositoFixa - valor : depositoFixa + valor,
+          depositoVariavel: direcao === 'fixa-variavel' ? depositoVariavel + valor : depositoVariavel - valor
+        });
+
+        setHistorico(prev => [...prev, novoRegistro]);
+        setShowTransferencia(false);
+      }}
+    />
+  </div>
+)
+}
 
       {showHistorico && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

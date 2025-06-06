@@ -3,7 +3,7 @@ import Button from './Button';
 import html2pdf from 'html2pdf.js';
 
 interface HistoricoItem {
-  tipo: 'deposito' | 'compra' | 'venda' | 'dividendo';
+  tipo: 'deposito' | 'compra' | 'venda' | 'dividendo'| 'transferencia';
   valor: number;
   destino?: 'fixa' | 'variavel';
   nome?: string;
@@ -20,7 +20,8 @@ const corPorTipo = {
   deposito: 'text-blue-600',
   compra: 'text-red-600',
   venda: 'text-green-600',
-  dividendo: 'text-purple-600' // nova cor para dividendos
+  dividendo: 'text-purple-600', // nova cor para dividendos
+  transferencia: 'text-gray-600' 
 };
 
 export default function HistoricoModal({ historico, onClose }: Props) {
@@ -73,7 +74,9 @@ export default function HistoricoModal({ historico, onClose }: Props) {
                   `Venda: ${item.valor.toFixed(2)} reais em "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
                   {item.tipo === 'dividendo' &&
                   `Dividendo: ${item.valor.toFixed(2)} reais recebidos de "${item.nome}" no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
-              </li>
+              {item.tipo === 'transferencia' &&
+      `Transferência: ${item.valor.toFixed(2)} reais para Renda ${item.destino === 'fixa' ? 'Fixa' : 'Variável'} no dia ${new Date(item.data).toLocaleDateString('pt-BR')}`}
+  </li>
             ))}
           </ul>
         </div>
