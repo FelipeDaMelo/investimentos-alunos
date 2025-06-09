@@ -1,4 +1,4 @@
-import { RegistroHistorico } from '../types/RegistroHistorico'; // ajuste o caminho conforme necessário
+import { RegistroHistorico } from './RegistroHistorico'; // ajuste o caminho conforme necessário
 
 export function calcularTotalVendidoNoMes(
   historico: RegistroHistorico[],
