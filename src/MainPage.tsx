@@ -604,59 +604,49 @@ const variacaoPercentual = useMemo(() => {
   <h2 className="text-xl font-semibold mb-4">Saldo Disponível para Novos Investimentos</h2>
 
   {/* Saldos - sempre à esquerda */}
-  <div className="space-y-3 pr-40"> {/* reserva espaço para os botões no desktop */}
-    <div className="flex justify-start items-center gap-4">
-      <span className="font-medium text-gray-700 w-full md:w-72">Renda Fixa</span>
-      <span className="text-lg font-bold text-gray-800">{formatCurrency(valorFixaDisponivel)}</span>
-    </div>
-    <div className="flex justify-start items-center gap-4">
-      <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
-      <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
-    </div>
-    <div className="flex items-center gap-4 bg-blue-50 border border-blue-300 rounded-xl p-4 shadow-sm">
-  <Wallet className="w-6 h-6 text-blue-600" />
-  <div className="flex flex-col w-full">
-    <span className="text-sm font-semibold text-blue-800 uppercase tracking-wide">
-      Valor total da carteira
+ <div className="space-y-3 pr-40">
+  <div className="flex justify-start items-center gap-4">
+    <span className="font-medium text-gray-700 w-full md:w-72">Renda Fixa</span>
+    <span className="text-lg font-bold text-gray-800">{formatCurrency(valorFixaDisponivel)}</span>
+  </div>
+  <div className="flex justify-start items-center gap-4">
+    <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
+    <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
+  </div>
+  <div className="grid grid-cols-2 items-center text-sm bg-blue-50 border border-blue-300 rounded-lg px-4 py-3 shadow-sm w-full max-w-md">
+  <div className="flex items-center gap-2 text-blue-800 font-semibold uppercase tracking-wide">
+    <Wallet className="w-5 h-5" />
+    <span>Valor total da carteira</span>
+  </div>
+  <div className="text-right">
+    <span className="block text-lg font-bold text-gray-900">{formatCurrency(valorTotalAtual)}</span>
+    <span className={`text-sm font-semibold ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+      {variacaoPercentual >= 0 ? (
+        <><CircleArrowUp className="inline w-4 h-4 mr-1" />{Math.abs(variacaoPercentual).toFixed(2)}%</>
+      ) : (
+        <><CircleArrowDown className="inline w-4 h-4 mr-1" />{Math.abs(variacaoPercentual).toFixed(2)}%</>
+      )}
     </span>
-    <div className="flex justify-between items-center mt-1">
-      <span className="text-xl font-bold text-gray-800">
-        {formatCurrency(valorTotalAtual)}
-      </span>
-      <span className={`text-base font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-        {variacaoPercentual >= 0 ? (
-          <>
-            <CircleArrowUp className="w-5 h-5 mr-1" />
-            {Math.abs(variacaoPercentual).toFixed(2)}%
-          </>
-        ) : (
-          <>
-            <CircleArrowDown className="w-5 h-5 mr-1" />
-            {Math.abs(variacaoPercentual).toFixed(2)}%
-          </>
-        )}
-      </span>
-    </div>
   </div>
 </div>
-  </div>
+</div>
 
   {/* Botões fixos no canto superior direito (mobile e desktop) */}
- <div className="absolute right-4 top-4 flex flex-wrap md:flex-col gap-2 items-center md:items-end max-w-full">
+ <div className="flex flex-col gap-2 items-stretch sm:absolute sm:right-4 sm:top-4 sm:items-end sm:flex-col">
 <Button
   onClick={() => setShowDepositar(true)}
-  className="bg-green-600 hover:bg-green-700 text-white shadow w-full "
+  className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-[180px]"
 >
   <Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar
 </Button>
     <Button
       onClick={() => setShowTransferencia(true)}
-      className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full" >
+      className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full sm:w-[180px]" >
         <ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" />  Transferir
     </Button>
     <Button
       onClick={() => setShowHistorico(true)}
-      className="bg-red-600 hover:bg-red-700 text-white shadow w-full"
+      className="bg-red-600 hover:bg-red-700 text-white shadow w-full sm:w-[180px]"
     >
       <ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato
     </Button>

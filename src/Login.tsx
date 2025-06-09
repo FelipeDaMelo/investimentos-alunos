@@ -140,8 +140,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </li>
           </ul>
 
-          <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 rounded mt-4">
+          <div className="bg-violet-100 border-l-4 border-violet-400 p-3 text-sm text-violet-800 rounded mt-4">
             ⚠️ <strong>Atenção:</strong> Este sistema é uma <strong>simulação</strong>. Não utiliza dinheiro real, cartões de crédito nem realiza transações financeiras verdadeiras.
+            {/* Modal e botão do tutorial */}
+      {mostrarTutorial && (
+        <TutorialModal onClose={() => setMostrarTutorial(false)} />
+      )}
+
+      <div className="text-center mt-4">
+        <Button
+          onClick={() => setMostrarTutorial(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white shadow w-full" 
+        >
+          Ver Tutorial do Simulador
+        </Button>
+      </div>
           </div>
         </div>
 
@@ -245,20 +258,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </form>
           )}
         </div>
-      </div>
-
-      {/* Modal e botão do tutorial */}
-      {mostrarTutorial && (
-        <TutorialModal onClose={() => setMostrarTutorial(false)} />
-      )}
-
-      <div className="text-center mt-4">
-        <button
-          onClick={() => setMostrarTutorial(true)}
-          className="text-sm underline text-blue-700 hover:text-blue-900 transition"
-        >
-          📘 Ver Tutorial do Sistema
-        </button>
       </div>
     </>
   );
