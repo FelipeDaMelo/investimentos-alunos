@@ -176,7 +176,28 @@ onSubmit({
           <option value="posFixada">Pós-fixada</option>
           <option value="hibrida">Híbrida</option>
         </select>
+             <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded text-sm text-gray-800">
+          <p className="mb-2 font-semibold">Veja as opções reais de investimentos em renda fixa:</p>
+          <ul className="list-disc list-inside space-y-1 text-left">
+            <li>
+              <a href="https://www.infomoney.com.br/ferramentas/comparador-renda-fixa/" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+                Comparador InfoMoney
+              </a>
+            </li>
+            <li>
+              <a href="https://www.tesourodireto.com.br/titulos/precos-e-taxas.htm" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+                Tesouro Direto – Preços e Taxas
+              </a>
+            </li>
+            <li>
+              <a href="https://yubb.com.br/investimentos/renda-fixa" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+                Yubb – Buscador de CDBs
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
+
 
       {/* 🔵 Taxas e botão quando for Pós-fixada */}
 {form.categoriaFixa === 'posFixada' && (

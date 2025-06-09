@@ -14,9 +14,11 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-
-
-
+import { Chart } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
+Chart.register(zoomPlugin);
+import { useRef } from 'react';
+import { formatarDataHoraBr } from './utils/formatarDataHora';
 import AtivoCard from './components/AtivoCard';
 import AddAtivoWizard from './components/AddAtivoWizard';
 import VendaAtivoModal from './components/VendaAtivoModal'; // Importando o modal de venda
@@ -32,6 +34,11 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from './hooks/useAtualizarAtivos';
 import FotoGrupoUploader from './components/FotoGrupoUploader';
+import { CircleArrowUp, CircleArrowDown } from 'lucide-react';
+import { Wallet,Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus,RefreshCw, Download  } from 'lucide-react'; // certifique-se de importar esse ícone também
+import { verificarImpostoMensal } from './hooks/verificarImpostoMensal';
+import { ResumoIR } from './components/ResumoIR';
+import DeduzirIRModal from './components/DeduzirIRModal';
 
 
 ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -53,12 +60,17 @@ interface MainPageProps {
 }
 
 interface RegistroHistorico {
-  tipo: 'compra' | 'venda' | 'deposito' | 'dividendo' | 'transferencia';
+  tipo: 'compra' | 'venda' | 'deposito' | 'dividendo' | 'transferencia'| 'ir';
   valor: number;
   nome?: string;
   destino?: 'fixa' | 'variavel';
   categoria?: 'rendaFixa' | 'rendaVariavel';
+   subtipo?: 'acao' | 'fii' | 'criptomoeda'; // ⬅️ necessário para o cálculo de IR
   data: string;
+  valorBruto?: number;
+  valorLiquido?: number;
+  imposto?: number;
+  diasAplicado?: number;
 }
 
 const formatCurrency = (value: number) => {
@@ -92,7 +104,13 @@ const [ativoInvestimento, setAtivoInvestimento] = useState<RendaFixaAtivo | null
 const [showInvestirModal, setShowInvestirModal] = useState(false);
 const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
 const [showTransferencia, setShowTransferencia] = useState(false);
+const [escalaY, setEscalaY] = useState<'linear' | 'logarithmic'>('linear');
+const [resgatesFixa, setResgatesFixa] = useState(0);
+const [resumosIR, setResumosIR] = useState<ResumoIR[] | null>(null);
+const [mostrarModalIR, setMostrarModalIR] = useState(false);
 
+
+const chartRef = useRef<Chart<'line'> | null>(null);
 useEffect(() => {
   if (ativos.length === 0) return;
 
@@ -104,7 +122,7 @@ useEffect(() => {
 }, [login]);
 
 
-  const coresAtivos = useMemo(() => {
+ const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
     ativos.forEach((ativo, index) => {
       mapeamento[ativo.id] = CORES_UNICAS[index % CORES_UNICAS.length];
@@ -154,6 +172,19 @@ useEffect(() => {
     carregarDados();
   }, [login, fixo, variavel]);
 
+  useEffect(() => {
+  const carregarResgates = async () => {
+    const docRef = doc(db, 'usuarios', login);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      setResgatesFixa(data?.resgatesFixa || 0); // 👈 valor resgatado anteriormente
+    }
+  };
+  carregarResgates();
+}, [login]);
+
+
 useEffect(() => {
   const valorFixaInicial = valorInvestido * (fixo / 100);
   const valorVariavelInicial = valorInvestido * (variavel / 100);
@@ -161,9 +192,13 @@ useEffect(() => {
   const totalFixa = valorFixaInicial + depositoFixa;
   const totalVariavel = valorVariavelInicial + depositoVariavel;
 
-  setValorFixaDisponivel(totalFixa - calcularTotalInvestido('rendaFixa'));
-  setValorVariavelDisponivel(totalVariavel - calcularTotalInvestido('rendaVariavel'));
-}, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel]);
+  const disponivelFixa = totalFixa - calcularTotalInvestido('rendaFixa') + resgatesFixa;
+  const disponivelVariavel = totalVariavel - calcularTotalInvestido('rendaVariavel');
+
+  setValorFixaDisponivel(disponivelFixa);
+  setValorVariavelDisponivel(disponivelVariavel);
+}, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel, resgatesFixa]);
+
 
 useEffect(() => {
   async function verificarBloqueio() {
@@ -255,40 +290,32 @@ const handleDeposito = async (
     alert('Senha incorreta!');
     return false;
   }
+
   const docRef = doc(db, 'usuarios', login);
 
-  if (destino === 'fixa') {
-    setDepositoFixa(prev => prev + valor);
-   const novoRegistro: RegistroHistorico = {
-  tipo: 'deposito',
-  valor,
-  destino,
-  data: new Date().toISOString()
-};
+  const novoRegistro: RegistroHistorico = {
+    tipo: 'deposito',
+    valor,
+    destino,
+    data: new Date().toISOString(),
+  };
 
-await updateDoc(docRef, {
-  depositoFixa: depositoFixa + valor,
-  historico: arrayUnion(novoRegistro)
-});
-setHistorico(prev => [...prev, novoRegistro]);
-    
-  } else {
-    setDepositoVariavel(prev => prev + valor);
-const novoRegistro: RegistroHistorico = {
-  tipo: 'deposito',
-  valor,
-  destino,
-  data: new Date().toISOString()
-};
+  const campoDeposito = destino === 'fixa' ? 'depositoFixa' : 'depositoVariavel';
+  const setDeposito = destino === 'fixa' ? setDepositoFixa : setDepositoVariavel;
+  const valorAtual = destino === 'fixa' ? depositoFixa : depositoVariavel;
 
-await updateDoc(docRef, {
-  depositoFixa: depositoVariavel + valor,
-  historico: arrayUnion(novoRegistro)
-});
-setHistorico(prev => [...prev, novoRegistro]);
-  }
+  setDeposito(prev => prev + valor);
+
+  await updateDoc(docRef, {
+    [campoDeposito]: valorAtual + valor,
+    historico: arrayUnion(novoRegistro),
+  });
+
+  setHistorico(prev => [...prev, novoRegistro]);
+
   return true;
 };
+
 
     const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
 if (novoAtivo.senha !== senhaSalva) {
@@ -381,48 +408,64 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) 
   }
 
     if (!ativoSelecionado) return;
+if (ativoSelecionado.tipo === 'rendaFixa') {
+  const { calcularImpostoRenda } = await import('./hooks/calcularImpostoRenda');
 
-    if (ativoSelecionado.tipo === 'rendaFixa') {
-      // Venda total da renda fixa
-      setValorFixaDisponivel(prev => prev + ativoSelecionado.valorAtual);
-      const ativosRestantes = ativos.filter(a => a.id !== ativoSelecionado.id);
-      setAtivos(ativosRestantes);
+  const resultadoIR = calcularImpostoRenda(
+    ativoSelecionado.dataInvestimento,
+    ativoSelecionado.valorInvestido,
+    ativoSelecionado.valorAtual,
+  );
 
-      const docRef = doc(db, 'usuarios', login);
-      await updateDoc(docRef, { ativos: ativosRestantes });
-      await updateDoc(docRef, {
-  historico: arrayUnion({
-    tipo: 'venda',
-    valor: quantidadeVendida * ativoSelecionado.valorAtual,
-    nome: ativoSelecionado.nome,
-    categoria: ativoSelecionado.tipo,
-    data: new Date().toISOString()
-  })
-  
+  // ✅ Soma o valor resgatado ao controle separado e persiste no Firestore
+const lucroLiquido = resultadoIR.lucro - resultadoIR.imposto;
+
+setResgatesFixa(prev => {
+  const novoValor = prev + lucroLiquido;
+  updateDoc(doc(db, 'usuarios', login), { resgatesFixa: novoValor });
+  return novoValor;
 });
-const novoRegistro: RegistroHistorico = {
-  tipo: 'venda',
-  valor: quantidadeVendida * ativoSelecionado.valorAtual,
-  nome: ativoSelecionado.nome,
-  categoria: ativoSelecionado.tipo,
-  data: new Date().toISOString()
-};
-setHistorico(prev => [...prev, novoRegistro]);
 
-    } else {
+  // ✅ Remove o ativo da carteira
+  const ativosRestantes = ativos.filter(a => a.id !== ativoSelecionado.id);
+  setAtivos(ativosRestantes);
+
+  const docRef = doc(db, 'usuarios', login);
+  await updateDoc(docRef, { ativos: ativosRestantes });
+
+  // ✅ Registro da venda com campos extras
+  const registroVenda: RegistroHistorico = {
+    tipo: 'venda',
+    valor: resultadoIR.valorLiquido,
+    valorBruto: ativoSelecionado.valorAtual,
+    valorLiquido: resultadoIR.valorLiquido,
+    imposto: resultadoIR.imposto,
+    diasAplicado: resultadoIR.diasAplicado,
+    nome: ativoSelecionado.nome,
+    categoria: 'rendaFixa',
+    data: new Date().toISOString()
+  };
+
+  await updateDoc(docRef, {
+    historico: arrayUnion(registroVenda)
+  });
+
+  setHistorico(prev => [...prev, registroVenda]);
+
+  setShowVendaModal(false);
+  setAtivoSelecionado(null);
+}
+ else {
       // Venda parcial ou total de renda variável
       const ativoVar = ativoSelecionado;
-
       const valorVenda = quantidadeVendida * ativoVar.valorAtual;
       setValorVariavelDisponivel(prev => prev + valorVenda);
-
-const novaQuantidade = ativoVar.quantidade - quantidadeVendida;
+      const novaQuantidade = ativoVar.quantidade - quantidadeVendida;
 
 if (Math.abs(novaQuantidade) < 1e-8) {
   // Venda total (inclusive se restar ~0)
   const ativosRestantes = ativos.filter(a => a.id !== ativoVar.id);
   setAtivos(ativosRestantes);
-
   const docRef = doc(db, 'usuarios', login);
   await updateDoc(docRef, { ativos: ativosRestantes });
   await updateDoc(docRef, {
@@ -469,8 +512,7 @@ setHistorico(prev => [...prev, novoRegistro]);
       nome: ativoSelecionado.nome,
       categoria: ativoSelecionado.tipo,
       data: new Date().toISOString()
-    })
-    
+    }) 
   });
   
   const novoRegistro: RegistroHistorico = {
@@ -483,7 +525,6 @@ setHistorico(prev => [...prev, novoRegistro]);
 setHistorico(prev => [...prev, novoRegistro]);
 }
     }
-
     setShowVendaModal(false);
     setAtivoSelecionado(null);
   };
@@ -497,15 +538,15 @@ setHistorico(prev => [...prev, novoRegistro]);
       const [ano, mes, dia] = date.split('-');
       return `${dia}/${mes}/${ano}`;
     }),
-    datasets: ativos.map(ativo => ({
-      label: ativo.nome,
-      data: allDates.map(date => ativo.patrimonioPorDia?.[date] ?? 0),
-      borderColor: getCorAtivo(ativo.id),
-      backgroundColor: getCorAtivo(ativo.id) + '80',
-      borderWidth: 2,
-      tension: 0.1,
-      pointRadius: 4
-    }))
+datasets: ativos.map(ativo => ({
+  label: ativo.nome,
+  data: allDates.map(date => ativo.patrimonioPorDia?.[date] ?? 0),
+  borderColor: getCorAtivo(ativo.id),
+  backgroundColor: getCorAtivo(ativo.id) + '33', // opacidade leve
+  borderWidth: 3,
+  pointRadius: 3,
+  pointHoverRadius: 5,
+}))
   };
 
 const todosValores = chartData.datasets.flatMap(ds => ds.data).filter(v => v > 0);
@@ -513,6 +554,26 @@ const menorValor = Math.min(...todosValores);
 const maiorValor = Math.max(...todosValores);
 const minY: number = Math.max(menorValor * 0.5, 0.01);
 const maxY: number = maiorValor * 1.2;
+
+// Novo cálculo de valor total e valorização
+const valorTotalAtual = useMemo(() => {
+  const valorAtivos = ativos.reduce((total, ativo) => {
+    const dataHoje = new Date().toISOString().split('T')[0];
+
+    if (ativo.tipo === 'rendaVariavel') {
+      const ativoRV = ativo as RendaVariavelAtivo;
+      return total + (ativoRV.patrimonioPorDia?.[dataHoje] ?? ativoRV.valorAtual * ativoRV.quantidade);
+    }
+
+    return total + (ativo.patrimonioPorDia?.[dataHoje] ?? ativo.valorAtual);
+  }, 0);
+
+  return valorAtivos + valorFixaDisponivel + valorVariavelDisponivel;
+}, [ativos, valorFixaDisponivel, valorVariavelDisponivel]);
+const variacaoPercentual = useMemo(() => {
+  const ganho = valorTotalAtual - valorInvestido;
+  return (ganho / valorInvestido) * 100;
+}, [valorTotalAtual, valorInvestido]);
 
   return (
     
@@ -528,65 +589,107 @@ const maxY: number = maiorValor * 1.2;
 </div>
   
       {error && (
-        <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-x1 mb-4">
           {error}
         </div>
       )}
   
       {loading && (
-        <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-lg mb-4">
+        <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-x1 mb-4">
           Carregando...
         </div>
       )}
   
-<div className="relative bg-white p-6 rounded-lg shadow-lg mb-6 border-2 border-gray-200 text-left min-h-[220px]">
-  <h2 className="text-xl font-semibold mb-4">Disponível para Investimento</h2>
+<div className="relative bg-white p-6 rounded-x1 shadow-lg mb-6 border-2 border-gray-200 text-left min-h-[220px]">
+  <h2 className="text-xl font-semibold mb-4">Saldo Disponível para Novos Investimentos</h2>
 
-  <div className="space-y-3">
+  {/* Saldos - sempre à esquerda */}
+  <div className="space-y-3 pr-40"> {/* reserva espaço para os botões no desktop */}
     <div className="flex justify-start items-center gap-4">
       <span className="font-medium text-gray-700 w-full md:w-72">Renda Fixa</span>
-      <span className="text-lg font-bold text-gray-800">
-        {formatCurrency(valorFixaDisponivel)}
-      </span>
+      <span className="text-lg font-bold text-gray-800">{formatCurrency(valorFixaDisponivel)}</span>
     </div>
     <div className="flex justify-start items-center gap-4">
       <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
-      <span className="text-lg font-bold text-gray-800">
-        {formatCurrency(valorVariavelDisponivel)}
+      <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
+    </div>
+    <div className="flex items-center gap-4 bg-blue-50 border border-blue-300 rounded-xl p-4 shadow-sm">
+  <Wallet className="w-6 h-6 text-blue-600" />
+  <div className="flex flex-col w-full">
+    <span className="text-sm font-semibold text-blue-800 uppercase tracking-wide">
+      Valor total da carteira
+    </span>
+    <div className="flex justify-between items-center mt-1">
+      <span className="text-xl font-bold text-gray-800">
+        {formatCurrency(valorTotalAtual)}
+      </span>
+      <span className={`text-base font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        {variacaoPercentual >= 0 ? (
+          <>
+            <CircleArrowUp className="w-5 h-5 mr-1" />
+            {Math.abs(variacaoPercentual).toFixed(2)}%
+          </>
+        ) : (
+          <>
+            <CircleArrowDown className="w-5 h-5 mr-1" />
+            {Math.abs(variacaoPercentual).toFixed(2)}%
+          </>
+        )}
       </span>
     </div>
   </div>
-
-  {/* Botão fixo no canto superior direito do box */}
-<div className="mt-4 flex flex-col md:flex-row md:justify-end md:items-center gap-2">
-  <Button className="bg-green-600 hover:bg-green-700 text-white shadow">
-    + Depositar
-  </Button>
-  <Button
-    onClick={() => setShowTransferencia(true)}
-    className="bg-yellow-500 hover:bg-yellow-600 text-white shadow"
-  >
-    ↔ Transferir
-  </Button>
-  <Button
-    onClick={() => setShowHistorico(true)}
-    className="bg-red-600 hover:bg-red-700 text-white shadow"
-  >
-    + Ver Extrato
-  </Button>
 </div>
+  </div>
+
+  {/* Botões fixos no canto superior direito (mobile e desktop) */}
+ <div className="absolute right-4 top-4 flex gap-2 items-center md:flex-col md:items-end">
+<Button
+  onClick={() => setShowDepositar(true)}
+  className="bg-green-600 hover:bg-green-700 text-white shadow w-full "
+>
+  <Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar
+</Button>
+    <Button
+      onClick={() => setShowTransferencia(true)}
+      className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full" >
+        <ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" />  Transferir
+    </Button>
+    <Button
+      onClick={() => setShowHistorico(true)}
+      className="bg-red-600 hover:bg-red-700 text-white shadow w-full"
+    >
+      <ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato
+    </Button>
+  </div>
 </div>
   
       <div className="flex justify-center gap-4 mb-6 flex-wrap">
   <Button onClick={() => setShowWizard(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow">
-    + Adicionar Ativo
+    <SquarePlus className="w-5 h-4.5 inline-block mr-1" />  Adicionar Novo Ativo
   </Button>
 <Button
   onClick={() => setShowAtualizarModal(true)}
   disabled={bloqueado}
+  className="bg-green-600 hover:bg-green-700 text-white shadow"
+>
+  <Calculator className="w-5 h-4.5 inline-block mr-1" /> Atualizar Valores de Investimentos
+</Button>
+
+<Button
+    onClick={async () => {
+    const resumos: ResumoIR[] = await verificarImpostoMensal(
+      historico,
+      setValorVariavelDisponivel,
+      setHistorico,
+      login,
+      false // apenas resumo
+    );
+    setResumosIR(resumos);
+    setMostrarModalIR(true);
+  }}
   className="bg-red-600 hover:bg-red-700 text-white shadow"
 >
-  Atualizar Investimentos
+  🦁 Informar Imposto de Renda
 </Button>
 </div>
       {ativos.length > 0 ? (
@@ -606,40 +709,176 @@ const maxY: number = maiorValor * 1.2;
               />
             ))}
           </div>
-  
-          <div className="mt-8 bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
-            <h2 className="text-xl font-semibold mb-4">Evolução do Patrimônio</h2>
-            <div className="h-64 overflow-x-auto min-w-[600px]">
+<div className="mt-8 bg-white p-4 rounded-x1 shadow-lg border-2 border-gray-200 relative">
+  {/* Cabeçalho do gráfico */}
+<div className="flex flex-col items-center mb-4">
+  <h2 className="text-xl font-semibold text-center mb-2">📈 Evolução do Patrimônio</h2>
+  <select
+    value={escalaY}
+    onChange={(e) => {
+      setEscalaY(e.target.value as 'linear' | 'logarithmic');
+      localStorage.setItem('escalaY', e.target.value);
+    }}
+    className="bg-gray-600 text-white px-4 py-2 rounded-md font-semibold text-sm shadow"
+  >
+    <option value="linear">Escala Linear</option>
+    <option value="logarithmic">Escala Logarítmica</option>
+  </select>
+</div>
+            <div className="h-[500px] overflow-x-auto min-w-[600px] bg-white">
 
 
 
- <Line data={chartData} options={{
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (context) => ` ${context.dataset.label}: ${formatCurrency(Number(context.raw))}`
-      }
-    }
-  },
-scales: {
-  y: {
-    type: 'logarithmic',
-    min: minY,
-    max: maxY,
-    ticks: {
-      callback: (value) => formatCurrency(Number(value))
-    }
+<Line
+  ref={chartRef}
+  data={{
+    ...chartData,
+    datasets: chartData.datasets.map((dataset) => ({
+      ...dataset,
+      tension: 0.3,
+      pointRadius: 3,
+    })),
+  }}
+    options={{
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+                zoom: {
+          pan: {
+            enabled: true,
+            mode: 'xy'
+          },
+          zoom: {
+            wheel: {
+              enabled: false,
+            },
+            pinch: {
+              enabled: true
+            },
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(0,0,0,0.1)',
+              borderColor: 'rgba(0,0,0,0.25)',
+              borderWidth: 1,
+              modifierKey: 'ctrl'
+            },
+            mode: 'xy'
+          }
+        },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 10,
+            boxHeight: 10,
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle',
+          },
+          onHover: (event) => {
+            const target = event?.native?.target as HTMLElement | null;
+            if (target) target.style.cursor = 'pointer';
+          },
+          onLeave: (event) => {
+            const target = event?.native?.target as HTMLElement | null;
+            if (target) target.style.cursor = 'default';
+          },
+          onClick: (e, legendItem, legend) => {
+            const ci = legend.chart;
+            const index = legendItem.datasetIndex;
+            if (index !== undefined) {
+              const meta = ci.getDatasetMeta(index);
+              const alreadyHidden = meta.hidden === true || ci.data.datasets[index].hidden === true;
+              meta.hidden = !alreadyHidden;
+              ci.update();
+            }
+          },
+        },
+        tooltip: {
+          mode: 'nearest',
+          intersect: true,
+          callbacks: {
+            label: (context) => {
+              const valorAtual = Number(context.raw);
+              const dataset = context.dataset;
+              const primeiroValor = dataset.data.find((v: any) => typeof v === 'number' && v > 0) as number;
+              const variacao = primeiroValor ? (((valorAtual - primeiroValor) / primeiroValor) * 100).toFixed(2) : '0';
+              return ` ${dataset.label}: ${formatCurrency(valorAtual)} (${variacao}%)`;
+            }
+          }
+        },
+        title: {
+          display: true,
+          text:  'Gráfico de acompanhamento da evolução da carteira de investimentos',
+          font: {size: 20},
+        },
+      },
+      scales: {
+        x: {
+  type: 'category',
+  ticks: {
+    autoSkip: true,
+    maxTicksLimit: allDates.length,
+            callback: function(_, index) {
+              const rawDate = chartData.labels?.[index];
+              if (!rawDate) return '';
+              const [dia, mes, ano] = rawDate.split('/');
+              return `${dia}/${mes}`;
+            },
+    maxRotation: 45,
+    minRotation: 0
   }
-}
-}} />
-            </div>
-          </div>
+},
+        y: {
+          type: escalaY,
+          min: minY,
+          max: maxY,
+          ticks: {
+            callback: (value) => formatCurrency(Number(value)),
+          }
+        }
+      },
+             interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: true
+      }
+    }} />
+  </div>
+<div className="mt-4 flex justify-center gap-4">
+  <Button
+    variant="secondary"
+  onClick={() => {
+    const canvas = document.querySelector('canvas');
+    if (canvas && canvas instanceof HTMLCanvasElement) {
+      const chart = Chart.getChart(canvas);
+      chart?.resetZoom?.(); // chama a função resetZoom do plugin
+    }
+  }}
+  >
+    <RefreshCw className="w-4 h-4 mr-2 inline" /> Resetar Zoom
+  </Button>
+
+  <Button
+    variant="primary"
+    onClick={() => {
+      const chartCanvas = document.querySelector('canvas');
+      if (chartCanvas instanceof HTMLCanvasElement) {
+        const link = document.createElement('a');
+        const hoje = new Date();
+        link.download = `grafico_patrimonio_${hoje.toLocaleDateString('pt-BR')}.png`;
+        link.href = chartCanvas.toDataURL('image/png');
+        link.click();
+      }
+    }}
+  >
+    <Download className="w-4 h-4 mr-2 inline" /> Baixar Gráfico
+  </Button>
+</div>
+</div>
         </>
       ) : (
-        <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+        <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-x1">
           Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.
         </div>
       )}
@@ -672,6 +911,28 @@ scales: {
           />
         </div>
       )}
+
+      {mostrarModalIR && resumosIR && (
+  <DeduzirIRModal
+    resumosIR={resumosIR}
+    onClose={() => setMostrarModalIR(false)}
+    onConfirm={async (senhaDigitada: string) => {
+      if (senhaDigitada !== senhaSalva) {
+        alert('Senha incorreta.');
+        return;
+      }
+
+      await verificarImpostoMensal(
+        historico,
+        setValorVariavelDisponivel,
+        setHistorico,
+        login,
+        true // deduzir de fato
+      );
+      setMostrarModalIR(false);
+    }}
+  />
+)}
 
  {showTransferencia && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

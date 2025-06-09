@@ -59,9 +59,27 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtiv
             />
           </>
         ) : (
-          <p className="text-sm text-gray-600">
-            Esta venda irá devolver {ativo.valorAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} para o caixa.
-          </p>
+<p className="text-sm text-gray-600 whitespace-pre-line">
+  {(() => {
+    const hoje = new Date();
+    const dataCompra = new Date(ativo.dataInvestimento); // ✅ Corrigido aqui
+    const dias = Math.floor((hoje.getTime() - dataCompra.getTime()) / (1000 * 60 * 60 * 24));
+
+    const lucro = ativo.valorAtual - ativo.valorInvestido;
+    const calcularAliquota = (d: number) => d <= 180 ? 0.225 : d <= 360 ? 0.20 : d <= 720 ? 0.175 : 0.15;
+    const aliquota = calcularAliquota(dias);
+    const imposto = lucro > 0 ? lucro * aliquota : 0;
+    const valorLiquido = ativo.valorAtual - imposto;
+
+    return (
+      `Bruto: ${ativo.valorAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n` +
+      `Lucro: ${lucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n` +
+      `IR (${(aliquota * 100).toFixed(1)}%): ${imposto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n` +
+      `Líquido: ${valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n` +
+      `Dias aplicados: ${dias}`
+    );
+  })()}
+</p>
         )}
 
         <div>
