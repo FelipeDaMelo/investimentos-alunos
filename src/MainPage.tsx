@@ -613,30 +613,29 @@ const variacaoPercentual = useMemo(() => {
     <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
     <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
   </div>
-<div className="bg-blue-50 border border-blue-300 rounded-lg px-4 py-2 shadow-sm w-full sm:w-[220px] flex flex-col gap-1">
+<div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px] flex flex-col items-start sm:items-end gap-1">
   <div className="flex items-center gap-2 text-blue-800 font-semibold uppercase tracking-wide text-xs">
     <Wallet className="w-4 h-4" />
     <span>Valor total da carteira</span>
   </div>
 
-  <div className="flex justify-between items-center">
-    <span className="text-base font-bold text-gray-900">
-      {formatCurrency(valorTotalAtual)}
-    </span>
-    <span className={`text-sm font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-      {variacaoPercentual >= 0 ? (
-        <>
-          <CircleArrowUp className="w-4 h-4 mr-1" />
-          {Math.abs(variacaoPercentual).toFixed(2)}%
-        </>
-      ) : (
-        <>
-          <CircleArrowDown className="w-4 h-4 mr-1" />
-          {Math.abs(variacaoPercentual).toFixed(2)}%
-        </>
-      )}
-    </span>
-  </div>
+  <span className="text-lg font-bold text-gray-900">
+    {formatCurrency(valorTotalAtual)}
+  </span>
+
+  <span className={`text-sm font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+    {variacaoPercentual >= 0 ? (
+      <>
+        <CircleArrowUp className="w-4 h-4 mr-1" />
+        {Math.abs(variacaoPercentual).toFixed(2)}%
+      </>
+    ) : (
+      <>
+        <CircleArrowDown className="w-4 h-4 mr-1" />
+        {Math.abs(variacaoPercentual).toFixed(2)}%
+      </>
+    )}
+  </span>
 </div>
 </div>
 
