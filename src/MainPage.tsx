@@ -651,26 +651,28 @@ const variacaoPercentual = useMemo(() => {
   </div>
 
   {/* Botões fixos no canto superior direito */}
-  <div className="flex flex-col gap-2 items-stretch sm:absolute sm:right-4 sm:top-4 sm:items-end">
-    <Button
-      onClick={() => setShowDepositar(true)}
-      className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-[180px]"
-    >
-      <Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar
-    </Button>
-    <Button
-      onClick={() => setShowTransferencia(true)}
-      className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full sm:w-[180px]"
-    >
-      <ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" /> Transferir
-    </Button>
-    <Button
-      onClick={() => setShowHistorico(true)}
-      className="bg-red-600 hover:bg-red-700 text-white shadow w-full sm:w-[180px]"
-    >
-      <ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato
-    </Button>
-  </div>
+<div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 mt-4">
+  <Button
+    onClick={() => setShowDepositar(true)}
+    className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-auto"
+  >
+    <Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar
+  </Button>
+
+  <Button
+    onClick={() => setShowTransferencia(true)}
+    className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full sm:w-auto"
+  >
+    <ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" /> Transferir
+  </Button>
+
+  <Button
+    onClick={() => setShowHistorico(true)}
+    className="bg-red-600 hover:bg-red-700 text-white shadow w-full sm:w-auto"
+  >
+    <ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato
+  </Button>
+</div>
 </div>
 
   
