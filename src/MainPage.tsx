@@ -600,57 +600,69 @@ const variacaoPercentual = useMemo(() => {
         </div>
       )}
   
-<div className="relative bg-white p-6 rounded-x1 shadow-lg mb-6 border-2 border-gray-200 text-left min-h-[220px]">
+<div className="relative bg-white p-6 rounded-xl shadow-lg mb-6 border-2 border-gray-200 text-left min-h-[220px]">
   <h2 className="text-xl font-semibold mb-4">Saldo Disponível para Novos Investimentos</h2>
 
-  {/* Saldos - sempre à esquerda */}
- <div className="space-y-3 pr-40">
-  <div className="flex justify-start items-center gap-4">
-    <span className="font-medium text-gray-700 w-full md:w-72">Renda Fixa</span>
-    <span className="text-lg font-bold text-gray-800">{formatCurrency(valorFixaDisponivel)}</span>
-  </div>
-  <div className="flex justify-start items-center gap-4">
-    <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
-    <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
-  </div>
-<div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px]">
-  <div className="text-blue-800 font-semibold uppercase tracking-wide text-xs mb-1 flex items-center gap-1">
-    <Wallet className="w-4 h-4" />
-    <span>Valor total da carteira</span>
+  {/* Blocos de saldo com layout consistente */}
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    {/* Renda Fixa */}
+    <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px]">
+      <span className="text-gray-700 text-xs font-semibold uppercase tracking-wide mb-1 block">
+        Renda Fixa
+      </span>
+      <span className="text-lg font-bold text-gray-800">
+        {formatCurrency(valorFixaDisponivel)}
+      </span>
+    </div>
+
+    {/* Renda Variável */}
+    <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px]">
+      <span className="text-gray-700 text-xs font-semibold uppercase tracking-wide mb-1 block">
+        Renda Variável / Criptomoedas
+      </span>
+      <span className="text-lg font-bold text-gray-800">
+        {formatCurrency(valorVariavelDisponivel)}
+      </span>
+    </div>
+
+    {/* Valor total da carteira */}
+    <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px]">
+      <div className="flex items-center gap-1 text-blue-800 font-semibold uppercase tracking-wide text-xs mb-1">
+        <Wallet className="w-4 h-4" />
+        <span>Valor total da carteira</span>
+      </div>
+      <div className="text-gray-900 text-lg font-bold">
+        {formatCurrency(valorTotalAtual)}
+      </div>
+      <div className={`text-sm font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        {variacaoPercentual >= 0 ? (
+          <>
+            <CircleArrowUp className="w-4 h-4 mr-1" />
+            {Math.abs(variacaoPercentual).toFixed(2)}%
+          </>
+        ) : (
+          <>
+            <CircleArrowDown className="w-4 h-4 mr-1" />
+            {Math.abs(variacaoPercentual).toFixed(2)}%
+          </>
+        )}
+      </div>
+    </div>
   </div>
 
-  <div className="text-gray-900 text-lg font-bold">
-    {formatCurrency(valorTotalAtual)}
-  </div>
-
-  <div className={`text-sm font-semibold ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
-    {variacaoPercentual >= 0 ? (
-      <>
-        <CircleArrowUp className="w-4 h-4 mr-1" />
-        {Math.abs(variacaoPercentual).toFixed(2)}%
-      </>
-    ) : (
-      <>
-        <CircleArrowDown className="w-4 h-4 mr-1" />
-        {Math.abs(variacaoPercentual).toFixed(2)}%
-      </>
-    )}
-  </div>
-</div>
-</div>
-
-  {/* Botões fixos no canto superior direito (mobile e desktop) */}
- <div className="flex flex-col gap-2 items-stretch sm:absolute sm:right-4 sm:top-4 sm:items-end sm:flex-col">
-<Button
-  onClick={() => setShowDepositar(true)}
-  className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-[180px]"
->
-  <Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar
-</Button>
+  {/* Botões fixos no canto superior direito */}
+  <div className="flex flex-col gap-2 items-stretch sm:absolute sm:right-4 sm:top-4 sm:items-end">
+    <Button
+      onClick={() => setShowDepositar(true)}
+      className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-[180px]"
+    >
+      <Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar
+    </Button>
     <Button
       onClick={() => setShowTransferencia(true)}
-      className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full sm:w-[180px]" >
-        <ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" />  Transferir
+      className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full sm:w-[180px]"
+    >
+      <ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" /> Transferir
     </Button>
     <Button
       onClick={() => setShowHistorico(true)}
@@ -660,6 +672,7 @@ const variacaoPercentual = useMemo(() => {
     </Button>
   </div>
 </div>
+
   
       <div className="flex justify-center gap-4 mb-6 flex-wrap">
   <Button onClick={() => setShowWizard(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow">
