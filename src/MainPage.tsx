@@ -642,7 +642,7 @@ const variacaoPercentual = useMemo(() => {
   </div>
 
   {/* Botões fixos no canto superior direito (mobile e desktop) */}
- <div className="absolute right-4 top-4 flex gap-2 items-center md:flex-col md:items-end">
+ <div className="absolute right-4 top-4 flex flex-wrap md:flex-col gap-2 items-center md:items-end max-w-full">
 <Button
   onClick={() => setShowDepositar(true)}
   className="bg-green-600 hover:bg-green-700 text-white shadow w-full "
