@@ -613,17 +613,17 @@ const variacaoPercentual = useMemo(() => {
     <span className="font-medium text-gray-700 w-full md:w-72">Renda Variável / Criptomoedas</span>
     <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
   </div>
-<div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px] flex flex-col items-start sm:items-end gap-1">
-  <div className="flex items-center gap-2 text-blue-800 font-semibold uppercase tracking-wide text-xs">
+<div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px]">
+  <div className="text-blue-800 font-semibold uppercase tracking-wide text-xs mb-1 flex items-center gap-1">
     <Wallet className="w-4 h-4" />
     <span>Valor total da carteira</span>
   </div>
 
-  <span className="text-lg font-bold text-gray-900">
+  <div className="text-gray-900 text-lg font-bold">
     {formatCurrency(valorTotalAtual)}
-  </span>
+  </div>
 
-  <span className={`text-sm font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+  <div className={`text-sm font-semibold ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center`}>
     {variacaoPercentual >= 0 ? (
       <>
         <CircleArrowUp className="w-4 h-4 mr-1" />
@@ -635,7 +635,7 @@ const variacaoPercentual = useMemo(() => {
         {Math.abs(variacaoPercentual).toFixed(2)}%
       </>
     )}
-  </span>
+  </div>
 </div>
 </div>
 
