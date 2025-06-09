@@ -651,7 +651,7 @@ const variacaoPercentual = useMemo(() => {
   </div>
 
   {/* Botões fixos no canto superior direito */}
-<div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 sm:gap-x-6 mt-4">
+<div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 sm:container mx-auto mt-4">
   <Button
     onClick={() => setShowDepositar(true)}
     className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-auto"
