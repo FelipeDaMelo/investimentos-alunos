@@ -628,7 +628,7 @@ const variacaoPercentual = useMemo(() => {
     {/* Valor total da carteira */}
     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-[220px]">
       <div className="flex items-center gap-1 text-blue-800 font-semibold uppercase tracking-wide text-xs mb-1">
-        <Wallet className="w-4 h-4" />
+        <Wallet className="w-5 h-4.5" />
         <span>Valor total da carteira</span>
       </div>
       <div className="text-gray-900 text-lg font-bold">
@@ -651,7 +651,7 @@ const variacaoPercentual = useMemo(() => {
   </div>
 
   {/* Botões fixos no canto superior direito */}
-<div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 mt-4">
+<div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 sm:gap-x-6 mt-4">
   <Button
     onClick={() => setShowDepositar(true)}
     className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-auto"
