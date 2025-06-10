@@ -2,6 +2,7 @@
 import fetchValorAtual from '../fetchValorAtual';
 import { Ativo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
 import calcularRendimentoFixa from '../hooks/calcularRendimentoFixa';
+import { diasDecorridos } from './datas'; // ajuste o caminho se necessário
 
 export async function atualizarAtivos(
   ativos: Ativo[],
@@ -10,9 +11,7 @@ export async function atualizarAtivos(
   return await Promise.all(
     ativos.map(async (ativo) => {
       if (ativo.tipo === 'rendaFixa') {
-        const diasPassados = Math.max(0, Math.floor(
-          (new Date(hoje).getTime() - new Date(ativo.dataInvestimento).getTime()) / (1000 * 60 * 60 * 24)
-        ));
+        const diasPassados = Math.max(0, diasDecorridos(ativo.dataInvestimento, hoje));
         const rendimento = await calcularRendimentoFixa(ativo as RendaFixaAtivo);
         return {
           ...ativo,

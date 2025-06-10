@@ -199,7 +199,7 @@ useEffect(() => {
   const disponivelVariavel = totalVariavel - calcularTotalInvestido('rendaVariavel');
 
   setValorFixaDisponivel(disponivelFixa);
-  setValorVariavelDisponivel(disponivelVariavel);
+  //setValorVariavelDisponivel(disponivelVariavel);
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel, resgatesFixa]);
 
 useEffect(() => {
