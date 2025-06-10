@@ -540,21 +540,28 @@ setHistorico(prev => [...prev, novoRegistro]);
     new Set(ativos.flatMap(a => Object.keys(a.patrimonioPorDia)))
   ).sort();
 
-  const chartData = {
-    labels: allDates.map(date => {
-      const [ano, mes, dia] = date.split('-');
-      return `${dia}/${mes}/${ano}`;
-    }),
-datasets: ativos.map(ativo => ({
-  label: ativo.nome,
-  data: allDates.map(date => ativo.patrimonioPorDia?.[date] ?? 0),
-  borderColor: getCorAtivo(ativo.id),
-  backgroundColor: getCorAtivo(ativo.id) + '33', // opacidade leve
-  borderWidth: 3,
-  pointRadius: 3,
-  pointHoverRadius: 5,
-}))
-  };
+ const chartData = {
+  labels: allDates.map(date => {
+    const [ano, mes, dia] = date.split('-');
+    return `${dia}/${mes}/${ano}`;
+  }),
+  datasets: ativos.map(ativo => {
+    const ativoFinalizado =
+      (ativo.tipo === 'rendaVariavel' && ativo.quantidade === 0) ||
+      (ativo.tipo === 'rendaFixa' && ativo.valorAtual === 0);
+
+    return {
+      label: ativo.nome,
+      data: allDates.map(date => ativo.patrimonioPorDia?.[date] ?? null),
+      borderColor: getCorAtivo(ativo.id),
+      backgroundColor: getCorAtivo(ativo.id) + '33',
+      borderWidth: 3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderDash: ativoFinalizado ? [5, 5] : undefined
+    };
+  })
+};
 
 const todosValores = chartData.datasets.flatMap(ds => ds.data).filter(v => v > 0);
 const menorValor = Math.min(...todosValores);

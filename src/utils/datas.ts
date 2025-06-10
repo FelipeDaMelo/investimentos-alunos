@@ -29,6 +29,9 @@ export function diasDecorridos(dataInicial: string | Date, dataFinal: string | D
   const inicioLocal = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
   const fimLocal = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
 
+  console.log('📅 Data inicial (ajustada):', inicio.toISOString());
+  console.log('📅 Data final (ajustada):', fim.toISOString());
+
   const msPorDia = 1000 * 60 * 60 * 24;
   return Math.floor((fimLocal.getTime() - inicioLocal.getTime()) / msPorDia);
 }
