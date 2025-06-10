@@ -22,16 +22,20 @@ export function formatarDataHoraBr(dataIso: string | Date): string {
  * @returns Número de dias completos decorridos
  */
 export function diasDecorridos(dataInicial: string | Date, dataFinal: string | Date = new Date()): number {
-  const inicio = new Date(dataInicial);
-  const fim = new Date(dataFinal);
+  // Aplica correção de fuso UTC-3 para ambas as datas
+  const inicioCorrigido = new Date(new Date(dataInicial).getTime() - 3 * 60 * 60 * 1000);
+  const fimCorrigido = new Date(new Date(dataFinal).getTime() - 3 * 60 * 60 * 1000);
 
-  // Ignora horas para evitar erros de fuso horário e arredondamento
-  const inicioLocal = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
-  const fimLocal = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
-
-  console.log('📅 Data inicial (ajustada):', inicio.toISOString());
-  console.log('📅 Data final (ajustada):', fim.toISOString());
+  // Zera as horas para ignorar diferença por hora/minuto
+  const inicioLocal = new Date(inicioCorrigido.getFullYear(), inicioCorrigido.getMonth(), inicioCorrigido.getDate());
+  const fimLocal = new Date(fimCorrigido.getFullYear(), fimCorrigido.getMonth(), fimCorrigido.getDate());
 
   const msPorDia = 1000 * 60 * 60 * 24;
   return Math.floor((fimLocal.getTime() - inicioLocal.getTime()) / msPorDia);
+}
+
+export function dataHojeLocal(): string {
+  const agora = new Date();
+  const local = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  return local.toISOString().split('T')[0];
 }
