@@ -61,3 +61,38 @@ export const criarAtivoVariavel = (
 
   return [...ativos, novoAtivo];
 };
+
+import { RegistroHistorico } from '../hooks/RegistroHistorico';
+
+/**
+ * Calcula o saldo disponível em renda variável com base no histórico completo de transações.
+ */
+export function calcularSaldoVariavel(historico: RegistroHistorico[]): number {
+  let saldo = 0;
+
+  historico.forEach(item => {
+    if (item.tipo === 'deposito' && item.destino === 'variavel') {
+      saldo += item.valor;
+    }
+    if (item.tipo === 'compra' && item.categoria === 'rendaVariavel') {
+      saldo -= item.valor;
+    }
+    if (item.tipo === 'venda' && item.categoria === 'rendaVariavel') {
+      saldo += item.valor;
+    }
+    if (item.tipo === 'transferencia' && item.destino === 'variavel') {
+      saldo += item.valor;
+    }
+    if (item.tipo === 'transferencia' && item.destino === 'fixa') {
+      saldo -= item.valor;
+    }
+    if (item.tipo === 'dividendo') {
+      saldo += item.valor;
+    }
+    if (item.tipo === 'ir' && item.destino === 'variavel') {
+      saldo -= item.valor;
+    }
+  });
+
+  return parseFloat(saldo.toFixed(2));
+}

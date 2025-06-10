@@ -39,6 +39,7 @@ import { Wallet,Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus,Ref
 import { verificarImpostoMensal } from './hooks/verificarImpostoMensal';
 import { ResumoIR } from './components/ResumoIR';
 import DeduzirIRModal from './components/DeduzirIRModal';
+import { calcularSaldoVariavel } from './utils/ativoHelpers';
 
 
 ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -153,6 +154,8 @@ useEffect(() => {
           setDepositoFixa(data?.depositoFixa || 0);
           setDepositoVariavel(data?.depositoVariavel || 0);
           setHistorico((data?.historico || []) as RegistroHistorico[]);
+          const saldoCalculado = calcularSaldoVariavel(data?.historico || []);
+          setValorVariavelDisponivel(saldoCalculado);
           setSenhaSalva(data?.senha || '');
               } else {
           await setDoc(docRef, {
@@ -199,6 +202,10 @@ useEffect(() => {
   setValorVariavelDisponivel(disponivelVariavel);
 }, [ativos, valorInvestido, fixo, variavel, depositoFixa, depositoVariavel, resgatesFixa]);
 
+useEffect(() => {
+  const novoSaldoVariavel = calcularSaldoVariavel(historico);
+  setValorVariavelDisponivel(novoSaldoVariavel);
+}, [historico]);
 
 useEffect(() => {
   async function verificarBloqueio() {
