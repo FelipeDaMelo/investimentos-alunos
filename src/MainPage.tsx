@@ -309,6 +309,15 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     const maiorValor = Math.max(...todosValores);
     return { minY: Math.max(menorValor * 0.5, 0.01), maxY: maiorValor * 1.2 };
   }, [chartData]);
+
+  const totalAportado = useMemo(() => {
+  // Esta é a forma mais robusta e simples:
+  // Soma o valor de TODAS as transações do tipo 'deposito' encontradas no histórico.
+  // Isso funciona porque o Login.tsx já registra o aporte inicial como 'deposito'.
+  return historico
+    .filter(registro => registro.tipo === 'deposito')
+    .reduce((soma, deposito) => soma + deposito.valor, 0);
+}, [historico]); // Roda sempre que o histórico for atualizado
   
   const valorTotalAtual = useMemo(() => {
     const valorAtivos = ativos.reduce((total, ativo) => {
@@ -322,11 +331,20 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     return valorAtivos + valorFixaDisponivel + valorVariavelDisponivel;
   }, [ativos, valorFixaDisponivel, valorVariavelDisponivel]);
   
-  const variacaoPercentual = useMemo(() => {
-    if (valorInvestido === 0) return 0;
-    const ganho = valorTotalAtual - valorInvestido;
-    return (ganho / valorInvestido) * 100;
-  }, [valorTotalAtual, valorInvestido]);
+const variacaoPercentual = useMemo(() => {
+  // Se não houve aportes, não há variação. Evita divisão por zero.
+  if (totalAportado === 0) {
+    return 0;
+  }
+  
+  // O ganho real é a diferença entre o que a carteira vale agora
+  // e tudo o que foi colocado nela.
+  const ganhoReal = valorTotalAtual - totalAportado;
+  
+  // A rentabilidade é calculada sobre o total aportado.
+  return (ganhoReal / totalAportado) * 100;
+  
+}, [valorTotalAtual, totalAportado]); // Agora depende do valor total e do total aportado
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
