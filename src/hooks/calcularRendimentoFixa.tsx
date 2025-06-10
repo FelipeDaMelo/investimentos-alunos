@@ -9,7 +9,7 @@ const calcularRendimentoFixa = async (ativo: RendaFixaAtivo): Promise<number> =>
   if (t <= 0) return principal;
 
   if (ativo.categoriaFixa === 'prefixada' && ativo.parametrosFixa?.taxaPrefixada) {
-    const diaria = ativo.parametrosFixa.taxaPrefixada / 100 / 365;
+    const diaria = ativo.parametrosFixa.taxaPrefixada / 100 / 252;
     return principal * Math.pow(1 + diaria, t);
   }
 
@@ -38,7 +38,7 @@ const calcularRendimentoFixa = async (ativo: RendaFixaAtivo): Promise<number> =>
       ipca = 0
     } = ativo.parametrosFixa || {};
 
-    const diariaPrefixada = taxaPrefixada / 100 / 365;
+    const diariaPrefixada = taxaPrefixada / 100 / 252;
     let diariaIndexada = 0;
 
     if (percentualCDI > 0) {
