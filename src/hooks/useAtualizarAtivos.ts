@@ -42,7 +42,7 @@ if (agoraMs - ultimaHoraMs < 30 * 60 * 1000) return; // menos de 30 minutos
       const ativosAtualizados = await Promise.all(
         ativosRef.current.map(async (ativo) => {
           if (ativo.tipo === 'rendaFixa') {
-            const rendimento = await calcularRendimentoFixa(ativo as RendaFixaAtivo, t);
+            const rendimento = await calcularRendimentoFixa(ativo as RendaFixaAtivo);
             return {
               ...ativo,
               valorAtual: rendimento,
@@ -54,7 +54,7 @@ if (agoraMs - ultimaHoraMs < 30 * 60 * 1000) return; // menos de 30 minutos
           } else {
             const ativoVar = ativo as RendaVariavelAtivo;
             const valorAtualString = await fetchValorAtual(ativoVar.tickerFormatado);
-            const valorAtual = parseFloat(valorAtualString);
+            const valorAtual = parseFloat(valorAtualString) || 0; // <- proteção contra NaN
             const updatedPatrimonio = ativoVar.quantidade * valorAtual;
 
             return {
