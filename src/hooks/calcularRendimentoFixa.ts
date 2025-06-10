@@ -1,7 +1,9 @@
 import fetchValorAtual from '../fetchValorAtual';
 import { RendaFixaAtivo } from '../types/Ativo';
+import { diasDecorridos } from '../utils/datas'; // <- certifique-se de importar corretamente
 
-const calcularRendimentoFixa = async (ativo: RendaFixaAtivo, t: number): Promise<number> => {
+const calcularRendimentoFixa = async (ativo: RendaFixaAtivo): Promise<number> => {
+  const t = diasDecorridos(ativo.dataInvestimento); // cálculo correto dos dias
   const principal = ativo.valorInvestido;
 
   if (t <= 0) return principal;
