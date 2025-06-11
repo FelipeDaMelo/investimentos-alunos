@@ -28,6 +28,7 @@ const calcularRendimentoFixa = async (
     const taxaAnual = ativo.parametrosFixa.taxaPrefixada;
     const taxaDiaria = Math.pow(1 + taxaAnual / 100, 1 / 252) - 1;
     return principal * Math.pow(1 + taxaDiaria, t);
+
   }
 
   // Lógica para tipo Pós-fixado
