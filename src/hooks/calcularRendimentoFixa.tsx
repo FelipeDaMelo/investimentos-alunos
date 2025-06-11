@@ -44,36 +44,35 @@ const calcularRendimentoTotalFixa = async (
     let taxaDiariaIndexada = 0;
 
     if (percentualCDI > 0) {
-      const cdiAnual = parseFloat(await fetchValorAtual('CDI'));
-      const cdiDiario = Math.pow(1 + cdiAnual / 100, 1 / 252) - 1;
-      taxaDiariaIndexada = cdiDiario * (percentualCDI / 100);
+      const cdiDiario = parseFloat(await fetchValorAtual('CDI'));
+      taxaDiariaIndexada = (cdiDiario/100) * (percentualCDI / 100);
     } else if (percentualSELIC > 0) {
-      const selicAnual = parseFloat(await fetchValorAtual('SELIC'));
-      const selicDiaria = Math.pow(1 + selicAnual / 100, 1 / 252) - 1;
-      taxaDiariaIndexada = selicDiaria * (percentualSELIC / 100);
+      const selicDiaria = parseFloat(await fetchValorAtual('SELIC'));
+      taxaDiariaIndexada = (selicDiaria/100) * (percentualSELIC / 100);
     }
     
     // Aplica a taxa diária para o período 't' de forma exponencial.
     return principal * Math.pow(1 + taxaDiariaIndexada, t);
   }
 
-  // --- Lógica para tipo Híbrido ---
-  if (ativo.categoriaFixa === 'hibrida') {
-    const { taxaPrefixada = 0, ipca = 0 } = ativo.parametrosFixa || {};
+ // --- Lógica para tipo Híbrido ---
+if (ativo.categoriaFixa === 'hibrida') {
+    const { taxaPrefixada = 0 } = ativo.parametrosFixa || {}; // Este é o seu "X%"
+    
+    // 1. Calcula a taxa diária da parte PRÉ-fixada ("X%")
+    const taxaDiariaPre = Math.pow(1 + taxaPrefixada / 100, 1 / 252) - 1;
 
-    // Parte 1: Rendimento da taxa pré-fixada (juros real)
-    const montantePrefixado = principal * Math.pow(1 + taxaPrefixada / 100, t / 252);
-
-    // Parte 2: Correção pela inflação (IPCA)
+    // 2. Busca a taxa MENSAL do IPCA e converte para diária
     const ipcaMensal = parseFloat(await fetchValorAtual('IPCA'));
-    // Aprox. 21 dias úteis em um mês.
-    const ipcaDiarioAprox = Math.pow(1 + ipcaMensal / 100, 1 / 21) - 1; 
+    const taxaDiariaIpca = Math.pow(1 + ipcaMensal / 100, 1 / 21) - 1;
 
-    // Aplica a correção do IPCA sobre o valor já corrigido pela taxa pré-fixada.
-    const valorFinal = montantePrefixado * Math.pow(1 + ipcaDiarioAprox, t);
+    // 3. Compõe as duas taxas para encontrar a taxa total diária.
+    //    Esta linha é a implementação de (1+a)*(1+b)-1
+    const taxaTotalDiaria = (1 + taxaDiariaPre) * (1 + taxaDiariaIpca) - 1;
 
-    return valorFinal;
-  }
+    // 4. Aplica a taxa total para o período.
+    return principal * Math.pow(1 + taxaTotalDiaria, t);
+}
 
   // Se nenhum caso corresponder, retorna o valor principal sem alterações.
   return principal;
