@@ -1,14 +1,14 @@
-// utils/atualizarAtivos.ts
+// Caminho: src/utils/atualizarAtivos.ts
+// ✅ VERSÃO FINAL CORRIGIDA
+
 import fetchValorAtual from '../fetchValorAtual';
 import { Ativo, RendaFixaAtivo, RendaVariavelAtivo } from '../types/Ativo';
-// Importe a versão de calcularRendimentoFixa que aceita o número de dias
-import calcularRendimentoFixa from '../hooks/calcularRendimentoFixa'; 
-import { diasDecorridos } from './datas';
+// Importa a nova função com o nome corrigido
+import calcularRendimentoTotalFixa from '../hooks/calcularRendimentoFixa';
 
 /**
  * Atualiza uma lista de ativos para a data de "hoje".
- * - Renda Fixa: Calcula o rendimento cumulativo desde a última atualização.
- * - Renda Variável: Busca o preço de mercado atual.
+ * A lógica agora sempre recalcula o valor total a partir da data de início.
  * @param ativos A lista de ativos a ser atualizada.
  * @param hoje A data para a qual os ativos devem ser atualizados (formato 'YYYY-MM-DD').
  * @returns Uma promessa com a nova lista de ativos atualizados.
@@ -19,20 +19,12 @@ export async function atualizarAtivos(
 ): Promise<Ativo[]> {
   return await Promise.all(
     ativos.map(async (ativo) => {
+      
+      // --- LÓGICA PARA RENDA FIXA ---
       if (ativo.tipo === 'rendaFixa') {
-        // Encontra a última data em que o patrimônio foi registrado para este ativo
-        const datasRegistradas = Object.keys(ativo.patrimonioPorDia || {});
-        const ultimaData = datasRegistradas.sort().pop() || ativo.dataInvestimento;
         
-        // Calcula os dias úteis que se passaram desde a última atualização deste ativo específico
-        const diasParaRender = diasDecorridos(ultimaData, hoje);
-
-        if (diasParaRender <= 0) {
-          return ativo; // Nenhum rendimento a ser calculado, retorna o ativo como está.
-        }
-
-        // Chama a função de cálculo passando o número exato de dias a renderizar
-        const novoValor = await calcularRendimentoFixa(ativo as RendaFixaAtivo, diasParaRender);
+        // Simplesmente chama a nova função que contém toda a lógica.
+        const novoValor = await calcularRendimentoTotalFixa(ativo as RendaFixaAtivo, hoje);
         
         return {
           ...ativo,
