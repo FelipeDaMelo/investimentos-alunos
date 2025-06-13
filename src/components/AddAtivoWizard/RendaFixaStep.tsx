@@ -134,9 +134,9 @@ onSubmit({
         <label className="block mb-2 font-medium text-gray-700">Valor Investido</label>
         <input
           type="text"
+          placeholder="Ex:1000,00"
           value={displayValue}
           onChange={handleChange}
-          placeholder="Ex:1000,00"
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
           required
         />

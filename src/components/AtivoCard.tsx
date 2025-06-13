@@ -50,17 +50,23 @@ const rendimentoCard = isRendaVariavel
   ? rendimentoTotal
   : ativo.valorAtual - ativo.valorInvestido;
 
+// Em AtivoCard.tsx
+
+// ✅ Lógica de classe aprimorada para incluir dark mode
 const cardBgClass =
   rendimentoCard > 0
-    ? 'bg-green-100'
+    ? 'bg-green-100 dark:bg-green-900/50' // Verde muito sutil no modo claro, e um verde escuro translúcido no modo escuro
     : rendimentoCard < 0
-    ? 'bg-red-100'
-    : 'bg-white';
+    ? 'bg-red-100 dark:bg-red-900/50' // Vermelho muito sutil no modo claro, e um vermelho escuro translúcido no modo escuro
+    : 'bg-white dark:bg-gray-800'; // Fundo padrão
 
   return (
- <div
-  className={`border-l-4 p-4 rounded-x1 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full ${cardBgClass}`}
-  style={{ borderLeftColor: cor }}
+<div 
+   className={`p-4 rounded-xl shadow-lg border-l-4 
+             transform hover:-translate-y-1 hover:shadow-2xl 
+             transition-all duration-300 ease-out 
+             ${cardBgClass} `} // ✅ Agora ${cardBgClass} é a única fonte da cor de fundo
+  style={{ borderColor: cor }}
 >
       <div className="flex-1">
         <div className="flex justify-between items-start">

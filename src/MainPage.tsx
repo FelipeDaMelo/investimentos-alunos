@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { db } from './firebaseConfig';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from './firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Line } from 'react-chartjs-2';
 import {
@@ -81,7 +83,30 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [showTransferencia, setShowTransferencia] = useState(false);
   const [escalaY, setEscalaY] = useState<'linear' | 'logarithmic'>('linear');
   const [resumosIR, setResumosIR] = useState<ResumoIR[] | null>(null);
-  const [mostrarModalIR, setMostrarModalIR] = useState(false);
+  const [mostrarModalIR, setMostrarModalIR] = useState(false);  
+
+  // A função que faz a verificação e o upload.
+  const handleUploadConfirmado = async (file: File, senhaDigitada: string) => {
+    // 1. Verifica a senha
+    if (senhaDigitada !== senhaSalva) {
+      alert('Senha incorreta!');
+      // Lança um erro para o componente filho saber que falhou.
+      throw new Error("Senha incorreta");
+    }
+
+    // 2. Se a senha estiver correta, faz o upload.
+    try {
+      const storageRef = ref(storage, `fotosGrupos/${login}-${new Date().getTime()}.jpg`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      await updateDoc(doc(db, 'usuarios', login), { fotoGrupo: url });
+      setFotoGrupo(url); // Atualiza a UI imediatamente
+    } catch (error) {
+      alert('Erro ao enviar imagem.');
+      console.error(error);
+      throw error; // Re-lança o erro para o componente filho.
+    }
+  };
 
   const chartRef = useRef<Chart<'line'> | null>(null);
 
@@ -348,16 +373,45 @@ const variacaoPercentual = useMemo(() => {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8 flex-wrap">
-        <FotoGrupoUploader login={login} fotoUrlAtual={fotoGrupo || undefined} />
-        <h1 className="text-xl md:text-2xl font-bold text-center flex-1">Painel de Investimentos - Grupo: {nomeGrupo}</h1>
-        <div className="w-20" />
-      </div>
+{/* ===== INÍCIO DO NOVO CABEÇALHO ===== */}
+<header className="bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-xl shadow-2xl p-6 mb-8 w-full">
+  <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+    
+    {/* Lado Esquerdo: Foto do Grupo */}
+    <div className="flex-shrink-0">
+      <FotoGrupoUploader 
+        login={login} 
+        fotoUrlAtual={fotoGrupo || undefined}
+        onConfirmUpload={handleUploadConfirmado}
+      />
+    </div>
+
+    {/* Centro: Título e Subtítulo */}
+    <div className="text-center sm:text-left flex-grow">
+      <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white drop-shadow-md">
+        {nomeGrupo}
+      </h1>
+      <p className="text-blue-200 text-sm md:text-base mt-1">
+        Painel de Controle de Investimentos
+      </p>
+    </div>
+
+    {/* Lado Direito (Opcional): Um resumo ou status */}
+    <div className="hidden md:flex flex-col items-end bg-black bg-opacity-20 p-3 rounded-lg">
+      <p className="text-xs text-blue-300 font-semibold uppercase tracking-wider">Patrimônio Total</p>
+      <p className="text-2xl font-bold text-white">
+        {formatCurrency(valorTotalAtual)}
+      </p>
+    </div>
+
+  </div>
+</header>
+{/* ===== FIM DO NOVO CABEÇALHO ===== */}
 
       {error && <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4">{error}</div>}
       {loading && <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-xl mb-4">Carregando...</div>}
 
-      <div className="relative bg-white p-6 rounded-xl shadow-lg mb-6 border-2 border-gray-200 text-left min-h-[220px]">
+      <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-lg mb-6 text-left min-h-[220px]">
         <h2 className="text-xl font-semibold mb-4">Saldo Disponível para Novos Investimentos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 shadow-sm w-full sm:w-auto">
@@ -379,9 +433,9 @@ const variacaoPercentual = useMemo(() => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 sm:container mx-auto mt-4">
-          <Button onClick={() => setShowDepositar(true)} className="bg-green-600 hover:bg-green-700 text-white shadow w-full sm:w-auto"><Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar</Button>
-          <Button onClick={() => setShowTransferencia(true)} className="bg-orange-600 hover:bg-orange-700 text-white shadow w-full sm:w-auto"><ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" /> Transferir</Button>
-          <Button onClick={() => setShowHistorico(true)} className="bg-red-600 hover:bg-red-700 text-white shadow w-full sm:w-auto"><ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato</Button>
+          <Button onClick={() => setShowDepositar(true)} className="bg-blue-600 hover:bg-green-700 text-white shadow w-full sm:w-auto"><Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar</Button>
+          <Button onClick={() => setShowTransferencia(true)} className="bg-purple-600 hover:bg-purple-700 text-white shadow w-full sm:w-auto"><ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" /> Transferir</Button>
+          <Button onClick={() => setShowHistorico(true)} className="bg-violet-600 hover:bg-violet-700 text-white shadow w-full sm:w-auto"><ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato</Button>
         </div>
       </div>
 
@@ -412,7 +466,7 @@ const variacaoPercentual = useMemo(() => {
             </div>
             <div className="h-[500px] overflow-x-auto min-w-[600px] bg-white">
               <Line ref={chartRef} data={{...chartData, datasets: chartData.datasets.map(ds => ({ ...ds, tension: 0.3, pointRadius: 3 }))}} options={{
-                responsive: true, maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,devicePixelRatio: window.devicePixelRatio,
                 plugins: {
                   zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: false }, pinch: { enabled: true }, drag: { enabled: true, backgroundColor: 'rgba(0,0,0,0.1)', borderColor: 'rgba(0,0,0,0.25)', borderWidth: 1, modifierKey: 'ctrl' }, mode: 'xy' }},
                   legend: { display: true, position: 'top', labels: { boxWidth: 10, boxHeight: 10, padding: 15, usePointStyle: true, pointStyle: 'circle' },

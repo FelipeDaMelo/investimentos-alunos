@@ -22,7 +22,7 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 relative pb-20">
+    <div className="min-h-screen relative pb-20">
       {!login ? (
         <Login onLogin={handleLogin} />
       ) : (
