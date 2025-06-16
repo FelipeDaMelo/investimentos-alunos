@@ -19,7 +19,7 @@ const fetchValorAtual = async (ticker: string) => {
     } else if (tickerCorrigido === 'IPCA') {
       const valorMensal = await fetchTaxaBCB(433);
 const taxaDiaria = valorMensal !== null
-  ? (((Math.pow(1 + valorMensal / 100, 1 / 30)) - 1) * 100).toFixed(5)
+  ? (((Math.pow(1 + valorMensal / 100, 1 / 21)) - 1) * 100).toFixed(5)
   : 'Erro';
 valorAtual = taxaDiaria;
     } else {
