@@ -116,18 +116,14 @@ const cardBgClass =
                 <>
                   {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
                     <>
-                      <div>Índice:</div>
-                      <div>CDI</div>
                       <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
+                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%  CDI</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
                     <>
-                      <div>Índice:</div>
-                      <div>SELIC</div>
                       <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
+                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}% SELIC</div>
                     </>
                   )}
                 </>
@@ -141,26 +137,20 @@ const cardBgClass =
 
                   {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
                     <>
-                      <div>Índice:</div>
-                      <div>CDI</div>
                       <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
+                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}% CDI</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
                     <>
-                      <div>Índice:</div>
-                      <div>SELIC</div>
                       <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
+                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}% SELIC</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
                     <>
-                      <div>Índice:</div>
-                      <div>IPCA</div>
                       <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}%</div>
+                      <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}% IPCA</div>
 
                     </>
                   )}

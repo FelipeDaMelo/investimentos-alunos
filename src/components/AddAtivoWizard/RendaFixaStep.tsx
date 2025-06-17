@@ -5,7 +5,6 @@ import useMoneyInput from '../../hooks/useMoneyInput';
 import fetchValorAtual from '../../fetchValorAtual';
 import Button from '../Button';
 
-
 interface RendaFixaStepProps {
   onBack: () => void;
   onSubmit: (ativo: RendaFixaAtivo) => void;
@@ -19,19 +18,19 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     handleChange
   } = useMoneyInput(0);
 
+  // AJUSTE 1: Estado inicial modificado para permitir strings vazias nos campos numéricos
   const [form, setForm] = useState({
     nome: '',
     dataInvestimento: new Date().toISOString().split('T')[0],
     categoriaFixa: 'prefixada' as 'prefixada' | 'posFixada' | 'hibrida',
     parametrosFixa: {
-      taxaPrefixada: 0,
-      percentualCDI: 0,
-      percentualSELIC: 0,
-      ipca: 0,
+      taxaPrefixada: '' as number | '',
+      percentualCDI: 100 as number | '',
+      percentualSELIC: '' as number | '',
+      ipca: 100 as number | '',
       cdiUsado: 0,
       selicUsado: 0,
       ipcaUsado: 0
-
     }
   });
 
@@ -40,8 +39,9 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [IPCAAtual, setIPCAAtual] = useState<number | null>(null);
   const [carregandoTaxas, setCarregandoTaxas] = useState(false);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string>('');
-  const [indiceSelecionado, setIndiceSelecionado] = useState<'CDI' | 'SELIC' | 'IPCA'>('CDI');
+  const [indiceHibrido, setIndiceHibrido] = useState<'CDI' | 'SELIC' | 'IPCA'>('IPCA');
   const [senha, setSenha] = useState('');
+  const [indicePosFixado, setIndicePosFixado] = useState<'CDI' | 'SELIC'>('CDI');
 
   const carregarTaxas = async () => {
     try {
@@ -64,12 +64,12 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   };
 
   useEffect(() => {
-    // CORREÇÃO: Carrega as taxas se a categoria for 'posFixada' OU 'hibrida'
     if (form.categoriaFixa === 'posFixada' || form.categoriaFixa === 'hibrida') {
       carregarTaxas();
     }
   }, [form.categoriaFixa]);
 
+  // AJUSTE 2: Garantir que os valores sejam números antes de enviar
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -78,47 +78,69 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       return;
     }
 
-let taxaReferencia = 0;
+    const parametrosNumericos = {
+      taxaPrefixada: Number(form.parametrosFixa.taxaPrefixada) || 0,
+      percentualCDI: Number(form.parametrosFixa.percentualCDI) || 0,
+      percentualSELIC: Number(form.parametrosFixa.percentualSELIC) || 0,
+      ipca: Number(form.parametrosFixa.ipca) || 0,
+      cdiUsado: cdiAtual ?? 0,
+      selicUsado: selicAtual ?? 0,
+      ipcaUsado: IPCAAtual ?? 0,
+    };
 
-if (form.categoriaFixa === 'posFixada') {
-  taxaReferencia =
-    form.parametrosFixa.percentualCDI > 0
-      ? cdiAtual || 0
-      : selicAtual || 0;
-} else if (form.categoriaFixa === 'hibrida') {
-  if (form.parametrosFixa.percentualCDI > 0) {
-    taxaReferencia = cdiAtual || 0;
-  } else if (form.parametrosFixa.percentualSELIC > 0) {
-    taxaReferencia = selicAtual || 0;
-  } else if (form.parametrosFixa.ipca > 0) {
-    taxaReferencia = IPCAAtual || 0;
-  }
-}
+    const ativo = criarAtivoFixa({
+      ...form,
+      valorInvestido,
+      parametrosFixa: parametrosNumericos,
+    });
 
+    onSubmit({ ...ativo, senha } as any);
+  };
 
-const ativo = criarAtivoFixa({
-  ...form,
-  valorInvestido,
-  parametrosFixa: {
-    ...form.parametrosFixa,
-    cdiUsado: cdiAtual ?? 0,
-    selicUsado: selicAtual ?? 0,
-    ipcaUsado: IPCAAtual ?? 0,
-  }
-});
+  // AJUSTE 3: Funções centralizadas para lidar com inputs numéricos que podem ficar vazios
+  const handleNumericInputChange = (field: keyof typeof form.parametrosFixa) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setForm(prevForm => ({
+      ...prevForm,
+      parametrosFixa: {
+        ...prevForm.parametrosFixa,
+        [field]: value === '' ? '' : parseFloat(value)
+      }
+    }));
+  };
 
-console.log("OBJETO A SER SALVO NO FIREBASE:", ativo);
+  const handlePosFixadoPercentualChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    const valorFinal = value === '' ? '' : parseFloat(value);
+    setForm(prevForm => ({
+      ...prevForm,
+      parametrosFixa: {
+        ...prevForm.parametrosFixa,
+        percentualCDI: indicePosFixado === 'CDI' ? valorFinal : prevForm.parametrosFixa.percentualCDI,
+        percentualSELIC: indicePosFixado === 'SELIC' ? valorFinal : prevForm.parametrosFixa.percentualSELIC,
+      }
+    }));
+  };
 
-onSubmit({
-  ...ativo,
-  senha, // se necessário no tipo
-} as any);
-  }
+  const handleHibridoPercentualChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    const valorFinal = value === '' ? '' : parseFloat(value);
+    setForm(prevForm => ({
+      ...prevForm,
+      parametrosFixa: {
+        ...prevForm.parametrosFixa,
+        percentualCDI: indiceHibrido === 'CDI' ? valorFinal : prevForm.parametrosFixa.percentualCDI,
+        percentualSELIC: indiceHibrido === 'SELIC' ? valorFinal : prevForm.parametrosFixa.percentualSELIC,
+        ipca: indiceHibrido === 'IPCA' ? valorFinal : prevForm.parametrosFixa.ipca,
+      }
+    }));
+  };
+
   return (
     <form 
-    onSubmit={handleSubmit} 
-  className="space-y-4 overflow-y-auto max-h-[calc(100vh-120px)] px-2"
->
+      onSubmit={handleSubmit} 
+      className="space-y-4 overflow-y-auto max-h-[calc(100vh-120px)] px-2"
+    >
 
       {/* Nome do ativo */}
       <div>
@@ -203,83 +225,57 @@ onSubmit({
         </div>
       </div>
 
-
       {/* 🔵 Taxas e botão quando for Pós-fixada */}
-{form.categoriaFixa === 'posFixada' && (
-  <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
-    <div>
-      <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-      <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-        {ultimaAtualizacao && (
-        <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
+      {form.categoriaFixa === 'posFixada' && (
+        <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
+          <div>
+            <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+            <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+            {ultimaAtualizacao && (
+              <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
+            )}
+          </div>
+
+          <Button type="button" onClick={carregarTaxas} disabled={carregandoTaxas}>
+            {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
+          </Button>
+        
+          <div>
+            <label className="block mb-1 font-medium">Índice de Referência</label>
+            <select
+              value={indicePosFixado}
+              onChange={(e) => {
+                const novoIndice = e.target.value as 'CDI' | 'SELIC';
+                setIndicePosFixado(novoIndice);
+                setForm(prevForm => ({
+                  ...prevForm,
+                  parametrosFixa: {
+                    ...prevForm.parametrosFixa,
+                    percentualCDI: novoIndice === 'CDI' ? (prevForm.parametrosFixa.percentualCDI || 100) : '',
+                    percentualSELIC: novoIndice === 'SELIC' ? (prevForm.parametrosFixa.percentualSELIC || 100) : '',
+                  }
+                }));
+              }}
+              className="w-full p-3 border-2 border-gray-300 rounded-lg"
+            >
+              <option value="CDI">CDI</option>
+              <option value="SELIC">SELIC</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Percentual (%)</label>
+            <input
+              type="number"
+              placeholder="Ex: 100"
+              value={indicePosFixado === 'CDI' ? form.parametrosFixa.percentualCDI : form.parametrosFixa.percentualSELIC}
+              onChange={handlePosFixadoPercentualChange}
+              step="0.01"
+              className="w-full p-3 border-2 border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
       )}
-    </div>
-
-    <Button
-      type="button"
-      onClick={carregarTaxas}
-      disabled={carregandoTaxas}
-    >
-      {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
-    </Button>
-
-    {/* 🔽 Novo bloco: escolha de índice e percentual */}
-    <div>
-      <label className="block mb-1 font-medium">Índice de Referência</label>
-      <select
-        value={
-          form.parametrosFixa.percentualCDI > 0 ? 'CDI' : 'SELIC'
-        }
-        onChange={(e) => {
-          const indice = e.target.value as 'CDI' | 'SELIC';
-          setForm({
-            ...form,
-            parametrosFixa: {
-              ...form.parametrosFixa,
-              percentualCDI: indice === 'CDI' ? form.parametrosFixa.percentualCDI || 100 : 0,
-              percentualSELIC: indice === 'SELIC' ? form.parametrosFixa.percentualSELIC || 100 : 0,
-              ipca: 0
-            }
-          });
-        }}
-        className="w-full p-3 border-2 border-gray-300 rounded-lg"
-      >
-        <option value="CDI">CDI</option>
-        <option value="SELIC">SELIC</option>
-      </select>
-    </div>
-
-    <div>
-      <label className="block mb-1 font-medium">Percentual (%)</label>
-      <input
-        type="number"
-        placeholder="Ex:120"
-        value={
-          form.parametrosFixa.percentualCDI > 0
-            ? form.parametrosFixa.percentualCDI
-            : form.parametrosFixa.percentualSELIC
-        }
-        onChange={(e) => {
-          const valor = Number(e.target.value);
-          const indice =
-            form.parametrosFixa.percentualCDI > 0 ? 'CDI' : 'SELIC';
-
-          setForm({
-            ...form,
-            parametrosFixa: {
-              ...form.parametrosFixa,
-              percentualCDI: indice === 'CDI' ? valor : 0,
-              percentualSELIC: indice === 'SELIC' ? valor : 0
-            }
-          });
-        }}
-        step="0.01"
-        className="w-full p-3 border-2 border-gray-300 rounded-lg"
-      />
-    </div>
-  </div>
-)}
-
 
       {/* Campos específicos por categoria */}
       {form.categoriaFixa === 'prefixada' && (
@@ -287,16 +283,10 @@ onSubmit({
           <label className="block mb-2 font-medium text-gray-700">Taxa Anual (%)</label>
           <input
             type="number"
-            placeholder="Ex:12,4"
+            placeholder="Ex: 12.4"
             value={form.parametrosFixa.taxaPrefixada}
-            onChange={(e) => setForm({
-              ...form,
-              parametrosFixa: {
-                ...form.parametrosFixa,
-                taxaPrefixada: Number(e.target.value)
-              }
-            })}
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+            onChange={handleNumericInputChange('taxaPrefixada')}
+            className="w-full p-3 border-2 border-gray-300 rounded-lg"
             step="0.01"
             required
           />
@@ -304,42 +294,28 @@ onSubmit({
       )}
 
       {form.categoriaFixa === 'hibrida' && (
-     <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
-    <div>
-      <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-      <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-      <p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
-        {ultimaAtualizacao && (
-        <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
-      )}
-      
-    </div>
+        <div className="bg-blue-50 p-4 rounded-lg space-y-4 text-sm text-gray-700">
+          <div>
+            <p>CDI Atual: {cdiAtual !== null ? `${cdiAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+            <p>SELIC Atual: {selicAtual !== null ? `${selicAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+            <p>IPCA Atual: {IPCAAtual !== null ? `${IPCAAtual.toFixed(4)}% a.d.` : 'Carregando...'}</p>
+            {ultimaAtualizacao && (
+              <p className="text-gray-500 text-xs">Atualizado às {ultimaAtualizacao}</p>
+            )}
+          </div>
 
-    <Button
-      type="button"
-      onClick={carregarTaxas}
-      disabled={carregandoTaxas}
-    >
-      {carregandoTaxas ? 'Atualizando...' : 'Atualizar CDI/SELIC'}
-    </Button>
+          <Button type="button" onClick={carregarTaxas} disabled={carregandoTaxas}>
+            {carregandoTaxas ? 'Atualizando...' : 'Atualizar Índices'}
+          </Button>
 
-        
           <div>
             <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
             <input
               type="number"
-              placeholder="Ex:13,6"
+              placeholder="Ex: 7.14"
               value={form.parametrosFixa.taxaPrefixada}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  parametrosFixa: {
-                    ...form.parametrosFixa,
-                    taxaPrefixada: Number(e.target.value),
-                  },
-                })
-              }
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+              onChange={handleNumericInputChange('taxaPrefixada')}
+              className="w-full p-3 border-2 border-gray-300 rounded-lg"
               step="0.01"
               required
             />
@@ -348,10 +324,10 @@ onSubmit({
           <div>
             <label className="block mb-2 font-medium text-gray-700">Índice Variável</label>
             <select
-              value={indiceSelecionado}
+              value={indiceHibrido}
               onChange={(e) => {
                 const novoIndice = e.target.value as 'CDI' | 'SELIC' | 'IPCA';
-                setIndiceSelecionado(novoIndice);
+                setIndiceHibrido(novoIndice);
               }}
               className="w-full p-3 border-2 border-gray-300 rounded-lg"
             >
@@ -365,49 +341,37 @@ onSubmit({
             <label className="block mb-2 font-medium text-gray-700">Percentual sobre o índice selecionado</label>
             <input
               type="number"
-              placeholder="Ex:110"
+              placeholder="Ex: 100"
               value={
-                indiceSelecionado === 'CDI'
+                indiceHibrido === 'CDI'
                   ? form.parametrosFixa.percentualCDI
-                  : indiceSelecionado === 'SELIC'
+                  : indiceHibrido === 'SELIC'
                   ? form.parametrosFixa.percentualSELIC
                   : form.parametrosFixa.ipca
               }
-              onChange={(e) => {
-                const valor = Number(e.target.value);
-                setForm({
-                  ...form,
-                  parametrosFixa: {
-                    ...form.parametrosFixa,
-                    percentualCDI: indiceSelecionado === 'CDI' ? valor : form.parametrosFixa.percentualCDI,
-                    percentualSELIC: indiceSelecionado === 'SELIC' ? valor : form.parametrosFixa.percentualSELIC,
-                    ipca: indiceSelecionado === 'IPCA' ? valor : form.parametrosFixa.ipca,
-                  },
-                });
-              }}
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+              onChange={handleHibridoPercentualChange}
+              className="w-full p-3 border-2 border-gray-300 rounded-lg"
               step="0.01"
               required
             />
           </div>
         </div>
-      )
-      }
+      )}
 
-<div>
-  <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>
-  <input
-    type="password"
-    value={senha}
-    maxLength={6}
-    onChange={(e) => setSenha(e.target.value)}
-    className="w-full p-3 border-2 border-gray-300 rounded-lg"
-    placeholder="******"
-    required
-  />
-</div>
+      <div>
+        <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>
+        <input
+          type="password"
+          value={senha}
+          maxLength={6}
+          onChange={(e) => setSenha(e.target.value)}
+          className="w-full p-3 border-2 border-gray-300 rounded-lg"
+          placeholder="******"
+          required
+        />
+      </div>
 
- <div className="flex justify-between pt-4">
+      <div className="flex justify-between pt-4">
         <button
           type="button"
           onClick={onBack}
