@@ -64,7 +64,8 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   };
 
   useEffect(() => {
-    if (form.categoriaFixa === 'posFixada') {
+    // CORREÇÃO: Carrega as taxas se a categoria for 'posFixada' OU 'hibrida'
+    if (form.categoriaFixa === 'posFixada' || form.categoriaFixa === 'hibrida') {
       carregarTaxas();
     }
   }, [form.categoriaFixa]);
