@@ -134,7 +134,6 @@ onSubmit({
         <label className="block mb-2 font-medium text-gray-700">Valor Investido</label>
         <input
           type="text"
-          placeholder="Ex:1000,00"
           value={displayValue}
           onChange={handleChange}
           className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
@@ -249,7 +248,6 @@ onSubmit({
       <label className="block mb-1 font-medium">Percentual (%)</label>
       <input
         type="number"
-        placeholder="Ex:120"
         value={
           form.parametrosFixa.percentualCDI > 0
             ? form.parametrosFixa.percentualCDI
@@ -283,7 +281,6 @@ onSubmit({
           <label className="block mb-2 font-medium text-gray-700">Taxa Anual (%)</label>
           <input
             type="number"
-            placeholder="Ex:12,4"
             value={form.parametrosFixa.taxaPrefixada}
             onChange={(e) => setForm({
               ...form,
@@ -324,7 +321,6 @@ onSubmit({
             <label className="block mb-2 font-medium text-gray-700">Parte Prefixada (%)</label>
             <input
               type="number"
-              placeholder="Ex:13,6"
               value={form.parametrosFixa.taxaPrefixada}
               onChange={(e) =>
                 setForm({
@@ -361,7 +357,6 @@ onSubmit({
             <label className="block mb-2 font-medium text-gray-700">Percentual sobre o índice selecionado</label>
             <input
               type="number"
-              placeholder="Ex:110"
               value={
                 indiceSelecionado === 'CDI'
                   ? form.parametrosFixa.percentualCDI

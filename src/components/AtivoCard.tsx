@@ -50,23 +50,17 @@ const rendimentoCard = isRendaVariavel
   ? rendimentoTotal
   : ativo.valorAtual - ativo.valorInvestido;
 
-// Em AtivoCard.tsx
-
-// ✅ Lógica de classe aprimorada para incluir dark mode
 const cardBgClass =
   rendimentoCard > 0
-    ? 'bg-green-100 dark:bg-green-900/50' // Verde muito sutil no modo claro, e um verde escuro translúcido no modo escuro
+    ? 'bg-green-100'
     : rendimentoCard < 0
-    ? 'bg-red-100 dark:bg-red-900/50' // Vermelho muito sutil no modo claro, e um vermelho escuro translúcido no modo escuro
-    : 'bg-white dark:bg-gray-800'; // Fundo padrão
+    ? 'bg-red-100'
+    : 'bg-white';
 
   return (
-<div 
-   className={`p-4 rounded-xl shadow-lg border-l-4 
-             transform hover:-translate-y-1 hover:shadow-2xl 
-             transition-all duration-300 ease-out 
-             ${cardBgClass} `} // ✅ Agora ${cardBgClass} é a única fonte da cor de fundo
-  style={{ borderColor: cor }}
+ <div
+  className={`border-l-4 p-4 rounded-x1 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full ${cardBgClass}`}
+  style={{ borderLeftColor: cor }}
 >
       <div className="flex-1">
         <div className="flex justify-between items-start">
@@ -120,6 +114,8 @@ const cardBgClass =
                       <div>CDI</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
+                      <div>Taxa CDI usada:</div>
+                      <div>{(ativo.parametrosFixa.cdiUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
@@ -128,6 +124,8 @@ const cardBgClass =
                       <div>SELIC</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
+                      <div>Taxa SELIC usada:</div>
+                      <div>{(ativo.parametrosFixa.selicUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                 </>
@@ -145,6 +143,8 @@ const cardBgClass =
                       <div>CDI</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
+                      <div>Taxa CDI usada:</div>
+                      <div>{(ativo.parametrosFixa.cdiUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
@@ -153,6 +153,8 @@ const cardBgClass =
                       <div>SELIC</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
+                      <div>Taxa SELIC usada:</div>
+                      <div>{(ativo.parametrosFixa.selicUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
@@ -161,6 +163,8 @@ const cardBgClass =
                       <div>IPCA</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}%</div>
+                      <div>Taxa IPCA usada:</div>
+                      <div>{(ativo.parametrosFixa.ipcaUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                 </>
