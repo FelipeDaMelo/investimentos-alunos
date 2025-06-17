@@ -57,13 +57,14 @@ const calcularRendimentoTotalFixa = async (
 
  // --- Lógica para tipo Híbrido ---
 if (ativo.categoriaFixa === 'hibrida') {
-   const { taxaPrefixada = 0, ipcaUsado = 0 } = ativo.parametrosFixa || {};
+    const { taxaPrefixada = 0 } = ativo.parametrosFixa || {}; // Este é o seu "X%"
     
     // 1. Calcula a taxa diária da parte PRÉ-fixada ("X%")
     const taxaDiariaPre = Math.pow(1 + taxaPrefixada / 100, 1 / 252) - 1;
 
     // 2. Busca a taxa MENSAL do IPCA e converte para diária
-    const taxaDiariaIpca = ipcaUsado / 100;
+    const ipcaMensal = parseFloat(await fetchValorAtual('IPCA'));
+    const taxaDiariaIpca = Math.pow(1 + ipcaMensal / 100, 1 / 21) - 1;
 
     // 3. Compõe as duas taxas para encontrar a taxa total diária.
     //    Esta linha é a implementação de (1+a)*(1+b)-1

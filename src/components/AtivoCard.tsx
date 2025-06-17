@@ -120,8 +120,6 @@ const cardBgClass =
                       <div>CDI</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
-                      <div>Taxa CDI usada:</div>
-                      <div>{(ativo.parametrosFixa.cdiUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
@@ -130,8 +128,6 @@ const cardBgClass =
                       <div>SELIC</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
-                      <div>Taxa SELIC usada:</div>
-                      <div>{(ativo.parametrosFixa.selicUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                 </>
@@ -149,8 +145,6 @@ const cardBgClass =
                       <div>CDI</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%</div>
-                      <div>Taxa CDI usada:</div>
-                      <div>{(ativo.parametrosFixa.cdiUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
@@ -159,8 +153,6 @@ const cardBgClass =
                       <div>SELIC</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}%</div>
-                      <div>Taxa SELIC usada:</div>
-                      <div>{(ativo.parametrosFixa.selicUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                   {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
@@ -169,8 +161,6 @@ const cardBgClass =
                       <div>IPCA</div>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}%</div>
-                      <div>Taxa IPCA usada:</div>
-                      <div>{(ativo.parametrosFixa.ipcaUsado ?? 0).toFixed(4)}% a.d.</div>
                     </>
                   )}
                 </>
