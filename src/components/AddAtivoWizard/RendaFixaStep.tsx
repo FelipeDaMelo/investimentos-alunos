@@ -95,6 +95,7 @@ if (form.categoriaFixa === 'posFixada') {
   }
 }
 
+
 const ativo = criarAtivoFixa({
   ...form,
   valorInvestido,
@@ -105,6 +106,8 @@ const ativo = criarAtivoFixa({
     ipcaUsado: IPCAAtual ?? 0,
   }
 });
+
+console.log("OBJETO A SER SALVO NO FIREBASE:", ativo);
 
 onSubmit({
   ...ativo,

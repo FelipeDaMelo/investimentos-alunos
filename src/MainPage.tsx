@@ -198,6 +198,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   };
 
   const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
+      console.log("OBJETO RECEBIDO DO FORMULÁRIO:", novoAtivo);
     if (novoAtivo.senha !== senhaSalva) { alert('Senha incorreta!'); return false; }
     const { senha: _, ...ativoSemSenha } = novoAtivo;
 
@@ -233,10 +234,9 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
         valor: ativoSemSenha.valorInvestido,
         nome: ativoSemSenha.nome,
         categoria: ativoSemSenha.tipo,
-        subtipo: (ativoSemSenha as RendaVariavelAtivo).subtipo,
-        data: new Date().toISOString()
+          data: new Date().toISOString()
       };
-      
+      console.log("OBJETO 'novoRegistro' CRIADO PARA O HISTÓRICO:", novoRegistro);
       await updateDoc(doc(db, 'usuarios', login), {
         ativos: novosAtivos,
         historico: arrayUnion(novoRegistro)
@@ -246,6 +246,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     } catch (err) {
       setError('Erro ao adicionar ativo');
       console.error(err);
+
       return false;
     }
   };
