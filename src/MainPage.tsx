@@ -5,6 +5,7 @@ import { storage } from './firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { deleteObject } from 'firebase/storage';
 import { mesEncerrado } from './utils/mesEncerrado';
+import { getAuth } from "firebase/auth";
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -91,13 +92,30 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
 
   // A função que faz a verificação e o upload.
   const handleUploadConfirmado = async (file: File, senhaDigitada: string) => {
+
+      // --- INÍCIO DOS LOGS DE DEPURAÇÃO ---
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+
+  console.log("--- VERIFICAÇÃO DE AUTH ---");
+  if (currentUser) {
+    console.log("STATUS: Usuário autenticado encontrado no cliente.");
+    console.log("UID do Usuário:", currentUser.uid);
+  } else {
+    console.error("STATUS: ERRO CRÍTICO! auth.currentUser é nulo.");
+    alert("Sua sessão parece ter expirado. Por favor, faça o login novamente para completar esta ação.");
+    return; // Para a execução imediatamente
+  }
+  console.log("--------------------------");
+  // --- FIM DOS LOGS DE DEPURAÇÃO ---
+  
     // 1. Verifica a senha
     if (senhaDigitada !== senhaSalva) {
       alert('Senha incorreta!');
       // Lança um erro para o componente filho saber que falhou.
       throw new Error("Senha incorreta");
     }
-
+ console.log("Tentando fazer upload para o login:", login);
     // 2. Se a senha estiver correta, faz o upload.
     try {
       const storageRef = ref(storage, `fotosGrupos/${login}-${new Date().getTime()}.jpg`);
@@ -105,11 +123,29 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, 'usuarios', login), { fotoGrupo: url });
       setFotoGrupo(url); // Atualiza a UI imediatamente
-    } catch (error) {
-      alert('Erro ao enviar imagem.');
-      console.error(error);
-      throw error; // Re-lança o erro para o componente filho.
+} catch (error: any) {
+  // Loga o objeto de erro completo para podermos inspecioná-lo.
+  console.error("### ERRO DETALHADO DO STORAGE ###", error); 
+  
+  let mensagem = 'Erro ao enviar imagem. Verifique o console para mais detalhes.';
+  
+  // O Firebase Storage retorna erros com uma propriedade 'code'.
+  if (error.code) {
+    switch (error.code) {
+      case 'storage/unauthorized':
+        mensagem = 'Erro de permissão. Verifique as regras de segurança do Storage.';
+        break;
+      case 'storage/invalid-argument':
+         mensagem = 'Erro: Os dados enviados para o upload são inválidos.';
+         break;
+      default:
+        mensagem = `Erro desconhecido do Storage: ${error.code}`;
     }
+  }
+  
+  alert(mensagem);
+  throw error;
+}
   };
 
   const chartRef = useRef<Chart<'line'> | null>(null);
@@ -201,61 +237,81 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     return true;
   };
 
-  const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
-      console.log("OBJETO RECEBIDO DO FORMULÁRIO:", novoAtivo);
-    if (novoAtivo.senha !== senhaSalva) { alert('Senha incorreta!'); return false; }
-    const { senha: _, ...ativoSemSenha } = novoAtivo;
+ const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
+  console.log("OBJETO RECEBIDO DO FORMULÁRIO:", novoAtivo);
+  if (novoAtivo.senha !== senhaSalva) {
+    alert('Senha incorreta!');
+    return false;
+  }
+  const { senha: _, ...ativoSemSenha } = novoAtivo;
 
-    try {
-      let novosAtivos: Ativo[];
-  
-      if (ativoSemSenha.tipo === 'rendaVariavel') {
-        const existente = ativos.find(a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === (ativoSemSenha as RendaVariavelAtivo).tickerFormatado) as RendaVariavelAtivo | undefined;
-        if (existente) {
-          const novaQuantidade = existente.quantidade + (ativoSemSenha as RendaVariavelAtivo).quantidade;
-          const novoInvestimento = existente.valorInvestido + ativoSemSenha.valorInvestido;
-          const novoPrecoMedio = novoInvestimento / novaQuantidade;
-          const atualizado: RendaVariavelAtivo = {
-            ...existente,
-            quantidade: novaQuantidade,
-            valorInvestido: novoInvestimento,
-            precoMedio: novoPrecoMedio,
-            valorAtual: novoPrecoMedio,
-            patrimonioPorDia: { ...existente.patrimonioPorDia, [new Date().toISOString().split('T')[0]]: novaQuantidade * novoPrecoMedio }
-          };
-          novosAtivos = ativos.map(a => a.id === existente.id ? atualizado : a);
-        } else {
-          novosAtivos = [...ativos, ativoSemSenha as Ativo]; // ✅ CORREÇÃO 1: Asserção de tipo
-        }
+  try {
+    let novosAtivos: Ativo[];
+
+    if (ativoSemSenha.tipo === 'rendaVariavel') {
+      // Sua lógica para encontrar e atualizar ativos existentes está correta.
+      const existente = ativos.find(a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === (ativoSemSenha as RendaVariavelAtivo).tickerFormatado) as RendaVariavelAtivo | undefined;
+      if (existente) {
+        const novaQuantidade = existente.quantidade + (ativoSemSenha as RendaVariavelAtivo).quantidade;
+        const novoInvestimento = existente.valorInvestido + ativoSemSenha.valorInvestido;
+        const novoPrecoMedio = novoInvestimento / novaQuantidade;
+        const atualizado: RendaVariavelAtivo = {
+          ...existente,
+          quantidade: novaQuantidade,
+          valorInvestido: novoInvestimento,
+          precoMedio: novoPrecoMedio,
+          valorAtual: novoPrecoMedio,
+          patrimonioPorDia: { ...existente.patrimonioPorDia, [new Date().toISOString().split('T')[0]]: novaQuantidade * novoPrecoMedio }
+        };
+        novosAtivos = ativos.map(a => a.id === existente.id ? atualizado : a);
       } else {
-        novosAtivos = [...ativos, ativoSemSenha as Ativo]; // ✅ CORREÇÃO 1: Asserção de tipo
+        novosAtivos = [...ativos, ativoSemSenha as Ativo];
       }
-      
-      setAtivos(novosAtivos);
-
-      const novoRegistro: RegistroHistorico = {
-        tipo: 'compra',
-        valor: ativoSemSenha.valorInvestido,
-        nome: ativoSemSenha.nome,
-        categoria: ativoSemSenha.tipo,  
-        subtipo: (ativoSemSenha as RendaVariavelAtivo).subtipo, 
-        quantidade: (ativoSemSenha as RendaVariavelAtivo).quantidade,
-        data: new Date().toISOString()
-      };
-      console.log("OBJETO 'novoRegistro' CRIADO PARA O HISTÓRICO:", novoRegistro);
-      await updateDoc(doc(db, 'usuarios', login), {
-        ativos: novosAtivos,
-        historico: arrayUnion(novoRegistro)
-      });
-      setHistorico(prev => [...prev, novoRegistro]);
-      return true;
-    } catch (err) {
-      setError('Erro ao adicionar ativo');
-      console.error(err);
-
-      return false;
+    } else {
+      novosAtivos = [...ativos, ativoSemSenha as Ativo];
     }
-  };
+
+    setAtivos(novosAtivos);
+
+    // --- INÍCIO DA CORREÇÃO ---
+    
+    // Cria o objeto base para o registro do histórico
+    const novoRegistro: Partial<RegistroHistorico> = {
+      tipo: 'compra',
+      valor: ativoSemSenha.valorInvestido,
+      nome: ativoSemSenha.nome,
+      categoria: ativoSemSenha.tipo,
+      data: new Date().toISOString()
+    };
+    
+    // Se for Renda Variável, adicionamos os campos específicos
+    if (ativoSemSenha.tipo === 'rendaVariavel') {
+      // Usamos 'as RendaVariavelAtivo' para dizer ao TypeScript:
+      // "Neste bloco, pode ter certeza que é um ativo de Renda Variável".
+      const ativoVariavel = ativoSemSenha as RendaVariavelAtivo;
+      
+      novoRegistro.subtipo = ativoVariavel.subtipo;
+      novoRegistro.quantidade = ativoVariavel.quantidade;
+    }
+
+    // --- FIM DA CORREÇÃO ---
+    
+    console.log("OBJETO 'novoRegistro' CRIADO PARA O HISTÓRICO:", novoRegistro);
+
+    await updateDoc(doc(db, 'usuarios', login), {
+      ativos: novosAtivos,
+      historico: arrayUnion(novoRegistro as RegistroHistorico)
+    });
+
+    setHistorico(prev => [...prev, novoRegistro as RegistroHistorico]);
+    return true;
+
+  } catch (err) {
+    setError('Erro ao adicionar ativo');
+    console.error(err);
+    return false;
+  }
+};
 
   const handleSellAtivo = (id: string) => {
     const ativo = ativos.find(a => a.id === id);

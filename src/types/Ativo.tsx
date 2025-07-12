@@ -19,7 +19,8 @@ interface BaseAtivo {
   patrimonioPorDia: Record<string, number>;
   tipo: 'rendaFixa' | 'rendaVariavel';
   senha?: string;
-
+  subtipo?: string;
+  quantidade?: number;
 }
 
 export interface RendaFixaAtivo extends BaseAtivo {

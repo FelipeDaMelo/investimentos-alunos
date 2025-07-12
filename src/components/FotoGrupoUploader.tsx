@@ -121,9 +121,9 @@ export default function FotoGrupoUploader({
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-sm">
-            <h3 className="text-xl font-semibold mb-4 text-center text-gray-800">Alterar Foto do Grupo</h3>
-            <p className="text-sm text-center text-gray-600 mb-6">
-              Digite sua senha de 6 dígitos para confirmar o envio da nova imagem.
+            <h3 className="text-xl font-semibold mb-4 text-center text-gray-900">Alterar Foto do Grupo</h3>
+            <p className="mb-4">
+             Senha (6 dígitos)
             </p>
             <div className="mb-6">
               <input
