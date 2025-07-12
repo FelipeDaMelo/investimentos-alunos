@@ -14,7 +14,7 @@ interface AtivoCardProps {
   ativo: Ativo;
   onSell: (id: string) => void;
   cor: string;
-  onInformarDividendo?: (ativo: RendaVariavelAtivo) => void;
+  onInformarDividendo?: () => void; 
   onInvestir?: (ativo: RendaFixaAtivo) => void;
 }
 
@@ -206,7 +206,7 @@ const cardBgClass =
 
         {onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
           <Button
-            onClick={() => onInformarDividendo(ativo as RendaVariavelAtivo)}
+            onClick={onInformarDividendo} 
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <HandCoins className="w-5 h-4.5 inline-block mr-1" /> Informar Dividendo

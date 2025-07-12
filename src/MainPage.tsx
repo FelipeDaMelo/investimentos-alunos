@@ -28,7 +28,7 @@ import Button from './components/Button';
 import DepositarModal from './components/DepositarModal';
 import TransferenciaModal from './components/TransferenciaModal';
 import HistoricoModal from './components/HistoricoModal';
-import InformarDividendoModal from './components/InformarDividendoModal';
+import InformarDividendoModal from './components/InformarDividendosPendentesModal';
 import AtualizarInvestimentosModal from './components/AtualizarInvestimentosModal';
 import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
@@ -41,6 +41,8 @@ import DeduzirIRModal from './components/DeduzirIRModal';
 import { calcularSaldoVariavel, calcularSaldoFixa } from './utils/ativoHelpers';
 import { RegistroHistorico } from './hooks/RegistroHistorico';
 import ExcluirGrupoModal from './components/ExcluirGrupoModal';
+import { verificarDividendosPendentes } from './utils/verificarDividendos';
+import InformarDividendosPendentesModal, { PendenciaDividendo, DividendoPreenchido } from './components/InformarDividendosPendentesModal';
 Chart.register(zoomPlugin);
 ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -78,8 +80,9 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [historico, setHistorico] = useState<RegistroHistorico[]>([]);
   const [showHistorico, setShowHistorico] = useState(false);
   const [senhaSalva, setSenhaSalva] = useState('');
-  const [showDividendoModal, setShowDividendoModal] = useState(false);
   const [ativoDividendo, setAtivoDividendo] = useState<RendaVariavelAtivo | null>(null);
+  const [pendenciasDividendo, setPendenciasDividendo] = useState<PendenciaDividendo[]>([]);
+  const [showDividendosPendentesModal, setShowDividendosPendentesModal] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
   const [showAtualizarModal, setShowAtualizarModal] = useState(false);
   const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
@@ -88,7 +91,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [resumosIR, setResumosIR] = useState<ResumoIR[] | null>(null);
   const [mostrarModalIR, setMostrarModalIR] = useState(false);  
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showAccountMenu, setShowAccountMenu] = useState(false); // Para o novo menu
+ 
 
   // A função que faz a verificação e o upload.
   const handleUploadConfirmado = async (file: File, senhaDigitada: string) => {
@@ -200,34 +203,61 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     verificarBloqueio();
   }, [login]);
 
-  const handleInformarDividendo = (ativo: RendaVariavelAtivo) => {
-    setAtivoDividendo(ativo);
-    setShowDividendoModal(true);
-  };
+// ADICIONE estas duas novas funções no lugar das antigas
 
-  const confirmarDividendo = async (valor: number, senhaDigitada: string) => {
-    if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
-    if (!ativoDividendo) return;
+// 1. Função para VERIFICAR as pendências e ABRIR o modal
+const handleVerificarDividendos = (ativoFII: RendaVariavelAtivo) => {
+  const pendencias = verificarDividendosPendentes(ativoFII, historico);
+  setAtivoDividendo(ativoFII); // Guarda o FII para usarmos o nome e ticker no modal
+  setPendenciasDividendo(pendencias);
+  setShowDividendosPendentesModal(true);
+};
 
-    const hoje = new Date();
-    const jaTemDividendoEsteMes = historico.some(
-      (h) => h.tipo === 'dividendo' && h.nome === ativoDividendo.nome && new Date(h.data).getMonth() === hoje.getMonth() && new Date(h.data).getFullYear() === hoje.getFullYear()
-    );
-    if (jaTemDividendoEsteMes) { alert('Dividendo já registrado para este FII neste mês.'); return; }
-    if (hoje.getDate() < 15) { alert('Os dividendos só podem ser informados após o dia 15 do mês.'); return; }
+// 2. Função para CONFIRMAR e salvar os dividendos informados no modal
+const handleConfirmarDividendos = async (
+  dividendos: DividendoPreenchido[],
+  senhaDigitada: string
+) => {
+  if (senhaDigitada !== senhaSalva) {
+    alert('Senha incorreta!');
+    return;
+  }
+  if (!ativoDividendo) return;
 
-    const novoRegistro: RegistroHistorico = {
-      tipo: 'dividendo',
-      valor: valor * ativoDividendo.quantidade,
-      nome: ativoDividendo.nome,
-      data: hoje.toISOString()
-    };
-    await updateDoc(doc(db, 'usuarios', login), { historico: arrayUnion(novoRegistro) });
-    setHistorico(prev => [...prev, novoRegistro]);
+  setLoading(true);
+  try {
+    const novosRegistros: RegistroHistorico[] = [];
+    const docRef = doc(db, 'usuarios', login);
 
-    setShowDividendoModal(false);
-    setAtivoDividendo(null);
-  };
+    for (const dividendo of dividendos) {
+      const pendenciaOriginal = pendenciasDividendo.find(p => p.mesApuracao === dividendo.mesApuracao);
+      if (!pendenciaOriginal) continue;
+
+      const valorTotal = dividendo.valorPorCota * pendenciaOriginal.quantidadeNaqueleMes;
+
+      const novoRegistro: RegistroHistorico = {
+        tipo: 'dividendo',
+        valor: valorTotal,
+        nome: ativoDividendo.nome,
+        data: new Date().toISOString(),
+        mesApuracao: dividendo.mesApuracao,
+      };
+      
+      novosRegistros.push(novoRegistro);
+      await updateDoc(docRef, { historico: arrayUnion(novoRegistro) });
+    }
+
+    setHistorico(prev => [...prev, ...novosRegistros]);
+    setShowDividendosPendentesModal(false);
+    alert('Dividendos registrados com sucesso!');
+
+  } catch (error) {
+    console.error("Erro ao registrar dividendos:", error);
+    alert("Ocorreu um erro ao registrar os dividendos.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senhaDigitada: string): Promise<boolean> => {
     if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return false; }
@@ -520,7 +550,11 @@ const variacaoPercentual = useMemo(() => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {ativos.map(ativo => (
-              <AtivoCard key={ativo.id} ativo={ativo} onSell={handleSellAtivo} cor={getCorAtivo(ativo.id)} onInformarDividendo={ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' ? () => handleInformarDividendo(ativo as RendaVariavelAtivo) : undefined} />
+              <AtivoCard key={ativo.id} ativo={ativo} onSell={handleSellAtivo} cor={getCorAtivo(ativo.id)} onInformarDividendo={
+  (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
+  ? () => handleVerificarDividendos(ativo) // Passamos uma função que já sabe qual 'ativo' usar
+  : undefined
+} />
             ))}
           </div>
           <div className="mt-8 bg-white p-4 rounded-xl shadow-lg border-2 border-gray-200 relative">
@@ -690,24 +724,15 @@ const variacaoPercentual = useMemo(() => {
         </div>
       )}
 
-      {showDividendoModal && ativoDividendo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <InformarDividendoModal
-            ativo={ativoDividendo}
-            nome={ativoDividendo.nome}
-            ticker={ativoDividendo.tickerFormatado}
-            jaInformadoEsteMes={historico.some(
-              (h) =>
-                h.tipo === 'dividendo' &&
-                h.nome === ativoDividendo.nome &&
-                new Date(h.data).getMonth() === new Date().getMonth() &&
-                new Date(h.data).getFullYear() === new Date().getFullYear()
-            )}
-            onClose={() => setShowDividendoModal(false)}
-            onConfirm={confirmarDividendo}
-          />
-        </div>
-      )}
+     {showDividendosPendentesModal && ativoDividendo && (
+  <InformarDividendosPendentesModal
+    nomeFII={ativoDividendo.nome}
+    tickerFII={ativoDividendo.tickerFormatado}
+    pendencias={pendenciasDividendo}
+    onClose={() => setShowDividendosPendentesModal(false)}
+    onConfirm={handleConfirmarDividendos}
+  />
+)}
 
       {showAtualizarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
