@@ -235,7 +235,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
         valor: ativoSemSenha.valorInvestido,
         nome: ativoSemSenha.nome,
         categoria: ativoSemSenha.tipo,  
-        subtipo: ativoSemSenha.subtipo, 
+        subtipo: (ativoSemSenha as RendaVariavelAtivo).subtipo, 
         quantidade: (ativoSemSenha as RendaVariavelAtivo).quantidade,
         data: new Date().toISOString()
       };
