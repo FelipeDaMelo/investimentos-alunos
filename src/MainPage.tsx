@@ -3,6 +3,7 @@ import { db } from './firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from './firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { mesEncerrado } from './utils/mesEncerrado';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -233,8 +234,10 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
         tipo: 'compra',
         valor: ativoSemSenha.valorInvestido,
         nome: ativoSemSenha.nome,
-        categoria: ativoSemSenha.tipo,
-          data: new Date().toISOString()
+        categoria: ativoSemSenha.tipo,  
+        subtipo: ativoSemSenha.subtipo, 
+        quantidade: (ativoSemSenha as RendaVariavelAtivo).quantidade,
+        data: new Date().toISOString()
       };
       console.log("OBJETO 'novoRegistro' CRIADO PARA O HISTÓRICO:", novoRegistro);
       await updateDoc(doc(db, 'usuarios', login), {
@@ -281,7 +284,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     } else { // Renda Variável
       const valorVenda = quantidadeVendida * ativoSelecionado.valorAtual;
       const novoRegistroVenda: RegistroHistorico = {
-        tipo: 'venda', valor: valorVenda, nome: ativoSelecionado.nome, categoria: 'rendaVariavel', subtipo: ativoSelecionado.subtipo, data: new Date().toISOString()
+        tipo: 'venda', valor: valorVenda, nome: ativoSelecionado.nome, categoria: 'rendaVariavel', subtipo: ativoSelecionado.subtipo, quantidade: quantidadeVendida, data: new Date().toISOString()
       };
       const novaQuantidade = ativoSelecionado.quantidade - quantidadeVendida;
       
@@ -444,7 +447,9 @@ const variacaoPercentual = useMemo(() => {
         <Button onClick={() => setShowWizard(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow"><SquarePlus className="w-5 h-4.5 inline-block mr-1" /> Adicionar Novo Ativo</Button>
         <Button onClick={() => setShowAtualizarModal(true)} disabled={bloqueado} className="bg-green-600 hover:bg-green-700 text-white shadow"><Calculator className="w-5 h-4.5 inline-block mr-1" /> Atualizar Valores de Investimentos</Button>
         <Button onClick={async () => {
-          const resumos: ResumoIR[] = await verificarImpostoMensal(historico, setValorVariavelDisponivel, setHistorico, login, false);
+          console.log('📘 Histórico enviado para verificarImpostoMensal:', historico);
+          const resumos: ResumoIR[] = await verificarImpostoMensal(historico);
+          console.log('🔍 Resumos IR:', resumos);
           setResumosIR(resumos);
           setMostrarModalIR(true);
         }} className="bg-red-600 hover:bg-red-700 text-white shadow">🦁 Informar Imposto de Renda</Button>
@@ -512,7 +517,48 @@ const variacaoPercentual = useMemo(() => {
       )}
 
       {showDepositar && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"><DepositarModal onClose={() => setShowDepositar(false)} onConfirm={handleDeposito} /></div>}
-      {mostrarModalIR && resumosIR && <DeduzirIRModal resumosIR={resumosIR} onClose={() => setMostrarModalIR(false)} onConfirm={async (senha) => { if (senha !== senhaSalva) { alert('Senha incorreta.'); return; } await verificarImpostoMensal(historico, setValorVariavelDisponivel, setHistorico, login, true); setMostrarModalIR(false); }} />}
+      {mostrarModalIR && resumosIR && (
+  <DeduzirIRModal
+    resumosIR={resumosIR}
+    onClose={() => setMostrarModalIR(false)}
+    onConfirm={async (senhaDigitada) => {
+      if (senhaDigitada !== senhaSalva) {
+        alert('Senha incorreta!');
+        return false; // Indica falha na senha
+      }
+
+      // Loop através dos resumos que o verificarImpostoMensal já filtrou como dedutíveis
+      for (const resumo of resumosIR) {
+        if (resumo.imposto > 0 && mesEncerrado(resumo.mes)) {// Dupla checagem, embora verificarImpostoMensal já deva filtrar
+          const registroIR: RegistroHistorico = {
+            tipo: 'ir',
+            valor: resumo.imposto,
+            categoria: 'rendaVariavel', // Assumindo que IR é sempre para RV aqui
+            subtipo: resumo.subtipo as 'acao' | 'fii' | 'criptomoeda',
+             data: new Date().toISOString(),  // Data de referência para o mês
+            mesApuracao: resumo.mes // <-- A LINHA MÁGICA QUE SALVA O CONTEXTO
+          };
+
+          // Atualiza o saldo local (isso era feito em verificarImpostoMensal)
+          setValorVariavelDisponivel(prev => prev - resumo.imposto);
+
+          // Adiciona ao histórico local (isso era feito em verificarImpostoMensal)
+          setHistorico(prev => [...prev, registroIR]);
+
+          // Atualiza o Firebase (isso era feito em verificarImpostoMensal)
+          const docRef = doc(db, 'usuarios', login);
+          await updateDoc(docRef, {
+            historico: arrayUnion(registroIR),
+          });
+        }
+      }
+
+      setMostrarModalIR(false); // Fecha o modal após a dedução
+      alert('Dedução de Imposto de Renda confirmada e salva com sucesso!');
+      return true; // Indica sucesso
+    }}
+  />
+)}
       
       {showTransferencia && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

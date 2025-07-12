@@ -10,4 +10,6 @@ export interface RegistroHistorico {
   valorLiquido?: number;
   imposto?: number;
   diasAplicado?: number;
+  quantidade?: number;
+  mesApuracao?: string;
 }

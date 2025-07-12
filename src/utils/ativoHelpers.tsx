@@ -123,7 +123,7 @@ export function calcularSaldoVariavel(historico: RegistroHistorico[]): number {
 
       case 'ir':
         // O imposto sobre RV deduz do saldo de RV.
-        return registro.destino === 'variavel' ? acc - registro.valor : acc;
+        return registro.categoria === 'rendaVariavel' ? acc - registro.valor : acc; 
         
       default:
         return acc;
