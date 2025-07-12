@@ -18,7 +18,7 @@ export function mesEncerrado(mesAno: string, hoje = new Date()): boolean {
     }
     // Se é o mesmo mês, aplicamos a regra do dia 25.
     if (mesHoje === mes) {
-      return hoje.getDate() > 10;
+      return hoje.getDate() > 25;
     }
   }
 
