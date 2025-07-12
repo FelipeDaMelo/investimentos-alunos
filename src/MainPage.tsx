@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { db } from './firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from './firebaseConfig';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { deleteObject } from 'firebase/storage';
 import { mesEncerrado } from './utils/mesEncerrado';
 import { Line } from 'react-chartjs-2';
 import {
@@ -38,7 +39,7 @@ import { ResumoIR } from './components/ResumoIR';
 import DeduzirIRModal from './components/DeduzirIRModal';
 import { calcularSaldoVariavel, calcularSaldoFixa } from './utils/ativoHelpers';
 import { RegistroHistorico } from './hooks/RegistroHistorico';
-
+import ExcluirGrupoModal from './components/ExcluirGrupoModal';
 Chart.register(zoomPlugin);
 ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -85,6 +86,8 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [escalaY, setEscalaY] = useState<'linear' | 'logarithmic'>('linear');
   const [resumosIR, setResumosIR] = useState<ResumoIR[] | null>(null);
   const [mostrarModalIR, setMostrarModalIR] = useState(false);  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false); // Para o novo menu
 
   // A função que faz a verificação e o upload.
   const handleUploadConfirmado = async (file: File, senhaDigitada: string) => {
@@ -383,11 +386,13 @@ const variacaoPercentual = useMemo(() => {
     
     {/* Lado Esquerdo: Foto do Grupo */}
     <div className="flex-shrink-0">
-      <FotoGrupoUploader 
-        login={login} 
-        fotoUrlAtual={fotoGrupo || undefined}
-        onConfirmUpload={handleUploadConfirmado}
-      />
+  <FotoGrupoUploader 
+              login={login} 
+              fotoUrlAtual={fotoGrupo || undefined}
+              onConfirmUpload={handleUploadConfirmado}
+              // PROP ADICIONADA: Passamos a função para abrir o modal de exclusão
+              onTriggerDelete={() => setShowDeleteModal(true)} 
+            />
     </div>
 
     {/* Centro: Título e Subtítulo */}
@@ -559,7 +564,48 @@ const variacaoPercentual = useMemo(() => {
     }}
   />
 )}
-      
+
+      {showDeleteModal && (
+        <ExcluirGrupoModal
+          nomeGrupo={nomeGrupo}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={async (senhaDigitada) => {
+            if (senhaDigitada !== senhaSalva) {
+              alert('Senha incorreta!');
+              return; // Não retorna false, apenas para a execução
+            }
+            
+            setLoading(true);
+            try {
+              // 1. Apaga o documento do Firestore
+              await deleteDoc(doc(db, "usuarios", login));
+
+              // 2. Apaga a foto do Storage (se existir)
+              if (fotoGrupo) {
+                  // Esta é uma forma mais segura de obter a referência do que apenas a URL
+                  const fotoRef = ref(storage, fotoGrupo);
+                  await deleteObject(fotoRef).catch((error) => {
+                    // Ignora o erro se o arquivo não for encontrado (pode já ter sido apagado)
+                    if (error.code !== 'storage/object-not-found') {
+                      throw error;
+                    }
+                  });
+              }
+              
+              // 3. Desloga o usuário
+              alert('Grupo excluído com sucesso. Você será desconectado.');
+              // Força o recarregamento da página, que resultará em logout
+              window.location.reload(); 
+
+            } catch (error) {
+              console.error("Erro ao excluir grupo:", error);
+              alert("Ocorreu um erro ao tentar excluir o grupo.");
+              setLoading(false);
+            }
+          }}
+        />
+      )}
+
       {showTransferencia && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <TransferenciaModal onClose={() => setShowTransferencia(false)} onConfirm={async (valor, direcao, senhaDigitada) => {

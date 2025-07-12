@@ -1,64 +1,63 @@
 // Caminho: src/components/FotoGrupoUploader.tsx
-// ✅ VERSÃO FINAL CORRETA E AUTOCONTIDA
 
 import React, { useState, useRef } from 'react';
-import { Pencil, Camera } from 'lucide-react'; // Importar Camera para o placeholder
-import Button from './Button'; // Importar seu componente de Botão
+import { Pencil, Camera, Trash2 } from 'lucide-react'; // Importamos os ícones necessários
+import Button from './Button'; 
 
-// 1. Definição de Props: O que este componente precisa receber da MainPage
+// A interface de props agora recebe a nova função para abrir o modal de exclusão
 interface FotoGrupoUploaderProps {
   login: string;
   fotoUrlAtual?: string;
-  // A única prop necessária é a função que faz a lógica de negócio na MainPage
   onConfirmUpload: (file: File, senhaDigitada: string) => Promise<void>;
+  onTriggerDelete: () => void; // Prop para avisar a MainPage para abrir o modal de exclusão
 }
 
 export default function FotoGrupoUploader({
   login,
   fotoUrlAtual,
   onConfirmUpload,
+  onTriggerDelete,
 }: FotoGrupoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   
-  // Estados para controlar o modal que vive DENTRO deste componente
-  const [showModal, setShowModal] = useState(false);
+  // --- Estados de Controle ---
+  const [showMenu, setShowMenu] = useState(false); // NOVO: para controlar o menu
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [senhaDigitada, setSenhaDigitada] = useState('');
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Função para abrir a janela de seleção de arquivo
-  const handleEditClick = () => {
-    fileInputRef.current?.click();
+  // --- Funções de Ação do Menu ---
+  const handleAlterarFotoClick = () => {
+    setShowMenu(false); // Fecha o menu
+    fileInputRef.current?.click(); // Abre o seletor de arquivos
   };
 
-  // Quando o usuário seleciona um arquivo, apenas armazena e abre o modal.
+  const handleExcluirGrupoClick = () => {
+    setShowMenu(false); // Fecha o menu
+    onTriggerDelete(); // Chama a função da MainPage
+  };
+
+  // --- Lógica de Upload (do seu código original) ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setArquivoSelecionado(file);
-      setShowModal(true);
-      setSenhaDigitada(''); // Limpa a senha anterior
+      setShowUploadModal(true); // Abre o modal de confirmação de upload
+      setSenhaDigitada('');
     }
   };
 
-  // Função chamada pelo botão "Confirmar" do nosso modal.
-  const handleConfirmarAcao = async () => {
-    if (!arquivoSelecionado) return;
-
-    if (senhaDigitada.length !== 6) {
+  const handleConfirmarUpload = async () => {
+    if (!arquivoSelecionado || senhaDigitada.length !== 6) {
       alert('A senha deve conter 6 dígitos.');
       return;
     }
-
     setIsUploading(true);
     try {
-      // Chama a função da MainPage, passando o arquivo e a senha
       await onConfirmUpload(arquivoSelecionado, senhaDigitada);
-      // Se a função na MainPage for bem-sucedida, ela não lançará erro, então podemos fechar o modal.
-      setShowModal(false);
+      setShowUploadModal(false);
     } catch (error) {
-      // Se a função na MainPage lançar um erro (ex: senha incorreta),
-      // o 'alert' já foi mostrado lá. O modal permanecerá aberto para nova tentativa.
       console.error("Falha na confirmação do upload:", error);
     } finally {
       setIsUploading(false);
@@ -76,25 +75,50 @@ export default function FotoGrupoUploader({
         onChange={handleFileChange}
       />
       
-      {/* Exibe a foto atual ou um placeholder */}
-      <img
-        src={fotoUrlAtual || '/usuario-placeholder.png'}
-        alt="Foto do grupo"
-        className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-md"
-      />
-      
-      {/* Ícone de lápis para editar */}
+      {/* Gatilho Visual: A foto ou placeholder. Clicar aqui abre o menu. */}
       <button
-        onClick={handleEditClick}
-        className="absolute bottom-0 right-0 bg-blue-600 p-1.5 rounded-full shadow-lg hover:bg-blue-700 cursor-pointer opacity-0 group-hover:opacity-100 transition-all"
-        title="Editar foto"
-        disabled={isUploading}
+        type="button"
+        onClick={() => setShowMenu(true)}
+        className="w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer block"
+        aria-label="Abrir menu de opções do grupo"
       >
-        <Pencil className="w-4 h-4 text-white" />
+        <img
+          src={fotoUrlAtual || '/usuario-placeholder.png'}
+          alt="Foto do grupo"
+          className="w-full h-full object-cover"
+        />
+        {/* Efeito de sobreposição com lápis */}
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all duration-300">
+          <Pencil className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </button>
 
-      {/* ---- O JSX do Modal, renderizado condicionalmente ---- */}
-      {showModal && (
+      {/* --- O NOVO MENU DROPDOWN --- */}
+      {showMenu && (
+        <>
+          {/* Overlay para fechar ao clicar fora */}
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 bg-white rounded-lg shadow-xl z-50 py-2 animate-fade-in-down">
+            <button
+              onClick={handleAlterarFotoClick}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3 transition-colors"
+            >
+              <Camera size={16} /> Alterar Foto
+            </button>
+            <div className="border-t border-gray-100 my-1"></div>
+            <button
+              onClick={handleExcluirGrupoClick}
+              className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors"
+            >
+              <Trash2 size={16} /> Excluir Grupo
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* --- O MODAL DE UPLOAD (seu código original, agora controlado por 'showUploadModal') --- */}
+      {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-sm">
             <h3 className="text-xl font-semibold mb-4 text-center text-gray-800">Alterar Foto do Grupo</h3>
@@ -102,25 +126,20 @@ export default function FotoGrupoUploader({
               Digite sua senha de 6 dígitos para confirmar o envio da nova imagem.
             </p>
             <div className="mb-6">
-              <label className="block mb-2 font-medium text-gray-700 sr-only">Senha (6 dígitos)</label>
-<input
-    type="password"
-    value={senhaDigitada}
-    onChange={(e) => setSenhaDigitada(e.target.value)}
-    maxLength={6}
-    className="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-lg tracking-widest focus:border-blue-500 focus:ring-blue-200 
-               text-gray-900     // ✅ Garante que o texto (e os asteriscos) seja preto/cinza escuro.
-               placeholder-gray-400 // ✅ Estiliza a cor do placeholder *****.
-              "
-    placeholder="******"
-    autoFocus
-/>
+              <input
+                type="password"
+                value={senhaDigitada}
+                onChange={(e) => setSenhaDigitada(e.target.value)}
+                maxLength={6}
+                className="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-lg tracking-widest focus:border-blue-500 focus:ring-blue-200 text-gray-900 placeholder-gray-400"
+                placeholder="******"
+                autoFocus
+              />
             </div>
-    
             <div className="flex justify-between gap-4">
               <Button
                 type="button"
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowUploadModal(false)}
                 className="bg-gray-500 hover:bg-gray-600 text-white w-full"
                 disabled={isUploading}
               >
@@ -128,7 +147,7 @@ export default function FotoGrupoUploader({
               </Button>
               <Button
                 type="button"
-                onClick={handleConfirmarAcao}
+                onClick={handleConfirmarUpload}
                 disabled={isUploading || senhaDigitada.length !== 6}
                 className="bg-blue-600 hover:bg-blue-700 text-white w-full"
               >
