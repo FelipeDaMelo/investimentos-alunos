@@ -195,9 +195,9 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
       if (ultima) {
         const agora = new Date();
         const diff = (agora.getTime() - ultima.getTime()) / 60000;
-        if (diff < 30) {
+        if (diff < 1) {
           setBloqueado(true);
-          setTimeout(() => setBloqueado(false), (30 - diff) * 60000);
+          setTimeout(() => setBloqueado(false), (1 - diff) * 60000);
         }
       }
     }
@@ -761,7 +761,7 @@ const variacaoPercentual = useMemo(() => {
               });
               await salvarUltimaAtualizacaoManual(login);
               setBloqueado(true);
-              setTimeout(() => setBloqueado(false), 30 * 60 * 1000);
+              setTimeout(() => setBloqueado(false), 1 * 60 * 1000);
               setShowAtualizarModal(false);
             }}
           />

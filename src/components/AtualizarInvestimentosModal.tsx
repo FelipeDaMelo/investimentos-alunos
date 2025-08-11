@@ -23,7 +23,7 @@ export default function AtualizarInvestimentosModal({ onClose, onConfirm }: Prop
         <h2 className="text-lg font-semibold mb-4 text-center">Atualizar Investimentos</h2>
 
         <p className="text-sm text-gray-700 mb-4 text-justify">
-          Esta ação atualizará os valores dos ativos. Após a execução, será necessário aguardar <strong>30 minutos</strong> para nova atualização. A <strong>renda fixa</strong> só poderá ser atualizada novamente após <strong>24 horas</strong>.
+          Esta ação atualizará os valores dos ativos. Após a execução, será necessário aguardar <strong>60 segundos</strong> para nova atualização. A <strong>renda fixa</strong> só poderá ser atualizada novamente após <strong>24 horas</strong>.
         </p>
 
         <div className="mb-4">
