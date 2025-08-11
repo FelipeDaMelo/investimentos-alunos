@@ -59,6 +59,7 @@ interface HistoricoItem {
   diasAplicado?: number;
   categoria?: 'rendaFixa' | 'rendaVariavel';
   subtipo?: 'acao' | 'fii' | 'criptomoeda'; 
+  comentario?: string;
 }
 
 interface Props {
@@ -69,52 +70,62 @@ interface Props {
 // Helper para centralizar a lógica de exibição
 const getTransactionDetails = (registro: HistoricoItem) => {
   const dataFormatada = formatarDataHoraBr(registro.data);
+  let details = { text: '', color: 'text-gray-800' };
 
   switch (registro.tipo) {
     case 'deposito':
-      return {
+      details = {
         text: `Depósito: ${formatCurrency(registro.valor)} em Renda ${registro.destino === 'fixa' ? 'Fixa' : 'Variável'} no dia ${dataFormatada}`,
         color: 'text-blue-600 font-semibold',
       };
+      break;
     case 'compra':
-      return {
+      details = {
         text: `Compra: ${formatCurrency(registro.valor)} em "${registro.nome}" no dia ${dataFormatada}`,
         color: 'text-red-600',
       };
-    case 'venda':
+      break;
+     case 'venda':
       if (registro.categoria === 'rendaFixa') {
-        return {
+        details = {
           text: `Resgate de "${registro.nome}": Bruto ${formatCurrency(registro.valorBruto ?? 0)}, Líquido ${formatCurrency(registro.valorLiquido ?? 0)} (IR: ${formatCurrency(registro.imposto ?? 0)}) no dia ${dataFormatada}`,
           color: 'text-green-700',
         };
+      } else { // Para Renda Variável
+        details = {
+          text: `Venda: ${formatCurrency(registro.valor)} de "${registro.nome}" no dia ${dataFormatada}`,
+          color: 'text-green-600',
+        };
       }
-      return {
-        text: `Venda: ${formatCurrency(registro.valor)} de "${registro.nome}" no dia ${dataFormatada}`,
-        color: 'text-green-600',
-      };
+      break; // <-- ADICIONADO
     case 'dividendo':
-      return {
+      details = {
         text: `Dividendo: ${formatCurrency(registro.valor)} recebido de "${registro.nome}" no dia ${dataFormatada}`,
         color: 'text-purple-600',
       };
     case 'transferencia':
-      return {
+      details = {
         text: `Transferência: ${formatCurrency(registro.valor)} para Renda ${registro.destino === 'fixa' ? 'Fixa' : 'Variável'} no dia ${dataFormatada}`,
         color: 'text-gray-700',
       };
-    
+    break;
     // ATUALIZADO: Lógica para exibir o débito de IR de forma detalhada
     case 'ir':
       const mesApelido = formatarMesAno(registro.data); // Usa a data do registro, que é 'YYYY-MM-01'
       const subtipoApelido = formatarSubtipo(registro.subtipo || '');
-      return {
+      details = {
         text: `Débito de IR: ${formatCurrency(registro.valor)} sobre ${subtipoApelido} em ${mesApelido}, declarados no dia ${dataFormatada}`,
         color: 'text-orange-600 font-bold',
       };
-
+     break;
     default:
-      return { text: 'Operação desconhecida', color: 'text-gray-400' };
+      details = { text: 'Operação desconhecida', color: 'text-gray-400' };
   }
+  if (registro.comentario) {
+    details.text += `\n"${registro.comentario}"`; // Adiciona o comentário em uma nova linha
+  }
+
+  return details;
 };
 
 export default function HistoricoModal({ historico, onClose }: Props) {
@@ -160,16 +171,17 @@ export default function HistoricoModal({ historico, onClose }: Props) {
           </div>
           
           {historicoOrdenado.length > 0 ? (
-            <ul className="space-y-3">
-              {historicoOrdenado.map((registro, index) => {
-                const { text, color } = getTransactionDetails(registro);
-                return (
-                  <li key={`${registro.data}-${index}`} className={`text-base font-medium ${color}`}>
-                    {text}
-                  </li>
-                );
-              })}
-            </ul>
+             <ul className="space-y-3">
+        {historicoOrdenado.map((registro, index) => {
+          const { text, color } = getTransactionDetails(registro);
+          return (
+            // ADICIONE a classe whitespace-pre-line para que o `\n` funcione
+            <li key={`${registro.data}-${index}`} className={`text-base font-medium ${color} whitespace-pre-line`}>
+              {text}
+            </li>
+          );
+        })}
+      </ul>
           ) : (
             <p className="text-center text-gray-500 py-10">Nenhuma transação registrada.</p>
           )}

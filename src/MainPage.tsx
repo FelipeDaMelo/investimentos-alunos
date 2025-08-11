@@ -34,7 +34,7 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from './hooks/useAtualizarAtivos';
 import FotoGrupoUploader from './components/FotoGrupoUploader';
-import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download } from 'lucide-react';
+import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download, LogOut } from 'lucide-react';
 import { verificarImpostoMensal } from './hooks/verificarImpostoMensal';
 import { ResumoIR } from './components/ResumoIR';
 import DeduzirIRModal from './components/DeduzirIRModal';
@@ -60,6 +60,7 @@ interface MainPageProps {
   variavel: number;
   nomeGrupo: string;
   senha: string;
+  onLogout: () => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -67,7 +68,7 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
-export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGrupo }: Omit<MainPageProps, 'senha'>) {
+export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGrupo, onLogout }: Omit<MainPageProps, 'senha'>) {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
@@ -267,7 +268,7 @@ const handleConfirmarDividendos = async (
     return true;
   };
 
- const handleAddAtivo = async (novoAtivo: AtivoComSenha) => {
+ const handleAddAtivo = async (novoAtivo: AtivoComSenha, comentario: string) => { 
   console.log("OBJETO RECEBIDO DO FORMULÁRIO:", novoAtivo);
   if (novoAtivo.senha !== senhaSalva) {
     alert('Senha incorreta!');
@@ -311,7 +312,8 @@ const handleConfirmarDividendos = async (
       valor: ativoSemSenha.valorInvestido,
       nome: ativoSemSenha.nome,
       categoria: ativoSemSenha.tipo,
-      data: new Date().toISOString()
+      data: new Date().toISOString(),
+      comentario: comentario, // ADICIONE ESTA LINHA
     };
     
     // Se for Renda Variável, adicionamos os campos específicos
@@ -350,7 +352,7 @@ const handleConfirmarDividendos = async (
     setShowVendaModal(true);
   };
 
-  const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string) => {
+const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, comentario: string) => {
     if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
     if (!ativoSelecionado) return;
     
@@ -362,7 +364,7 @@ const handleConfirmarDividendos = async (
 
       const registroVenda: RegistroHistorico = {
         tipo: 'venda', valor: resultadoIR.valorLiquido, valorBruto: ativoSelecionado.valorAtual, valorLiquido: resultadoIR.valorLiquido,
-        imposto: resultadoIR.imposto, diasAplicado: resultadoIR.diasAplicado, nome: ativoSelecionado.nome, categoria: 'rendaFixa', data: new Date().toISOString()
+        imposto: resultadoIR.imposto, diasAplicado: resultadoIR.diasAplicado, nome: ativoSelecionado.nome, categoria: 'rendaFixa', data: new Date().toISOString(), comentario: comentario,
       };
       const ativosRestantes = ativos.filter(a => a.id !== ativoSelecionado.id);
       setAtivos(ativosRestantes);
@@ -373,7 +375,7 @@ const handleConfirmarDividendos = async (
     } else { // Renda Variável
       const valorVenda = quantidadeVendida * ativoSelecionado.valorAtual;
       const novoRegistroVenda: RegistroHistorico = {
-        tipo: 'venda', valor: valorVenda, nome: ativoSelecionado.nome, categoria: 'rendaVariavel', subtipo: ativoSelecionado.subtipo, quantidade: quantidadeVendida, data: new Date().toISOString()
+        tipo: 'venda', valor: valorVenda, nome: ativoSelecionado.nome, categoria: 'rendaVariavel', subtipo: ativoSelecionado.subtipo, quantidade: quantidadeVendida, data: new Date().toISOString(), comentario: comentario,
       };
       const novaQuantidade = ativoSelecionado.quantidade - quantidadeVendida;
       
@@ -498,7 +500,14 @@ const variacaoPercentual = useMemo(() => {
         {formatCurrency(valorTotalAtual)}
       </p>
     </div>
-
+ <Button 
+              onClick={onLogout} 
+              variant="danger" 
+              className="!py-2 !px-3" // Usando ! para sobrescrever o padding padrão e deixar o botão menor
+              title="Sair e voltar para a tela de login"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
   </div>
 </header>
 {/* ===== FIM DO NOVO CABEÇALHO ===== */}

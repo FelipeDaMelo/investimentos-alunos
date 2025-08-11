@@ -39,6 +39,16 @@ const App = () => {
     []
   );
 
+    const handleLogout = useCallback(() => {
+    setLogin(null);
+    setValorInvestido(0);
+    setFixo(0);
+    setVariavel(0);
+    setNomeGrupo('');
+    // Opcional: Redirecionar para o topo da página
+    window.scrollTo(0, 0); 
+  }, []);
+
   // Não mostra nada até que a sessão anônima esteja pronta
   if (!isAuthReady) {
     return <div>Inicializando sessão...</div>;
@@ -55,6 +65,7 @@ const App = () => {
           fixo={fixo} 
           variavel={variavel} 
           nomeGrupo={nomeGrupo} 
+          onLogout={handleLogout} // PASSE A FUNÇÃO COMO PROP
         />
       )}
 

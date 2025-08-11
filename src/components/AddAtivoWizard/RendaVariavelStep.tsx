@@ -12,12 +12,13 @@ const Spinner = ({ className = "" }: { className?: string }) => (
 
 interface RendaVariavelStepProps {
   onBack: () => void;
-  onSubmit: (ativo: RendaVariavelAtivo) => void;
+  onSubmit: (ativo: RendaVariavelAtivo, comentario: string) => void;
   saldoDisponivel: number;
 }
 
 export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }: RendaVariavelStepProps) {
   const [senha, setSenha] = useState('');
+   const [comentario, setComentario] = useState(''); // ADICIONE ESTE ESTADO
   const [dividendoFII, setDividendoFII] = useState<number | null>(null);
   const [form, setForm] = useState({
     
@@ -170,7 +171,7 @@ const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
   dividendo: dividendoFII ?? 0  // ✅ esta linha corrige o erro
 };
 
-  onSubmit(ativoCompleto);
+  onSubmit(ativoCompleto, comentario);
 };
   
 
@@ -309,6 +310,18 @@ const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
           required
         />
       </div>
+
+              <div>
+        <label className="block mb-2 font-medium text-gray-700">Comentário sobre a movimentação (Opcional)</label>
+        <textarea
+          value={comentario}
+          onChange={(e) => setComentario(e.target.value)}
+          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+          placeholder="Explique o motivo da sua movimentação"
+          rows={2}
+        />
+      </div>
+      
 <div>
   <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>
   <input

@@ -12,4 +12,5 @@ export interface RegistroHistorico {
   diasAplicado?: number;
   quantidade?: number;
   mesApuracao?: string;
+  comentario?: string;
 }

@@ -4,13 +4,14 @@ import Button from './Button';
 
 interface VendaAtivoModalProps {
   ativo: Ativo;
-  onConfirm: (quantidadeVendida: number, senha: string) => void;
+onConfirm: (quantidadeVendida: number, senha: string, comentario: string) => void;
   onClose: () => void;
 }
 
 export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtivoModalProps) {
   const [quantidade, setQuantidade] = useState('');
   const [senha, setSenha] = useState('');
+  const [comentario, setComentario] = useState(''); // ADICIONE ESTE ESTADO
 
   const isRendaVariavel = ativo.tipo === 'rendaVariavel';
 
@@ -29,7 +30,7 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtiv
       }
     }
 
-    onConfirm(isRendaVariavel ? quantidadeNumerica : 1, senha);
+    onConfirm(isRendaVariavel ? quantidadeNumerica : 1, senha, comentario);
   };
 
   return (
@@ -81,6 +82,18 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtiv
   })()}
 </p>
         )}
+
+        <div>
+        <label className="block mb-2 font-medium text-gray-700">Comentário sobre a movimentação (Opcional)</label>
+        <textarea
+          value={comentario}
+          onChange={(e) => setComentario(e.target.value)}
+          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+          placeholder="Explique o motivo da sua movimentação"
+          rows={2}
+        />
+      </div>
+
 
         <div>
           <label className="block mb-1 font-medium">Senha (6 dígitos)</label>

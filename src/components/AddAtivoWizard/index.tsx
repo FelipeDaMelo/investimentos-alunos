@@ -7,7 +7,7 @@ import { AtivoComSenha, RendaFixaAtivo, RendaVariavelAtivo } from '../../types/A
 
 interface AddAtivoWizardProps {
   onClose: () => void;
-  onAddAtivo: (ativo: AtivoComSenha) => Promise<boolean>;
+  onAddAtivo: (ativo: AtivoComSenha, comentario: string) => Promise<boolean>;
   valorFixaDisponivel: number;
   valorVariavelDisponivel: number;
   quantidadeAtivos: number;
@@ -50,7 +50,7 @@ export default function AddAtivoWizard({
       {step === 'fixa' && (
         <RendaFixaStep
           onBack={() => setStep('tipo')}
-          onSubmit={async (dados: DadosFormFixa) => {
+           onSubmit={async (dados, comentario) => {
             if (!dados.senha || dados.senha.length !== 6) {
               alert('A senha deve conter 6 dígitos.');
               return;
@@ -67,7 +67,7 @@ export default function AddAtivoWizard({
               senha: dados.senha,
             };
 
-            const sucesso = await onAddAtivo(ativoCompleto);
+            const sucesso = await onAddAtivo(ativoCompleto, comentario); // Passe o comentário aqui
             if (sucesso) onClose();
           }}
           saldoDisponivel={valorFixaDisponivel}
@@ -77,7 +77,7 @@ export default function AddAtivoWizard({
       {step === 'variavel' && (
         <RendaVariavelStep
           onBack={() => setStep('tipo')}
-          onSubmit={async (dados: DadosFormVariavel) => {
+          onSubmit={async (dados, comentario) => {
             if (!dados.senha || dados.senha.length !== 6) {
               alert('A senha deve conter 6 dígitos.');
               return;
@@ -96,7 +96,7 @@ export default function AddAtivoWizard({
               senha: dados.senha,
             };
 
-            const sucesso = await onAddAtivo(ativoCompleto);
+            const sucesso = await onAddAtivo(ativoCompleto, comentario); // E aqui também
             if (sucesso) onClose();
           }}
           saldoDisponivel={valorVariavelDisponivel}

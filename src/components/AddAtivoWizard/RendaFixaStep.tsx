@@ -7,7 +7,7 @@ import Button from '../Button';
 
 interface RendaFixaStepProps {
   onBack: () => void;
-  onSubmit: (ativo: RendaFixaAtivo) => void;
+  onSubmit: (ativo: RendaFixaAtivo, comentario: string) => void;
   saldoDisponivel: number;
 }
 
@@ -42,6 +42,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [indiceHibrido, setIndiceHibrido] = useState<'CDI' | 'SELIC' | 'IPCA'>('IPCA');
   const [senha, setSenha] = useState('');
   const [indicePosFixado, setIndicePosFixado] = useState<'CDI' | 'SELIC'>('CDI');
+  const [comentario, setComentario] = useState(''); // ADICIONE ESTE ESTADO
 
   const carregarTaxas = async () => {
     try {
@@ -94,7 +95,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       parametrosFixa: parametrosNumericos,
     });
 
-    onSubmit({ ...ativo, senha } as any);
+    onSubmit({ ...ativo, senha } as any, comentario);
   };
 
   // AJUSTE 3: Funções centralizadas para lidar com inputs numéricos que podem ficar vazios
@@ -357,6 +358,17 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
           </div>
         </div>
       )}
+
+        <div>
+        <label className="block mb-2 font-medium text-gray-700">Comentário sobre a movimentação (Opcional)</label>
+        <textarea
+          value={comentario}
+          onChange={(e) => setComentario(e.target.value)}
+          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+          placeholder="Explique o motivo da sua movimentação"
+          rows={2}
+        />
+      </div>
 
       <div>
         <label className="block mb-2 font-medium text-gray-700">Senha (6 dígitos)</label>
