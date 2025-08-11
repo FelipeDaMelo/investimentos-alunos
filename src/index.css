@@ -147,7 +147,7 @@ input[type="number"] {
 }
 
 /* Rodapé fixo com destaque no canto inferior direito */
-footer {
+.app-footer {
   position: fixed;
   bottom: 1rem;
   right: 1rem;

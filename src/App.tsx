@@ -69,7 +69,7 @@ const App = () => {
         />
       )}
 
-      <footer>
+      <footer className="app-footer"> {/* ADICIONE A CLASSE AQUI */}
         Desenvolvido por Prof. Dr. Felipe Damas Melo
       </footer>
     </div>
