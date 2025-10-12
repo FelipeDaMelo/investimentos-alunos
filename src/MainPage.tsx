@@ -34,7 +34,8 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from './hooks/useAtualizarAtivos';
 import FotoGrupoUploader from './components/FotoGrupoUploader';
-import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download, LogOut } from 'lucide-react';
+import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download, LogOut, Trophy } from 'lucide-react';
+import { Link } from 'react-router-dom'; // ✅ 1. Importe o Link
 import { verificarImpostoMensal } from './hooks/verificarImpostoMensal';
 import { ResumoIR } from './components/ResumoIR';
 import DeduzirIRModal from './components/DeduzirIRModal';
@@ -92,6 +93,8 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [resumosIR, setResumosIR] = useState<ResumoIR[] | null>(null);
   const [mostrarModalIR, setMostrarModalIR] = useState(false);  
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [totalCotas, setTotalCotas] = useState(0);
+  const [valorCotaAtual, setValorCotaAtual] = useState(1);
  
 
   // A função que faz a verificação e o upload.
@@ -167,6 +170,12 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
           setAtivos(data?.ativos || []);
           setHistorico((data?.historico || []) as RegistroHistorico[]);
           setSenhaSalva(data?.senha || '');
+          setTotalCotas(data?.totalCotas || 0);
+          if (data?.valorCotaPorDia) {
+            const datasOrdenadas = Object.keys(data.valorCotaPorDia).sort();
+            const ultimaData = datasOrdenadas[datasOrdenadas.length - 1];
+            setValorCotaAtual(data.valorCotaPorDia[ultimaData] || 1);
+          }
         }
       } catch (err) {
         setError('Erro ao carregar dados');
@@ -203,6 +212,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     }
     verificarBloqueio();
   }, [login]);
+  
 
 // ADICIONE estas duas novas funções no lugar das antigas
 
@@ -262,9 +272,26 @@ const handleConfirmarDividendos = async (
 
   const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senhaDigitada: string): Promise<boolean> => {
     if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return false; }
-    const novoRegistro: RegistroHistorico = { tipo: 'deposito', valor, destino, data: new Date().toISOString() };
-    await updateDoc(doc(db, 'usuarios', login), { historico: arrayUnion(novoRegistro) });
+        const novasCotas = valor / valorCotaAtual;
+    const novoTotalCotas = totalCotas + novasCotas;
+    
+    const novoRegistro: RegistroHistorico = { 
+      tipo: 'deposito', 
+      valor, 
+      destino, 
+      data: new Date().toISOString() 
+    };
+
+    // Atualiza o documento no Firestore com o novo total de cotas e o registro do histórico
+    await updateDoc(doc(db, 'usuarios', login), { 
+      historico: arrayUnion(novoRegistro),
+      totalCotas: novoTotalCotas 
+    });
+
+    // Atualiza os estados locais
     setHistorico(prev => [...prev, novoRegistro]);
+    setTotalCotas(novoTotalCotas);
+
     return true;
   };
 
@@ -466,6 +493,35 @@ const variacaoPercentual = useMemo(() => {
   
 }, [valorTotalAtual, totalAportado]); // Agora depende do valor total e do total aportado
 
+
+ useEffect(() => {
+    // Só executa se tivermos os dados necessários para o cálculo
+    if (valorTotalAtual > 0 && totalCotas > 0 && !loading && login) {
+      // 1. Calcula o novo valor da cota
+      const novoValorCota = valorTotalAtual / totalCotas;
+      
+      // 2. Arredonda os valores para salvar no DB
+      const valorPatrimonioArredondado = parseFloat(valorTotalAtual.toFixed(2));
+      const valorCotaArredondado = parseFloat(novoValorCota.toFixed(6)); // Cotas precisam de mais precisão
+
+      // 3. Atualiza o estado local para a UI refletir a mudança imediatamente
+      setValorCotaAtual(valorCotaArredondado);
+
+      // 4. Salva ambos os dados no Firestore
+      const hoje = new Date().toISOString().split('T')[0];
+      const docRef = doc(db, 'usuarios', login);
+
+      updateDoc(docRef, {
+        [`patrimonioPorDia.${hoje}`]: valorPatrimonioArredondado,
+        [`valorCotaPorDia.${hoje}`]: valorCotaArredondado
+      }).catch(err => {
+        console.error("Erro ao salvar dados diários de patrimônio e cota:", err);
+      });
+    }
+  }, [valorTotalAtual, totalCotas, login, loading]);
+
+
+
   return (
     <div className="p-4 max-w-6xl mx-auto">
 {/* ===== INÍCIO DO NOVO CABEÇALHO ===== */}
@@ -553,6 +609,12 @@ const variacaoPercentual = useMemo(() => {
           setResumosIR(resumos);
           setMostrarModalIR(true);
         }} className="bg-red-600 hover:bg-red-700 text-white shadow">🦁 Informar Imposto de Renda</Button>
+                {/* ✅ 4. ADICIONE O LINK COM O BOTÃO AQUI */}
+        <Link to="/ranking">
+            <Button className="bg-yellow-500 hover:bg-yellow-600 text-white shadow">
+                <Trophy className="w-5 h-4.5 inline-block mr-1" /> Ver Rankings
+            </Button>
+        </Link>
       </div>
 
       {ativos.length > 0 ? (
@@ -620,7 +682,15 @@ const variacaoPercentual = useMemo(() => {
         </div>
       )}
 
-      {showDepositar && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"><DepositarModal onClose={() => setShowDepositar(false)} onConfirm={handleDeposito} /></div>}
+        {showDepositar && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <DepositarModal 
+          onClose={() => setShowDepositar(false)} 
+          onConfirm={handleDeposito} 
+        />
+      </div>
+       )}
+
       {mostrarModalIR && resumosIR && (
   <DeduzirIRModal
     resumosIR={resumosIR}

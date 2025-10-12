@@ -82,11 +82,11 @@ export default function FotoGrupoUploader({
         className="w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer block"
         aria-label="Abrir menu de opções do grupo"
       >
-        <img
-          src={fotoUrlAtual || '/usuario-placeholder.png'}
-          alt="Foto do grupo"
-          className="w-full h-full object-cover"
-        />
+<img
+  src={fotoUrlAtual || '/logo-marista.png'} // ✅ ALTERAÇÃO AQUI
+  alt="Foto do grupo"
+  className="w-full h-full object-cover"
+/>
         {/* Efeito de sobreposição com lápis */}
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all duration-300">
           <Pencil className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />

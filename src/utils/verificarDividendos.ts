@@ -1,86 +1,127 @@
-// ARQUIVO: src/utils/verificarDividendos.ts (com logs de depuração)
+// ARQUIVO: src/utils/verificarDividendos.ts (VERSÃO FINAL COM COMPARAÇÃO DE DATA ROBUSTA)
 
 import { RendaVariavelAtivo } from '../types/Ativo';
 import { RegistroHistorico } from '../hooks/RegistroHistorico';
 import { PendenciaDividendo } from '../components/InformarDividendosPendentesModal';
-import { mesEncerrado } from './mesEncerrado';
 
 export function verificarDividendosPendentes(
   ativoFII: RendaVariavelAtivo,
   historicoCompleto: RegistroHistorico[]
 ): PendenciaDividendo[] {
-  console.log(`--- INICIANDO VERIFICAÇÃO PARA: ${ativoFII.nome} ---`);
+  
+  // Opcional: remover o console.clear() se preferir manter os logs antigos
+  // console.clear();
+  console.log(`%c--- INICIANDO VERIFICAÇÃO PARA: ${ativoFII.nome} ---`, "color: blue; font-weight: bold; font-size: 14px;");
 
-  const primeiraCompra = historicoCompleto
-    .filter(h => h.tipo === 'compra' && h.nome === ativoFII.nome)
-    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())[0];
+  const historicoDoAtivo = historicoCompleto
+    .filter(h => h.nome === ativoFII.nome)
+    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+
+  const primeiraCompra = historicoDoAtivo.find(h => h.tipo === 'compra');
 
   if (!primeiraCompra) {
-    console.log("Nenhuma compra encontrada para este ativo. Encerrando.");
+    console.log("LOG: Nenhuma compra encontrada.");
     return [];
   }
-  console.log("Primeira compra em:", primeiraCompra.data);
+  console.log("LOG: Primeira compra em:", primeiraCompra.data);
 
   const dividendosJaPagos = new Set<string>();
-  historicoCompleto.forEach(h => {
-    if (h.tipo === 'dividendo' && h.nome === ativoFII.nome && h.mesApuracao) {
+  historicoDoAtivo.forEach(h => {
+    if (h.tipo === 'dividendo' && h.mesApuracao) {
       dividendosJaPagos.add(h.mesApuracao);
     }
   });
-  console.log("Dividendos já pagos para este ativo:", dividendosJaPagos);
+  console.log("LOG: Meses pagos:", Array.from(dividendosJaPagos));
 
   const pendencias: PendenciaDividendo[] = [];
-  let dataCorrente = new Date(new Date(primeiraCompra.data).getFullYear(), new Date(primeiraCompra.data).getMonth(), 1);
+  const hoje = new Date();
+  
+  let dataCorrente = new Date(primeiraCompra.data);
+  dataCorrente.setDate(1);
+  dataCorrente.setHours(0, 0, 0, 0);
 
-  console.log("Iniciando loop de meses a partir de:", dataCorrente.toISOString());
-  while (dataCorrente <= new Date()) {
+  const inicioDoMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  
+  console.log(`LOG: Loop de meses de ${dataCorrente.toISOString().slice(0,7)} até ANTES de ${inicioDoMesAtual.toISOString().slice(0,7)}`);
+  
+  while (dataCorrente < inicioDoMesAtual) {
     const ano = dataCorrente.getFullYear();
     const mes = dataCorrente.getMonth();
     const mesApuracao = `${ano}-${String(mes + 1).padStart(2, '0')}`;
+    
+    console.log(`\n%cAnalisando Mês Passado: ${mesApuracao}`, "color: green;");
 
-    console.log(`\nAnalisando mês: ${mesApuracao}`);
+    if (dividendosJaPagos.has(mesApuracao)) {
+      console.log(` -> IGNORADO (pago).`);
+      dataCorrente.setMonth(dataCorrente.getMonth() + 1);
+      continue;
+    }
 
-    const isEncerrado = mesEncerrado(mesApuracao);
-    const isPago = dividendosJaPagos.has(mesApuracao);
-    console.log(`- Mês encerrado? ${isEncerrado}`);
-    console.log(`- Já foi pago? ${isPago}`);
+    let quantidadeNaqueleMes = 0;
+    const finalDaqueleMes = new Date(ano, mes + 1, 0); 
+    finalDaqueleMes.setHours(23, 59, 59, 999);
+    
+    // Converte a data final para um número para uma comparação infalível
+    const finalDaqueleMesTimestamp = finalDaqueleMes.getTime();
+    console.log(` -> Calculando posse até ${finalDaqueleMes.toISOString()}`);
 
-    if (isEncerrado && !isPago) {
-      console.log("-> CONDIÇÃO VÁLIDA. Calculando quantidade de cotas...");
-      
-      let quantidadeNaqueleMes = 0;
-      const finalDaqueleMes = new Date(ano, mes + 1, 0);
-
-      historicoCompleto
-        .filter(h => h.nome === ativoFII.nome && (h.tipo === 'compra' || h.tipo === 'venda'))
-        .filter(h => new Date(h.data) <= finalDaqueleMes)
-        .forEach(transacao => {
-          if (transacao.tipo === 'compra' && transacao.quantidade) {
-            quantidadeNaqueleMes += transacao.quantidade;
-          } else if (transacao.tipo === 'venda' && transacao.quantidade) {
-            quantidadeNaqueleMes -= transacao.quantidade;
-          }
-        });
-      
-      console.log(`- Quantidade de cotas no final de ${mesApuracao}: ${quantidadeNaqueleMes}`);
-
-      if (quantidadeNaqueleMes > 0) {
-        console.log(`✅ ADICIONANDO PENDÊNCIA PARA ${mesApuracao}`);
-        pendencias.push({
-          mesApuracao,
-          quantidadeNaqueleMes: parseFloat(quantidadeNaqueleMes.toPrecision(15)),
-        });
-      } else {
-        console.log(`- Ignorando ${mesApuracao} (quantidade era zero ou negativa).`);
+    for (const transacao of historicoDoAtivo) {
+      // --- A CORREÇÃO ESTÁ AQUI ---
+      // Compara os timestamps (números) em vez dos objetos Date
+      if (new Date(transacao.data).getTime() <= finalDaqueleMesTimestamp) {
+        if (transacao.tipo === 'compra') {
+            quantidadeNaqueleMes += transacao.quantidade || 0;
+        } else if (transacao.tipo === 'venda') {
+            quantidadeNaqueleMes -= transacao.quantidade || 0;
+        }
       }
+    }
+    
+    console.log(` -> Quantidade no final de ${mesApuracao}: ${quantidadeNaqueleMes}`);
+
+    if (quantidadeNaqueleMes > 0.00000001) {
+      console.log(`%c   ✅ PENDÊNCIA ENCONTRADA para ${mesApuracao}`, "color: orange; font-weight: bold;");
+      pendencias.push({
+        mesApuracao,
+        quantidadeNaqueleMes: quantidadeNaqueleMes,
+      });
     } else {
-        console.log("-> CONDIÇÃO INVÁLIDA. Pulando para o próximo mês.");
+      console.log(` -> IGNORADO (quantidade zero).`);
     }
 
     dataCorrente.setMonth(dataCorrente.getMonth() + 1);
   }
 
-  console.log("--- VERIFICAÇÃO FINALIZADA ---");
-  console.log("Pendências encontradas:", pendencias);
+  console.log(`\n%cAnalisando Mês Atual: ${hoje.toISOString().slice(0,7)}`, "color: purple;");
+  const mesApuracaoAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  
+  if (hoje.getDate() >= 15 && !dividendosJaPagos.has(mesApuracaoAtual)) {
+      let quantidadeNoMesAtual = 0;
+      const hojeTimestamp = hoje.getTime();
+
+      for (const transacao of historicoDoAtivo) {
+          if (new Date(transacao.data).getTime() <= hojeTimestamp) {
+               if (transacao.tipo === 'compra') {
+                  quantidadeNoMesAtual += transacao.quantidade || 0;
+              } else if (transacao.tipo === 'venda') {
+                  quantidadeNoMesAtual -= transacao.quantidade || 0;
+              }
+          }
+      }
+      console.log(` -> Quantidade até hoje: ${quantidadeNoMesAtual}`);
+      
+      if (quantidadeNoMesAtual > 0.00000001) {
+           console.log(`%c   ✅ PENDÊNCIA ENCONTRADA para ${mesApuracaoAtual}`, "color: orange; font-weight: bold;");
+           pendencias.push({
+            mesApuracao: mesApuracaoAtual,
+            quantidadeNaqueleMes: quantidadeNoMesAtual
+          });
+      }
+  } else {
+      console.log(" -> IGNORADO (não atendeu às condições do mês atual).");
+  }
+
+  console.log(`\n%c--- VERIFICAÇÃO FINALIZADA ---`, "color: blue; font-weight: bold; font-size: 14px;");
+  console.log("Resultado final (pendências retornadas):", pendencias);
   return pendencias;
 }

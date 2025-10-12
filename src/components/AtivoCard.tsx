@@ -134,20 +134,7 @@ const cardBgClass =
                 <>
                   <div>Taxa Prefixada:</div>
                   <div>{(ativo.parametrosFixa.taxaPrefixada ?? 0).toFixed(2)}%</div>
-
-                  {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
-                    <>
-                      <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}% CDI</div>
-                    </>
-                  )}
-                  {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
-                    <>
-                      <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}% SELIC</div>
-                    </>
-                  )}
-                  {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
+                 {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
                     <>
                       <div>Percentual:</div>
                       <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}% IPCA</div>

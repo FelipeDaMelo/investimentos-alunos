@@ -1,4 +1,10 @@
-// Em seu arquivo /utils/mesEncerrado.ts
+// src/utils/mesEncerrado.ts
+
+/**
+ * Verifica se um determinado mês (formato "YYYY-MM") já foi completamente encerrado
+ * em relação à data de hoje. Usado para a lógica de Imposto de Renda.
+ * Um mês é considerado "encerrado" se já estamos em um mês subsequente.
+ */
 export function mesEncerrado(mesAno: string, hoje = new Date()): boolean {
   const [ano, mes] = mesAno.split('-').map(Number);
 
@@ -10,18 +16,11 @@ export function mesEncerrado(mesAno: string, hoje = new Date()): boolean {
     return true;
   }
 
-  // Se o ano é o mesmo, verificamos o mês.
+  // Se o ano é o mesmo, o mês atual (mesHoje) deve ser maior que o mês verificado.
   if (anoHoje === ano) {
-    // Se o mês atual é maior que o mês verificado, ele encerrou.
-    if (mesHoje > mes) {
-      return true;
-    }
-    // Se é o mesmo mês, aplicamos a regra do dia 25.
-    if (mesHoje === mes) {
-      return hoje.getDate() > 25;
-    }
+    return mesHoje > mes;
   }
 
-  // Se chegamos aqui, a data atual é anterior ao mês verificado.
+  // Se o ano atual é menor que o ano verificado, o mês ainda não chegou.
   return false;
 }

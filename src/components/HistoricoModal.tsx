@@ -103,6 +103,7 @@ const getTransactionDetails = (registro: HistoricoItem) => {
         text: `Dividendo: ${formatCurrency(registro.valor)} recebido de "${registro.nome}" no dia ${dataFormatada}`,
         color: 'text-purple-600',
       };
+      break;
     case 'transferencia':
       details = {
         text: `Transferência: ${formatCurrency(registro.valor)} para Renda ${registro.destino === 'fixa' ? 'Fixa' : 'Variável'} no dia ${dataFormatada}`,

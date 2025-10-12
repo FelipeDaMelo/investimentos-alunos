@@ -1,10 +1,13 @@
+// Caminho: src/Login.tsx
+
 import React, { useState } from 'react';
 import useMoneyInput from './hooks/useMoneyInput';
 import { doc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import Button from './components/Button';
-import { Power, UserRoundCheck } from 'lucide-react';
-import TutorialModal from './TutorialModal'; // certifique-se que o caminho esteja correto
+import { Power, UserRoundCheck, Trophy } from 'lucide-react';
+import TutorialModal from './TutorialModal';
+import { Link } from 'react-router-dom';
 
 interface LoginProps {
   onLogin: (valorInvestido: number, fixo: number, variavel: number, nomeGrupo: string, senha: string) => void;
@@ -22,25 +25,30 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [senha, setSenha] = useState('');
   const [mostrarTutorial, setMostrarTutorial] = useState(false);
 
+  // Normaliza o nome do grupo para ser usado como ID no Firestore (minúsculo e sem espaços nas pontas)
+  const nomeGrupoNormalizado = nomeGrupo.trim().toUpperCase();
+
   const verificarGrupo = async () => {
-    if (!nomeGrupo.trim()) {
+    if (!nomeGrupoNormalizado) {
       setErro('Informe o nome do grupo');
       return;
     }
 
     setVerificando(true);
     try {
-      const docRef = doc(db, 'usuarios', nomeGrupo);
+      // Usa o nome normalizado para buscar o documento
+      const docRef = doc(db, 'usuarios', nomeGrupoNormalizado);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Passa o nome normalizado para a MainPage
         onLogin(
           data.valorInvestido,
           data.porcentagemFixa,
           data.porcentagemVariavel,
-          nomeGrupo,
-          senha,
+          nomeGrupoNormalizado,
+          senha
         );
       } else {
         setGrupoExistente(false);
@@ -74,8 +82,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
 
     const dataAtual = new Date().toISOString();
+    const hoje = dataAtual.split('T')[0]; // Pega a data no formato 'YYYY-MM-DD'
 
-    await setDoc(doc(db, 'usuarios', nomeGrupo), {
+     const valorCotaInicial = 1;
+    const totalCotasInicial = valorInvestido;
+
+    // Usa o nome normalizado para criar o novo documento
+   await setDoc(doc(db, 'usuarios', nomeGrupoNormalizado), {
       valorInvestido,
       porcentagemFixa: fixoNum,
       porcentagemVariavel: variavelNum,
@@ -94,10 +107,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           destino: 'variavel',
           data: dataAtual
         }
-      )
+      ),
+            totalCotas: totalCotasInicial,
+      valorCotaPorDia: {
+        [hoje]: valorCotaInicial
+      }
     });
 
-    onLogin(valorInvestido, fixoNum, variavelNum, nomeGrupo, senha);
+    // Passa o nome normalizado para a MainPage após a criação
+    onLogin(valorInvestido, fixoNum, variavelNum, nomeGrupoNormalizado, senha);
   };
 
   const inputClass =
@@ -142,19 +160,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="bg-violet-100 border-l-4 border-violet-400 p-3 text-sm text-violet-800 rounded mt-4">
             ⚠️ <strong>Atenção:</strong> Este sistema é uma <strong>simulação</strong>. Não utiliza dinheiro real, cartões de crédito nem realiza transações financeiras verdadeiras.
-            {/* Modal e botão do tutorial */}
-      {mostrarTutorial && (
-        <TutorialModal onClose={() => setMostrarTutorial(false)} />
-      )}
-
-      <div className="text-center mt-4">
-        <Button
-          onClick={() => setMostrarTutorial(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white shadow w-full" 
-        >
-          Ver Tutorial do Simulador
-        </Button>
-      </div>
+            {mostrarTutorial && (
+              <TutorialModal onClose={() => setMostrarTutorial(false)} />
+            )}
+            <div className="text-center mt-4">
+              <Button
+                onClick={() => setMostrarTutorial(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white shadow w-full" 
+              >
+                Ver Tutorial do Simulador
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -172,18 +188,30 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
 
           {grupoExistente === null && (
-            <Button
-              onClick={verificarGrupo}
-              disabled={verificando}
-              className="w-full mt-2"
-            >
-              {verificando ? 'Verificando...' : (
-                <>
-                  <UserRoundCheck className="w-5 h-4.5 inline-block mr-1 text-white-600" />
-                  Verificar Grupo
-                </>
-              )}
-            </Button>
+            <div className="mt-4 flex flex-col sm:flex-row gap-4">
+              <Button
+                onClick={verificarGrupo}
+                disabled={verificando}
+                className="w-full"
+              >
+                {verificando ? 'Verificando...' : (
+                  <>
+                    <UserRoundCheck className="w-5 h-4.5 inline-block mr-1" />
+                    Verificar/Acessar Grupo
+                  </>
+                )}
+              </Button>
+              
+              <Link to="/ranking" className="w-full">
+                <Button
+                  variant="secondary"
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                >
+                  <Trophy className="w-5 h-4.5 inline-block mr-1" />
+                  Ver Rankings
+                </Button>
+              </Link>
+            </div>
           )}
 
           {grupoExistente === false && (
