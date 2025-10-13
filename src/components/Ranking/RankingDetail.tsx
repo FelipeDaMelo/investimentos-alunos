@@ -5,7 +5,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ranking, RankingParticipantData } from '../../types/Ranking';
 import Button from '../Button';
-import { UserPlus, Trash2 } from 'lucide-react';
+import { UserPlus, Trash2, X } from 'lucide-react'; // Importe o ícone X
 import AddParticipantsModal from './AddParticipantsModal';
 import { Line } from 'react-chartjs-2';
 import {
@@ -32,9 +32,10 @@ interface Props {
   onBack: () => void;
   onDelete: (rankingId: string) => void;
   onAddParticipants: (rankingId: string, newParticipants: string[]) => void;
+    onRemoveParticipant: (rankingId: string, participantIdToRemove: string) => void; // ✅ 1. Adicione a nova prop
 }
 
-export default function RankingDetail({ ranking, onBack, onDelete, onAddParticipants }: Props) {
+export default function RankingDetail({ ranking, onBack, onDelete, onAddParticipants, onRemoveParticipant }: Props) {
   const [participantsData, setParticipantsData] = useState<RankingParticipantData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -152,6 +153,15 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
                     <h2 className="text-xl font-semibold text-gray-700 mb-2">Classificação Atual</h2>
                     {participantsData.map((p, index) => (
                     <div key={p.nomeGrupo} className="flex items-center p-3 bg-white rounded-lg shadow-md border-l-4" style={{ borderColor: CORES_GRAFICO[index % CORES_GRAFICO.length] }}>
+
+                                      <button
+                  onClick={() => onRemoveParticipant(ranking.id, p.nomeGrupo)}
+                  title={`Remover ${p.nomeGrupo} do ranking`}
+                  className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-200 transition-opacity"
+                >
+                  <X size={16} />
+                </button>
+                
                         <span className="text-2xl font-bold text-gray-500 w-12 text-center">{index + 1}º</span>
                         <img
                             src={p.fotoGrupo || '/logo-marista.png'}

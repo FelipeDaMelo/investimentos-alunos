@@ -799,6 +799,7 @@ const variacaoPercentual = useMemo(() => {
           <HistoricoModal
             historico={historico}
             onClose={() => setShowHistorico(false)}
+            nomeGrupo={nomeGrupo} 
           />
         </div>
       )}

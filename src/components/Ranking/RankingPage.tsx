@@ -1,14 +1,13 @@
 // Caminho: src/components/Ranking/RankingPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ranking } from '../../types/Ranking';
 import Button from '../Button';
 import CreateRankingModal from './CreateRankingModal';
 import RankingDetail from './RankingDetail';
 import { Trophy } from 'lucide-react';
-import AddParticipantsModal from './AddParticipantsModal'; // Importe o novo modal
 
 const ADMIN_PASSWORD = "admin"; // Mude para a senha que você desejar
 
@@ -80,12 +79,10 @@ export default function RankingPage({ onBack }: RankingPageProps) {
     setLoading(true);
     try {
         const rankingRef = doc(db, "rankings", rankingId);
-        // Usa arrayUnion para adicionar os novos participantes sem duplicar
         await updateDoc(rankingRef, {
             participantes: arrayUnion(...newParticipants)
         });
 
-        // Atualiza o estado local para a UI refletir a mudança
         setSelectedRanking(prev => {
             if (!prev) return null;
             return {
@@ -104,14 +101,49 @@ export default function RankingPage({ onBack }: RankingPageProps) {
     }
   };
 
-  // Se um ranking foi selecionado...
+  // ✅ FUNÇÃO MOVIDA PARA O LUGAR CORRETO
+  const handleRemoveParticipant = async (rankingId: string, participantIdToRemove: string) => {
+    const password = prompt("Para remover este participante, por favor, insira a senha de administrador:");
+    if (password !== ADMIN_PASSWORD) {
+        if (password !== null) alert("Senha incorreta!");
+        return;
+    }
+
+    if (confirm(`Você tem certeza que deseja remover "${participantIdToRemove}" deste ranking?`)) {
+        setLoading(true);
+        try {
+            const rankingRef = doc(db, "rankings", rankingId);
+            await updateDoc(rankingRef, {
+                participantes: arrayRemove(participantIdToRemove)
+            });
+
+            setSelectedRanking(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    participantes: prev.participantes.filter(p => p !== participantIdToRemove)
+                };
+            });
+            
+            alert(`"${participantIdToRemove}" foi removido do ranking com sucesso!`);
+
+        } catch (error) {
+            console.error("Erro ao remover participante:", error);
+            alert("Não foi possível remover o participante.");
+        } finally {
+            setLoading(false);
+        }
+    }
+  };
+
   if (selectedRanking) {
     return (
       <RankingDetail 
         ranking={selectedRanking} 
         onBack={() => setSelectedRanking(null)}
         onDelete={handleDeleteRanking}
-        onAddParticipants={handleAddParticipants} // ✅ 3. Passe a nova função como prop
+        onAddParticipants={handleAddParticipants}
+        onRemoveParticipant={handleRemoveParticipant} // Passa a nova função
       />
     );
   }
@@ -127,7 +159,6 @@ export default function RankingPage({ onBack }: RankingPageProps) {
       </header>
 
       <div className="mb-6 text-right">
-        {/* ✅ A CORREÇÃO ESTÁ AQUI */}
         <Button onClick={handleCreateClick}>
           Criar Novo Ranking
         </Button>

@@ -65,6 +65,7 @@ interface HistoricoItem {
 interface Props {
   historico: HistoricoItem[];
   onClose: () => void;
+  nomeGrupo: string;
 }
 
 // Helper para centralizar a lógica de exibição
@@ -129,7 +130,7 @@ const getTransactionDetails = (registro: HistoricoItem) => {
   return details;
 };
 
-export default function HistoricoModal({ historico, onClose }: Props) {
+export default function HistoricoModal({ historico, onClose, nomeGrupo }: Props) {
   const modalContentRef = useRef<HTMLDivElement>(null);
 
   const historicoOrdenado = useMemo(() => {
@@ -141,7 +142,8 @@ export default function HistoricoModal({ historico, onClose }: Props) {
     if (!content) return;
 
     const hoje = new Date();
-    const nomeArquivo = `Extrato_Transacoes_${hoje.toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+    // ✅ O nome do arquivo PDF agora inclui o nome do grupo
+    const nomeArquivo = `Extrato_${nomeGrupo}_${hoje.toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
 
     html2pdf().from(content).set({
       margin: 1,
@@ -163,26 +165,30 @@ export default function HistoricoModal({ historico, onClose }: Props) {
           </button>
         </header>
 
+        {/* ✅ A MUDANÇA ESTÁ AQUI DENTRO */}
         <main ref={modalContentRef} className="p-6 overflow-y-auto">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800">Extrato de Transações</h1>
-            <p className="text-sm text-gray-500">
+            
+            {/* LINHA ADICIONADA: Exibe o nome do grupo */}
+            <h2 className="text-lg font-semibold text-gray-600 mt-2">Grupo: {nomeGrupo}</h2>
+            
+            <p className="text-sm text-gray-500 mt-1">
               Emitido em {new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
             </p>
           </div>
           
           {historicoOrdenado.length > 0 ? (
              <ul className="space-y-3">
-        {historicoOrdenado.map((registro, index) => {
-          const { text, color } = getTransactionDetails(registro);
-          return (
-            // ADICIONE a classe whitespace-pre-line para que o `\n` funcione
-            <li key={`${registro.data}-${index}`} className={`text-base font-medium ${color} whitespace-pre-line`}>
-              {text}
-            </li>
-          );
-        })}
-      </ul>
+              {historicoOrdenado.map((registro, index) => {
+                const { text, color } = getTransactionDetails(registro);
+                return (
+                  <li key={`${registro.data}-${index}`} className={`text-base font-medium ${color} whitespace-pre-line`}>
+                    {text}
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             <p className="text-center text-gray-500 py-10">Nenhuma transação registrada.</p>
           )}
