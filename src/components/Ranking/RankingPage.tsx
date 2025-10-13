@@ -1,13 +1,14 @@
 // Caminho: src/components/Ranking/RankingPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ranking } from '../../types/Ranking';
 import Button from '../Button';
 import CreateRankingModal from './CreateRankingModal';
 import RankingDetail from './RankingDetail';
 import { Trophy } from 'lucide-react';
+import AddParticipantsModal from './AddParticipantsModal'; // Importe o novo modal
 
 const ADMIN_PASSWORD = "admin"; // Mude para a senha que você desejar
 
@@ -69,12 +70,48 @@ export default function RankingPage({ onBack }: RankingPageProps) {
     }
   };
 
+  const handleAddParticipants = async (rankingId: string, newParticipants: string[]) => {
+    const password = prompt("Para adicionar participantes, por favor, insira a senha de administrador:");
+    if (password !== ADMIN_PASSWORD) {
+        if (password !== null) alert("Senha incorreta!");
+        return;
+    }
+
+    setLoading(true);
+    try {
+        const rankingRef = doc(db, "rankings", rankingId);
+        // Usa arrayUnion para adicionar os novos participantes sem duplicar
+        await updateDoc(rankingRef, {
+            participantes: arrayUnion(...newParticipants)
+        });
+
+        // Atualiza o estado local para a UI refletir a mudança
+        setSelectedRanking(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                participantes: [...new Set([...prev.participantes, ...newParticipants])]
+            };
+        });
+        
+        alert(`${newParticipants.length} participante(s) adicionado(s) com sucesso!`);
+
+    } catch (error) {
+        console.error("Erro ao adicionar participantes:", error);
+        alert("Não foi possível adicionar os participantes.");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  // Se um ranking foi selecionado...
   if (selectedRanking) {
     return (
       <RankingDetail 
         ranking={selectedRanking} 
         onBack={() => setSelectedRanking(null)}
         onDelete={handleDeleteRanking}
+        onAddParticipants={handleAddParticipants} // ✅ 3. Passe a nova função como prop
       />
     );
   }

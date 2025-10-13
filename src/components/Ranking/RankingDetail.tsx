@@ -1,11 +1,12 @@
-// Caminho: src/components/Ranking/RankingDetail.tsx (VERSÃO COM FILTRO DE DATA)
+// Caminho: src/components/Ranking/RankingDetail.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ranking, RankingParticipantData } from '../../types/Ranking';
 import Button from '../Button';
-import { Trash2 } from 'lucide-react';
+import { UserPlus, Trash2 } from 'lucide-react';
+import AddParticipantsModal from './AddParticipantsModal';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -30,27 +31,24 @@ interface Props {
   ranking: Ranking;
   onBack: () => void;
   onDelete: (rankingId: string) => void;
+  onAddParticipants: (rankingId: string, newParticipants: string[]) => void;
 }
 
-export default function RankingDetail({ ranking, onBack, onDelete }: Props) {
+export default function RankingDetail({ ranking, onBack, onDelete, onAddParticipants }: Props) {
   const [participantsData, setParticipantsData] = useState<RankingParticipantData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     setLoading(true);
-
-    // ✅ 2. Crie um array para os "ouvintes" (listeners)
     const unsubscribes: (() => void)[] = [];
 
-    // Mapeia os participantes para criar os listeners
     ranking.participantes.forEach((participantId) => {
       const docRef = doc(db, "usuarios", participantId);
       
       const unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-
-          // Lógica de cálculo de rentabilidade (a mesma de antes)
           const valorCotaPorDia = data.valorCotaPorDia || {};
           const datasOrdenadas = Object.keys(valorCotaPorDia).sort();
           if (datasOrdenadas.length === 0) return;
@@ -70,12 +68,9 @@ export default function RankingDetail({ ranking, onBack, onDelete }: Props) {
             rentabilidadePorDia,
           };
 
-          // ✅ 3. Atualiza o estado de forma funcional
-          // Pega a lista atual, remove o participante (caso já exista) e adiciona a versão atualizada
           setParticipantsData(prevData => {
             const otherParticipants = prevData.filter(p => p.nomeGrupo !== participantId);
             const newData = [...otherParticipants, participantData];
-            // Re-ordena a lista a cada atualização
             newData.sort((a, b) => b.rentabilidadeAtual - a.rentabilidadeAtual);
             return newData;
           });
@@ -85,34 +80,23 @@ export default function RankingDetail({ ranking, onBack, onDelete }: Props) {
       unsubscribes.push(unsubscribe);
     });
     
-    setLoading(false); // Pode ser movido para cá para uma UI mais rápida
+    setLoading(false);
 
-    // ✅ 4. Função de limpeza: Quando o componente for desmontado,
-    // todos os "ouvintes" são desativados para economizar recursos.
     return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-
   }, [ranking]);
 
   const chartData = useMemo(() => {
-    // ✅ INÍCIO DA MODIFICAÇÃO
     const hojeString = new Date().toISOString().split('T')[0];
-
     let allDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
-
-    // Filtra o array de datas para conter apenas hoje e dias futuros
     allDates = allDates.filter(date => date >= hojeString);
-
-    // Se após o filtro não sobrar nenhuma data (ex: dados só até ontem),
-    // pegamos apenas a data mais recente disponível para mostrar pelo menos o ponto atual.
     if (allDates.length === 0) {
         const originalDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
         if (originalDates.length > 0) {
             allDates = [originalDates[originalDates.length - 1]];
         }
     }
-    // ✅ FIM DA MODIFICAÇÃO
     
     return {
       labels: allDates.map(date => {
@@ -137,20 +121,29 @@ export default function RankingDetail({ ranking, onBack, onDelete }: Props) {
   };
 
   return (
+    // ✅ O MODAL PRECISA ESTAR DENTRO DO ELEMENTO PAI
     <div className="max-w-6xl mx-auto p-4 animate-fade-in">
-        <header className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">{formatRankingName(ranking.nome)}</h1>
-            <div className="flex gap-4">
-            <Button onClick={onBack} variant="secondary">Voltar para Rankings</Button>
-            <Button 
-                onClick={() => onDelete(ranking.id)} 
-                variant="danger"
-                title="Excluir este ranking"
-            >
-                <Trash2 className="w-5 h-5" />
-            </Button>
-            </div>
-        </header>
+      <header className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">{formatRankingName(ranking.nome)}</h1>
+        <div className="flex gap-4">
+          <Button 
+            onClick={() => setShowAddModal(true)} 
+            variant="primary"
+            title="Adicionar novos participantes a este ranking"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <UserPlus className="w-5 h-5" />
+          </Button>
+          <Button onClick={onBack} variant="secondary">Voltar</Button>
+          <Button 
+            onClick={() => onDelete(ranking.id)} 
+            variant="danger"
+            title="Excluir este ranking"
+          >
+            <Trash2 className="w-5 h-5" />
+          </Button>
+        </div>
+      </header>
         {loading ? (
             <p className="text-center text-gray-600">Calculando performance dos participantes...</p>
         ) : (
@@ -188,18 +181,30 @@ export default function RankingDetail({ ranking, onBack, onDelete }: Props) {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
-                            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}%` } },
-                            legend: { position: 'bottom' }
+                                tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}%` } },
+                                legend: { position: 'bottom' }
                             },
                             scales: { 
-                            x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 20 } },
-                            y: { ticks: { callback: (value) => `${Number(value).toFixed(2)}%` } } 
+                                x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 20 } },
+                                y: { ticks: { callback: (value) => `${Number(value).toFixed(2)}%` } } 
                             }
                         }} />
                     </div>
                 </div>
             </div>
         )}
+
+      {/* A renderização do modal deve estar aqui, dentro do 'div' principal */}
+      {showAddModal && (
+        <AddParticipantsModal
+          onClose={() => setShowAddModal(false)}
+          currentParticipants={ranking.participantes}
+          onConfirm={(newParticipants) => {
+            onAddParticipants(ranking.id, newParticipants);
+            setShowAddModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
