@@ -7,6 +7,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import Login from './Login';
 import MainPage from './MainPage';
 import RankingPage from './components/Ranking/RankingPage';
+import AdminPage from './components/Admin/AdminPage'; // ✅ Importe a nova página
 
 const App = () => {
   const [valorInvestido, setValorInvestido] = useState<number>(0);
@@ -96,6 +97,7 @@ const App = () => {
             />
           } 
         />
+              <Route path="/admin" element={<AdminPage />} />
       </Routes>
 
       <footer className="app-footer">
