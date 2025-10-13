@@ -1,7 +1,7 @@
 // Caminho: src/components/Ranking/RankingDetail.tsx (VERSÃO COM FILTRO DE DATA)
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ranking, RankingParticipantData } from '../../types/Ranking';
 import Button from '../Button';
@@ -36,49 +36,63 @@ export default function RankingDetail({ ranking, onBack, onDelete }: Props) {
   const [participantsData, setParticipantsData] = useState<RankingParticipantData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchParticipantsData = async () => {
-      setLoading(true);
-      const promises = ranking.participantes.map(async (participantId) => {
-        try {
-          const docRef = doc(db, "usuarios", participantId);
-          const docSnap = await getDoc(docRef);
+    useEffect(() => {
+    setLoading(true);
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const valorCotaPorDia = data.valorCotaPorDia || {};
-            const datasOrdenadas = Object.keys(valorCotaPorDia).sort();
-            if (datasOrdenadas.length === 0) return null;
+    // ✅ 2. Crie um array para os "ouvintes" (listeners)
+    const unsubscribes: (() => void)[] = [];
 
-            const rentabilidadePorDia: Record<string, number> = {};
-            for (const dia of datasOrdenadas) {
-              rentabilidadePorDia[dia] = (valorCotaPorDia[dia] - 1) * 100;
-            }
-            
-            const ultimaData = datasOrdenadas[datasOrdenadas.length - 1];
-            const rentabilidadeAtual = rentabilidadePorDia[ultimaData];
+    // Mapeia os participantes para criar os listeners
+    ranking.participantes.forEach((participantId) => {
+      const docRef = doc(db, "usuarios", participantId);
+      
+      const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
 
-            return {
-              nomeGrupo: participantId,
-              fotoGrupo: data.fotoGrupo,
-              rentabilidadeAtual,
-              rentabilidadePorDia,
-            } as RankingParticipantData;
-          }
-          return null;
-        } catch (error) {
-          console.error(`Erro ao buscar dados para ${participantId}:`, error);
-          return null;
+          // Lógica de cálculo de rentabilidade (a mesma de antes)
+          const valorCotaPorDia = data.valorCotaPorDia || {};
+          const datasOrdenadas = Object.keys(valorCotaPorDia).sort();
+          if (datasOrdenadas.length === 0) return;
+
+          const rentabilidadePorDia: Record<string, number> = {};
+          datasOrdenadas.forEach(dia => {
+            rentabilidadePorDia[dia] = (valorCotaPorDia[dia] - 1) * 100;
+          });
+          
+          const ultimaData = datasOrdenadas[datasOrdenadas.length - 1];
+          const rentabilidadeAtual = rentabilidadePorDia[ultimaData];
+
+          const participantData: RankingParticipantData = {
+            nomeGrupo: participantId,
+            fotoGrupo: data.fotoGrupo,
+            rentabilidadeAtual,
+            rentabilidadePorDia,
+          };
+
+          // ✅ 3. Atualiza o estado de forma funcional
+          // Pega a lista atual, remove o participante (caso já exista) e adiciona a versão atualizada
+          setParticipantsData(prevData => {
+            const otherParticipants = prevData.filter(p => p.nomeGrupo !== participantId);
+            const newData = [...otherParticipants, participantData];
+            // Re-ordena a lista a cada atualização
+            newData.sort((a, b) => b.rentabilidadeAtual - a.rentabilidadeAtual);
+            return newData;
+          });
         }
       });
+      
+      unsubscribes.push(unsubscribe);
+    });
+    
+    setLoading(false); // Pode ser movido para cá para uma UI mais rápida
 
-      const results = (await Promise.all(promises)).filter(p => p !== null) as RankingParticipantData[];
-      results.sort((a, b) => b.rentabilidadeAtual - a.rentabilidadeAtual);
-      setParticipantsData(results);
-      setLoading(false);
+    // ✅ 4. Função de limpeza: Quando o componente for desmontado,
+    // todos os "ouvintes" são desativados para economizar recursos.
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
     };
 
-    fetchParticipantsData();
   }, [ranking]);
 
   const chartData = useMemo(() => {
