@@ -35,14 +35,17 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const fetchAllUsers = async () => {
+ const fetchAllUsers = async () => {
       setLoading(true);
       const usersQuery = query(collection(db, "usuarios"), orderBy(documentId()));
       const querySnapshot = await getDocs(usersQuery);
       
       const processedData = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        // ✅ AQUI ESTÁ A MUDANÇA
+        // Agora, a função apenas extrai os dados já calculados e salvos pela MainPage.
         const { valorTotalAtual, rentabilidade } = calculateUserMetrics(data);
+        
         return {
           id: doc.id,
           valorTotalAtual,

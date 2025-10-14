@@ -157,7 +157,7 @@ export default function HistoricoModal({ historico, onClose, nomeGrupo }: Props)
       const tableRows: string[][] = [];
 
     // Preenchimento das linhas da tabela a partir do histórico
-   historicoOrdenado.forEach(record => {
+      historicoOrdenado.forEach(record => {
         const data = record.data ? new Date(record.data).toLocaleDateString('pt-BR') : 'N/A';
         let valor = 'N/A';
         if (record.tipo === 'venda' && record.categoria === 'rendaFixa' && record.valorLiquido !== undefined) {
