@@ -111,18 +111,28 @@ export default function RankingPage({ onBack }: RankingPageProps) {
 
     if (confirm(`Você tem certeza que deseja remover "${participantIdToRemove}" deste ranking?`)) {
         setLoading(true);
-        try {
+         try {
             const rankingRef = doc(db, "rankings", rankingId);
             await updateDoc(rankingRef, {
                 participantes: arrayRemove(participantIdToRemove)
             });
 
+            // ✅ ATUALIZAÇÃO DA LÓGICA
+            // Atualiza o estado de 'rankings' na página principal.
+            // Isso força o 'selectedRanking' a ser recriado a partir de uma fonte limpa.
+            setRankings(prevRankings => 
+                prevRankings.map(r => 
+                    r.id === rankingId 
+                    ? { ...r, participantes: r.participantes.filter(p => p !== participantIdToRemove) } 
+                    : r
+                )
+            );
+            
+            // Força a atualização do 'selectedRanking' com base na nova lista de 'rankings'
             setSelectedRanking(prev => {
                 if (!prev) return null;
-                return {
-                    ...prev,
-                    participantes: prev.participantes.filter(p => p !== participantIdToRemove)
-                };
+                const updatedParticipants = prev.participantes.filter(p => p !== participantIdToRemove);
+                return { ...prev, participantes: updatedParticipants };
             });
             
             alert(`"${participantIdToRemove}" foi removido do ranking com sucesso!`);

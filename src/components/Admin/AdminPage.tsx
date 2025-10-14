@@ -70,44 +70,76 @@ export default function AdminPage() {
     [allUsersData, selectedUserIds]
   );
 
-  const handleExportSinglePDF = async (user: UserData) => {
+const handleExportSinglePDF = async (user: UserData) => {
+    console.log(`Iniciando exportação para: ${user.id}`); // Log 1: Início
     setExportingId(user.id);
 
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text("Extrato de Transações", 14, 22);
-    doc.setFontSize(14);
-    doc.text(`Grupo: ${user.id}`, 14, 30);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Emitido em ${new Date().toLocaleString('pt-BR')}`, 14, 36);
+    try {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text("Extrato de Transações", 14, 22);
+        doc.setFontSize(14);
+        doc.text(`Grupo: ${user.id}`, 14, 30);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Emitido em ${new Date().toLocaleString('pt-BR')}`, 14, 36);
 
-    const tableColumn = ["Data", "Tipo", "Descrição", "Valor"];
-    const tableRows: any[][] = [];
-    const historicoOrdenado = [...user.historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    
-    historicoOrdenado.forEach(record => {
-      const data = record.data ? new Date(record.data).toLocaleDateString('pt-BR') : 'N/A';
-      const valor = typeof record.valor === 'number' ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(record.valor) : 'N/A';
-      let descricao = record.nome || record.destino || '';
-      if (record.comentario) descricao += ` (${record.comentario})`;
-      
-      tableRows.push([data, record.tipo || 'N/A', descricao, valor]);
-    });
+        console.log("Cabeçalho do PDF criado."); // Log 2: Cabeçalho OK
 
-    (doc as any).autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 50,
-      theme: 'striped',
-      headStyles: { fillColor: [22, 160, 133] },
-    });
+        const tableColumn = ["Data", "Tipo", "Descrição", "Valor"];
+        const tableRows: (string | number)[][] = [];
 
-    doc.save(`${user.id}_extrato.pdf`);
+        if (!user.historico || user.historico.length === 0) {
+            console.warn(`Usuário ${user.id} não possui histórico para exportar.`);
+            doc.text("Nenhuma transação registrada.", 14, 60);
+        } else {
+            const historicoOrdenado = [...user.historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+            
+            console.log(`Processando ${historicoOrdenado.length} registros do histórico...`); // Log 3: Processando
 
-    setExportingId(null);
-  };
+            historicoOrdenado.forEach((record, index) => {
+                // Verificações de segurança para cada campo
+                const data = record.data ? new Date(record.data).toLocaleDateString('pt-BR') : 'Data Inválida';
+                const tipo = record.tipo || 'N/A';
+                const valor = typeof record.valor === 'number' 
+                    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(record.valor) 
+                    : 'R$ 0,00';
+                
+                let descricao = record.nome || record.destino || '[Sem Descrição]';
+                if (record.comentario) {
+                    // Remove quebras de linha e caracteres problemáticos do comentário
+                    const comentarioLimpo = record.comentario.replace(/(\r\n|\n|\r)/gm, " ");
+                    descricao += ` (${comentarioLimpo})`;
+                }
+
+                // Garante que todos os valores são strings
+                tableRows.push([String(data), String(tipo), String(descricao), String(valor)]);
+            });
+
+            console.log("Dados da tabela processados. Gerando tabela..."); // Log 4: Tabela
+        }
+
+        (doc as any).autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 50,
+            theme: 'striped',
+            headStyles: { fillColor: [22, 160, 133] },
+        });
+
+        console.log("Tabela gerada. Iniciando download..."); // Log 5: Download
+
+        doc.save(`${user.id}_extrato.pdf`);
+
+    } catch (error) {
+        console.error("Erro CRÍTICO durante a exportação do PDF:", error);
+        alert(`Ocorreu um erro ao gerar o PDF para ${user.id}. Verifique o console.`);
+    } finally {
+        console.log(`Exportação finalizada para: ${user.id}`); // Log 6: Fim
+        setExportingId(null);
+    }
+};
 
   if (!isAuthenticated || loading) {
     return <div className="p-8 text-center">Carregando dados de usuários...</div>;

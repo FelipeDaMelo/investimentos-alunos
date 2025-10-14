@@ -43,6 +43,7 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
   useEffect(() => {
     setLoading(true);
     const unsubscribes: (() => void)[] = [];
+     setParticipantsData([]);
 
     ranking.participantes.forEach((participantId) => {
       const docRef = doc(db, "usuarios", participantId);
@@ -83,10 +84,11 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
     
     setLoading(false);
 
-    return () => {
+        return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [ranking]);
+  }, [ranking]); // Esta dependência é a chave. Quando 'ranking.participantes' muda, o efeito roda de novo.
+
 
   const chartData = useMemo(() => {
     const hojeString = new Date().toISOString().split('T')[0];
