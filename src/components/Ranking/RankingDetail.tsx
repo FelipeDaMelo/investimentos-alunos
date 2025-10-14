@@ -183,11 +183,25 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
                     ))}
                 </div>
 
-                <div className="lg:col-span-2 bg-white p-4 rounded-xl shadow-lg">
-                    {/* ... (código do gráfico) ... */}
+            <div className="lg:col-span-2 bg-white p-4 rounded-xl shadow-lg">
+                <h2 className="text-xl font-semibold text-center mb-4">Evolução da Rentabilidade</h2>
+                <div className="h-[500px]">
+                    <Line data={chartData} options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}%` } },
+                            legend: { position: 'bottom' }
+                        },
+                        scales: { 
+                            x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 20 } },
+                            y: { ticks: { callback: (value) => `${Number(value).toFixed(2)}%` } } 
+                        }
+                    }} />
                 </div>
             </div>
-        )}
+        </div>
+    )}
 
       {showAddModal && (
         <AddParticipantsModal
