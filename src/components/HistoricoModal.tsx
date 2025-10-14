@@ -2,6 +2,8 @@ import { useMemo, useRef } from 'react';
 import { XCircle, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import Button from './Button';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // --- INÍCIO DAS FUNÇÕES DE FORMATAÇÃO INTERNAS ---
 
@@ -131,28 +133,65 @@ const getTransactionDetails = (registro: HistoricoItem) => {
 };
 
 export default function HistoricoModal({ historico, onClose, nomeGrupo }: Props) {
-  const modalContentRef = useRef<HTMLDivElement>(null);
 
-  const historicoOrdenado = useMemo(() => {
+   const historicoOrdenado = useMemo(() => {
     return [...historico].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
   }, [historico]);
 
+  // ✅ 3. SUBSTITUIÇÃO COMPLETA DA FUNÇÃO exportarPDF
   const exportarPDF = () => {
-    const content = modalContentRef.current;
-    if (!content) return;
+    try { // ✅ Adicionado try...catch para depuração
+      const doc = new jsPDF();
 
-    const hoje = new Date();
-    // ✅ O nome do arquivo PDF agora inclui o nome do grupo
-    const nomeArquivo = `Extrato_${nomeGrupo}_${hoje.toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      // ... (código do cabeçalho do PDF permanece o mesmo)
+      doc.setFontSize(18);
+      doc.text("Extrato de Transações", 14, 22);
+      doc.setFontSize(14);
+      doc.text(`Grupo: ${nomeGrupo}`, 14, 30);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Emitido em ${new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}`, 14, 36);
 
-    html2pdf().from(content).set({
-      margin: 1,
-      filename: nomeArquivo,
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    }).save();
+
+      const tableColumn = ["Data", "Tipo", "Descrição", "Valor"];
+      const tableRows: string[][] = [];
+
+    // Preenchimento das linhas da tabela a partir do histórico
+   historicoOrdenado.forEach(record => {
+        const data = record.data ? new Date(record.data).toLocaleDateString('pt-BR') : 'N/A';
+        let valor = 'N/A';
+        if (record.tipo === 'venda' && record.categoria === 'rendaFixa' && record.valorLiquido !== undefined) {
+            valor = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(record.valorLiquido);
+        } else if (typeof record.valor === 'number') {
+            valor = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(record.valor);
+        }
+        let descricao = record.nome || record.destino || '';
+        if (record.comentario) {
+            descricao += ` (${record.comentario})`;
+        }
+        tableRows.push([data, record.tipo || 'N/A', descricao, valor]);
+      });
+
+
+      // ✅ 2. Chame 'autoTable' diretamente, passando 'doc' como primeiro argumento
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 50,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+
+      const nomeArquivo = `Extrato_${nomeGrupo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      doc.save(nomeArquivo);
+
+    } catch (error) {
+        console.error("Erro ao gerar PDF do extrato:", error);
+        alert("Ocorreu um erro ao gerar o PDF. Verifique o console para mais detalhes.");
+    }
   };
 
+  // O JSX para a visualização na tela permanece o mesmo
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
@@ -165,14 +204,11 @@ export default function HistoricoModal({ historico, onClose, nomeGrupo }: Props)
           </button>
         </header>
 
-        {/* ✅ A MUDANÇA ESTÁ AQUI DENTRO */}
-        <main ref={modalContentRef} className="p-6 overflow-y-auto">
+        {/* O 'ref' foi removido do <main> pois não é mais necessário */}
+        <main className="p-6 overflow-y-auto">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800">Extrato de Transações</h1>
-            
-            {/* LINHA ADICIONADA: Exibe o nome do grupo */}
             <h2 className="text-lg font-semibold text-gray-600 mt-2">Grupo: {nomeGrupo}</h2>
-            
             <p className="text-sm text-gray-500 mt-1">
               Emitido em {new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
             </p>

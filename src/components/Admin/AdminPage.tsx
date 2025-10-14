@@ -10,6 +10,7 @@ import UserSummaryCard, { UserData } from './UserSummaryCard';
 
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const ADMIN_PASSWORD = "admin";
 
@@ -70,9 +71,9 @@ export default function AdminPage() {
     [allUsersData, selectedUserIds]
   );
 
-const handleExportSinglePDF = async (user: UserData) => {
-    console.log(`Iniciando exportação para: ${user.id}`); // Log 1: Início
-    setExportingId(user.id);
+    const handleExportSinglePDF = async (user: UserData) => {
+        setExportingId(user.id);
+        console.log(`Iniciando exportação para: ${user.id}`);
 
     try {
         const doc = new jsPDF();
@@ -88,7 +89,7 @@ const handleExportSinglePDF = async (user: UserData) => {
         console.log("Cabeçalho do PDF criado."); // Log 2: Cabeçalho OK
 
         const tableColumn = ["Data", "Tipo", "Descrição", "Valor"];
-        const tableRows: (string | number)[][] = [];
+        const tableRows: string[][] = [];
 
         if (!user.historico || user.historico.length === 0) {
             console.warn(`Usuário ${user.id} não possui histórico para exportar.`);
@@ -120,27 +121,26 @@ const handleExportSinglePDF = async (user: UserData) => {
             console.log("Dados da tabela processados. Gerando tabela..."); // Log 4: Tabela
         }
 
-        (doc as any).autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 50,
-            theme: 'striped',
-            headStyles: { fillColor: [22, 160, 133] },
-        });
+          autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 50,
+                theme: 'striped',
+                headStyles: { fillColor: [22, 160, 133] },
+            });
+            
+            console.log("Tabela gerada. Iniciando download...");
 
-        console.log("Tabela gerada. Iniciando download..."); // Log 5: Download
+            doc.save(`${user.id}_extrato.pdf`);
 
-        doc.save(`${user.id}_extrato.pdf`);
-
-    } catch (error) {
-        console.error("Erro CRÍTICO durante a exportação do PDF:", error);
-        alert(`Ocorreu um erro ao gerar o PDF para ${user.id}. Verifique o console.`);
-    } finally {
-        console.log(`Exportação finalizada para: ${user.id}`); // Log 6: Fim
-        setExportingId(null);
-    }
-};
-
+        } catch (error) {
+            console.error("Erro CRÍTICO durante a exportação do PDF:", error);
+            alert(`Ocorreu um erro ao gerar o PDF para ${user.id}. Verifique o console.`);
+        } finally {
+            console.log(`Exportação finalizada para: ${user.id}`);
+            setExportingId(null);
+        }
+    };
   if (!isAuthenticated || loading) {
     return <div className="p-8 text-center">Carregando dados de usuários...</div>;
   }
