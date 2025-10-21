@@ -7,7 +7,7 @@ import { Ranking, RankingParticipantData } from '../../types/Ranking';
 import Button from '../Button';
 import { UserPlus, Trash2, X } from 'lucide-react';
 import AddParticipantsModal from './AddParticipantsModal';
-import { motion } from 'framer-motion'; // ✅ Importe o motion
+import { motion } from 'framer-motion';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -19,6 +19,9 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+// ✅ Importa a nossa função de cálculo de ROI unificada
+import { calculateUserMetrics } from '../../utils/calculateUserMetrics';
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const CORES_GRAFICO = [
@@ -44,8 +47,6 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
   useEffect(() => {
     setLoading(true);
     const unsubscribes: (() => void)[] = [];
-
-    // Limpa os dados antigos sempre que o ranking mudar
     setParticipantsData([]); 
 
     ranking.participantes.forEach((participantId) => {
@@ -54,23 +55,17 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
       const unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const valorCotaPorDia = data.valorCotaPorDia || {};
-          const datasOrdenadas = Object.keys(valorCotaPorDia).sort();
-          if (datasOrdenadas.length === 0) return;
-
-          const rentabilidadePorDia: Record<string, number> = {};
-          datasOrdenadas.forEach(dia => {
-            rentabilidadePorDia[dia] = (valorCotaPorDia[dia] - 1) * 100;
-          });
           
-          const ultimaData = datasOrdenadas[datasOrdenadas.length - 1];
-          const rentabilidadeAtual = rentabilidadePorDia[ultimaData];
+          // ✅ A GRANDE MUDANÇA ESTÁ AQUI:
+          // Em vez de calcular por cotas, usamos a função ROI unificada.
+          const { rentabilidade } = calculateUserMetrics(data);
 
           const participantData: RankingParticipantData = {
             nomeGrupo: participantId,
             fotoGrupo: data.fotoGrupo,
-            rentabilidadeAtual,
-            rentabilidadePorDia,
+            rentabilidadeAtual: rentabilidade, // Usa a rentabilidade ROI
+            // ✅ Para o gráfico, vamos recalcular o ROI para cada dia (lógica mais complexa, mas correta)
+            rentabilidadePorDia: calcularROIPorDia(data),
           };
 
           setParticipantsData(prevData => {
@@ -81,7 +76,6 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
           });
         }
       });
-      
       unsubscribes.push(unsubscribe);
     });
     
@@ -92,16 +86,45 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
     };
   }, [ranking]);
 
-  // ✅ A CORREÇÃO ESTÁ AQUI
+  // ✅ NOVA FUNÇÃO AUXILIAR: Calcula o ROI para cada dia do histórico
+  const calcularROIPorDia = (userData: any): Record<string, number> => {
+    const historico = userData.historico || [];
+    const patrimonioPorDia = userData.patrimonioPorDia || {};
+    const datas = Object.keys(patrimonioPorDia).sort();
+    const roiPorDia: Record<string, number> = {};
+
+    let totalAportadoAcumulado = 0;
+    
+    // Calcula o aporte acumulado até cada data
+    const aportesPorDia: Record<string, number> = {};
+    historico
+      .filter((reg: any) => reg.tipo === 'deposito')
+      .forEach((reg: any) => {
+        const dataDeposito = reg.data.split('T')[0];
+        aportesPorDia[dataDeposito] = (aportesPorDia[dataDeposito] || 0) + reg.valor;
+      });
+
+    datas.forEach(data => {
+      totalAportadoAcumulado += aportesPorDia[data] || 0;
+      
+      if (totalAportadoAcumulado > 0) {
+        const patrimonioNesseDia = patrimonioPorDia[data];
+        const ganhoReal = patrimonioNesseDia - totalAportadoAcumulado;
+        roiPorDia[data] = (ganhoReal / totalAportadoAcumulado) * 100;
+      } else {
+        roiPorDia[data] = 0;
+      }
+    });
+
+    return roiPorDia;
+  };
+
   const chartData = useMemo(() => {
-    // ✅ 2. LÓGICA DE FALLBACK PARA A DATA DE CORTE
-    let dataDeCorte = '1970-01-01'; // Um valor padrão bem antigo
+    let dataDeCorte = '1970-01-01';
 
     if (ranking.dataCriacao) {
-      // Se a data de criação existe, usa ela
       dataDeCorte = ranking.dataCriacao.toISOString().split('T')[0];
     } else {
-      // Se não existe, encontra a data mais antiga de todos os participantes
       const allHistoricDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
       if (allHistoricDates.length > 0) {
         dataDeCorte = allHistoricDates[0];
@@ -109,8 +132,6 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
     }
 
     let allDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
-    
-    // Filtra para incluir apenas as datas a partir da data de corte definida
     allDates = allDates.filter(date => date >= dataDeCorte);
 
     return {
@@ -129,7 +150,7 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
         pointHoverRadius: 6,
       })),
     };
-  }, [participantsData, ranking.dataCriacao]); // ✅ Adiciona ranking.dataCriacao às dependências
+  }, [participantsData, ranking.dataCriacao]);
 
   const formatRankingName = (name: string) => {
     return name.replace(/_/g, ' ').toUpperCase();

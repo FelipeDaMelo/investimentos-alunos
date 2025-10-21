@@ -32,7 +32,7 @@ export default function UserSummaryCard({ user, onExport, isExporting }: UserSum
             <p className="text-2xl font-semibold text-gray-800">{formatCurrency(user.valorTotalAtual)}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Rentabilidade (Cotas)</p>
+            <p className="text-sm text-gray-500">Rentabilidade</p>
             <div className={`text-xl font-bold flex items-center gap-1 ${user.rentabilidade > 0.004 ? 'text-green-600' : user.rentabilidade < -0.004 ? 'text-red-600' : 'text-gray-600'}`}>
               {user.rentabilidade > 0.004 && <CircleArrowUp size={18} />}
               {user.rentabilidade < -0.004 && <CircleArrowDown size={18} />}
