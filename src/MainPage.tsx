@@ -5,6 +5,7 @@ import { storage } from './firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { deleteObject } from 'firebase/storage';
 import { mesEncerrado } from './utils/mesEncerrado';
+import { motion } from 'framer-motion';
 import { getAuth } from "firebase/auth";
 import { Line } from 'react-chartjs-2';
 import {
@@ -95,6 +96,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [totalCotas, setTotalCotas] = useState(0);
   const [valorCotaAtual, setValorCotaAtual] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ ADICIONE ESTA LINHA
  
 
   // A função que faz a verificação e o upload.
@@ -380,11 +382,13 @@ const handleConfirmarDividendos = async (
   };
 
 const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, comentario: string) => {
+    if (isSubmitting) return;
     if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
     if (!ativoSelecionado) return;
+    setIsSubmitting(true); // <<<<<< ATIVA O "TRAVÃO"
     
     const docRef = doc(db, 'usuarios', login);
-
+    try {
     if (ativoSelecionado.tipo === 'rendaFixa') {
       const { calcularImpostoRenda } = await import('./hooks/calcularImpostoRenda');
       const resultadoIR = calcularImpostoRenda(ativoSelecionado.dataInvestimento, ativoSelecionado.valorInvestido, ativoSelecionado.valorAtual);
@@ -411,17 +415,33 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, 
         setAtivos(ativosRestantes);
         await updateDoc(docRef, { ativos: ativosRestantes, historico: arrayUnion(novoRegistroVenda) });
       } else {
-        const ativosAtualizados = ativos.map(a => 
-          (a.id === ativoSelecionado.id && a.tipo === 'rendaVariavel') ? { ...a, quantidade: novaQuantidade, valorInvestido: novaQuantidade * a.precoMedio } : a
-        );
+// Quando uma venda acontece, atualize o ativo da seguinte forma:
+       const ativosAtualizados = ativos.map(a => 
+        (a.id === ativoSelecionado.id && a.tipo === 'rendaVariavel') 
+          ? { 
+          ...a, 
+          quantidade: novaQuantidade, // Atualiza a quantidade (isto já estava certo)
+          valorInvestido: novaQuantidade * a.precoMedio // ✅ Adiciona esta linha para corrigir o valor investido
+          } 
+           : a
+                );
         setAtivos(ativosAtualizados);
         await updateDoc(docRef, { ativos: ativosAtualizados, historico: arrayUnion(novoRegistroVenda) });
       }
       setHistorico(prev => [...prev, novoRegistroVenda]);
     }
-    setShowVendaModal(false);
-    setAtivoSelecionado(null);
-  };
+} catch (error) {
+        console.error("Erro ao confirmar a venda:", error);
+        alert("Ocorreu um erro ao processar a venda. Tente novamente.");
+    
+    } finally {
+        // Este bloco é executado SEMPRE, com sucesso ou com erro.
+        setShowVendaModal(false);
+        setAtivoSelecionado(null);
+        setIsSubmitting(false); // <<<<<< LIBERTA O "TRAVÃO"
+    }
+};
+
 
   const coresAtivos = useMemo(() => {
     const mapeamento: Record<string, string> = {};
@@ -466,17 +486,27 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, 
     .reduce((soma, deposito) => soma + deposito.valor, 0);
 }, [historico]); // Roda sempre que o histórico for atualizado
   
-  const valorTotalAtual = useMemo(() => {
+const valorTotalAtual = useMemo(() => {
     const valorAtivos = ativos.reduce((total, ativo) => {
       const dataHoje = new Date().toISOString().split('T')[0];
+      let valorDoAtivo = 0;
+
       if (ativo.tipo === 'rendaVariavel') {
         const ativoRV = ativo as RendaVariavelAtivo;
-        return total + (ativoRV.patrimonioPorDia?.[dataHoje] ?? ativoRV.valorAtual * ativoRV.quantidade);
+        valorDoAtivo = ativoRV.patrimonioPorDia?.[dataHoje] ?? ativoRV.valorAtual * ativoRV.quantidade;
+      } else { // Renda Fixa
+        valorDoAtivo = ativo.patrimonioPorDia?.[dataHoje] ?? ativo.valorAtual;
       }
-      return total + (ativo.patrimonioPorDia?.[dataHoje] ?? ativo.valorAtual);
+      
+      // ✅ A CORREÇÃO ESTÁ AQUI: Arredonda o valor de CADA ativo antes de somar ao total
+      return total + parseFloat(valorDoAtivo.toFixed(2));
+
     }, 0);
+
+    // O resto da soma continua igual
     return valorAtivos + valorFixaDisponivel + valorVariavelDisponivel;
-  }, [ativos, valorFixaDisponivel, valorVariavelDisponivel]);
+
+}, [ativos, valorFixaDisponivel, valorVariavelDisponivel]);
   
 const variacaoPercentual = useMemo(() => {
   // Se não houve aportes, não há variação. Evita divisão por zero.
@@ -619,15 +649,29 @@ const variacaoPercentual = useMemo(() => {
 
       {ativos.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {ativos.map(ativo => (
-              <AtivoCard key={ativo.id} ativo={ativo} onSell={handleSellAtivo} cor={getCorAtivo(ativo.id)} onInformarDividendo={
-  (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
-  ? () => handleVerificarDividendos(ativo) // Passamos uma função que já sabe qual 'ativo' usar
-  : undefined
-} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {ativos.map((ativo, index) => (
+                <motion.div
+                    key={ativo.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                    <AtivoCard 
+                        ativo={ativo} 
+                        onSell={handleSellAtivo} 
+                        cor={getCorAtivo(ativo.id)} 
+                        onInformarDividendo={
+                            (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
+                            ? () => handleVerificarDividendos(ativo)
+                            : undefined
+                        } 
+                    />
+                </motion.div>
             ))}
-          </div>
+        </div>
+
+
           <div className="mt-8 bg-white p-4 rounded-xl shadow-lg border-2 border-gray-200 relative">
             <div className="flex flex-col items-center mb-4">
               <h2 className="text-xl font-semibold text-center mb-2">📈 Evolução do Patrimônio</h2>
@@ -678,7 +722,12 @@ const variacaoPercentual = useMemo(() => {
       
       {showVendaModal && ativoSelecionado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <VendaAtivoModal ativo={ativoSelecionado} onClose={() => setShowVendaModal(false)} onConfirm={confirmarVenda} />
+            <VendaAtivoModal 
+            ativo={ativoSelecionado} 
+            onClose={() => setShowVendaModal(false)} 
+            onConfirm={confirmarVenda} 
+            isSubmitting={isSubmitting} // ✅ PASSE A NOVA PROP
+            />
         </div>
       )}
 

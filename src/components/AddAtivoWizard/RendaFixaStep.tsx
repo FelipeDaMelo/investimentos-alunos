@@ -25,9 +25,9 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     categoriaFixa: 'prefixada' as 'prefixada' | 'posFixada' | 'hibrida',
     parametrosFixa: {
       taxaPrefixada: '' as number | '',
-      percentualCDI: 100 as number | '',
+      percentualCDI: '' as number | '',
       percentualSELIC: '' as number | '',
-      ipca: 100 as number | '',
+      ipca: '' as number | '',
       cdiUsado: 0,
       selicUsado: 0,
       ipcaUsado: 0

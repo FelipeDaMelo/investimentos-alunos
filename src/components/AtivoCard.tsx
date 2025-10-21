@@ -132,13 +132,51 @@ const cardBgClass =
               {/* Híbrida */}
               {ativo.categoriaFixa === 'hibrida' && (
                 <>
+                  {/* Taxa Prefixada (sempre aparece) */}
                   <div>Taxa Prefixada:</div>
                   <div>{(ativo.parametrosFixa.taxaPrefixada ?? 0).toFixed(2)}%</div>
-                 {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
-                    <>
-                      <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}% IPCA</div>
 
+                  {/* 
+                    Verifica se existe PELO MENOS UM percentual para mostrar o título "Percentual:" 
+                    Isto evita que o título apareça sozinho.
+                  */}
+                  {((ativo.parametrosFixa.ipca ?? 0) > 0 || 
+                    (ativo.parametrosFixa.percentualCDI ?? 0) > 0 || 
+                    (ativo.parametrosFixa.percentualSELIC ?? 0) > 0) && (
+                    <div>Percentual:</div>
+                  )}
+
+                  {/* 
+                    Container vazio para o grid alinhar corretamente. 
+                    Só é necessário se houver pelo menos um percentual.
+                  */}
+                  {((ativo.parametrosFixa.ipca ?? 0) > 0 || 
+                    (ativo.parametrosFixa.percentualCDI ?? 0) > 0 || 
+                    (ativo.parametrosFixa.percentualSELIC ?? 0) > 0) && (
+                    <div></div>
+                  )}
+
+                  {/* Mostra o IPCA apenas se for maior que zero */}
+                  {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
+                    <>
+                      <div></div> {/* Coluna da esquerda vazia para alinhar */}
+                      <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}% IPCA</div>
+                    </>
+                  )}
+
+                  {/* Mostra o CDI apenas se for maior que zero */}
+                  {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
+                    <>
+                      <div></div> {/* Coluna da esquerda vazia para alinhar */}
+                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}% CDI</div>
+                    </>
+                  )}
+
+                  {/* Mostra o SELIC apenas se for maior que zero */}
+                  {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
+                    <>
+                      <div></div> {/* Coluna da esquerda vazia para alinhar */}
+                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}% SELIC</div>
                     </>
                   )}
                 </>

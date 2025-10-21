@@ -7,6 +7,7 @@ import { Ranking, RankingParticipantData } from '../../types/Ranking';
 import Button from '../Button';
 import { UserPlus, Trash2, X } from 'lucide-react';
 import AddParticipantsModal from './AddParticipantsModal';
+import { motion } from 'framer-motion'; // ✅ Importe o motion
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -43,7 +44,9 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
   useEffect(() => {
     setLoading(true);
     const unsubscribes: (() => void)[] = [];
-     setParticipantsData([]);
+
+    // Limpa os dados antigos sempre que o ranking mudar
+    setParticipantsData([]); 
 
     ranking.participantes.forEach((participantId) => {
       const docRef = doc(db, "usuarios", participantId);
@@ -84,23 +87,32 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
     
     setLoading(false);
 
-        return () => {
+    return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [ranking]); // Esta dependência é a chave. Quando 'ranking.participantes' muda, o efeito roda de novo.
+  }, [ranking]);
 
-
+  // ✅ A CORREÇÃO ESTÁ AQUI
   const chartData = useMemo(() => {
-    const hojeString = new Date().toISOString().split('T')[0];
-    let allDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
-    allDates = allDates.filter(date => date >= hojeString);
-    if (allDates.length === 0) {
-        const originalDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
-        if (originalDates.length > 0) {
-            allDates = [originalDates[originalDates.length - 1]];
-        }
+    // ✅ 2. LÓGICA DE FALLBACK PARA A DATA DE CORTE
+    let dataDeCorte = '1970-01-01'; // Um valor padrão bem antigo
+
+    if (ranking.dataCriacao) {
+      // Se a data de criação existe, usa ela
+      dataDeCorte = ranking.dataCriacao.toISOString().split('T')[0];
+    } else {
+      // Se não existe, encontra a data mais antiga de todos os participantes
+      const allHistoricDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
+      if (allHistoricDates.length > 0) {
+        dataDeCorte = allHistoricDates[0];
+      }
     }
+
+    let allDates = [...new Set(participantsData.flatMap(p => Object.keys(p.rentabilidadePorDia)))].sort();
     
+    // Filtra para incluir apenas as datas a partir da data de corte definida
+    allDates = allDates.filter(date => date >= dataDeCorte);
+
     return {
       labels: allDates.map(date => {
         const [ano, mes, dia] = date.split('-');
@@ -108,7 +120,7 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
       }),
       datasets: participantsData.map((p, index) => ({
         label: p.nomeGrupo,
-        data: allDates.map(date => p.rentabilidadePorDia[date] ?? null),
+        data: allDates.map(date => p.rentabilidadePorDia[date]),
         borderColor: CORES_GRAFICO[index % CORES_GRAFICO.length],
         backgroundColor: CORES_GRAFICO[index % CORES_GRAFICO.length] + '33',
         tension: 0.1,
@@ -117,7 +129,7 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
         pointHoverRadius: 6,
       })),
     };
-  }, [participantsData]);
+  }, [participantsData, ranking.dataCriacao]); // ✅ Adiciona ranking.dataCriacao às dependências
 
   const formatRankingName = (name: string) => {
     return name.replace(/_/g, ' ').toUpperCase();
@@ -149,12 +161,19 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
         {loading ? (
             <p className="text-center text-gray-600">Calculando performance dos participantes...</p>
         ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1 space-y-4">
                     <h2 className="text-xl font-semibold text-gray-700 mb-2">Classificação Atual</h2>
                     {participantsData.map((p, index) => (
-                    // ✅ A CORREÇÃO ESTÁ AQUI: Adicionado 'relative group'
-                    <div key={p.nomeGrupo} className="relative group flex items-center p-3 bg-white rounded-lg shadow-md border-l-4" style={{ borderColor: CORES_GRAFICO[index % CORES_GRAFICO.length] }}>
+                    // ✅ Envolva o card do participante com o motion.div para animar
+                    <motion.div
+                      key={p.nomeGrupo}
+                      layout // Anima a mudança de posição na lista
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: index * 0.05 }}
+                    >
+                      <div className="relative group flex items-center p-3 bg-white rounded-lg shadow-md border-l-4" style={{ borderColor: CORES_GRAFICO[index % CORES_GRAFICO.length] }}>
                         <button
                           onClick={() => onRemoveParticipant(ranking.id, p.nomeGrupo)}
                           title={`Remover ${p.nomeGrupo} do ranking`}
@@ -181,29 +200,37 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
                                 )}
                             </div>
                         </div>
-                    </div>
+                      </div>
+                    </motion.div>
                     ))}
                 </div>
 
-            <div className="lg:col-span-2 bg-white p-4 rounded-xl shadow-lg">
-                <h2 className="text-xl font-semibold text-center mb-4">Evolução da Rentabilidade</h2>
-                <div className="h-[500px]">
-                    <Line data={chartData} options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}%` } },
-                            legend: { position: 'bottom' }
-                        },
-                        scales: { 
-                            x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 20 } },
-                            y: { ticks: { callback: (value) => `${Number(value).toFixed(2)}%` } } 
-                        }
-                    }} />
+                 <div className="lg:col-span-2 bg-white p-4 rounded-xl shadow-lg">
+            <h2 className="text-xl font-semibold text-center mb-4">Evolução da Rentabilidade</h2>
+            
+            {/* ✅ INÍCIO DA CORREÇÃO */}
+            {/* A condição agora é: "se houver PELO MENOS UMA data" */}
+            {chartData.labels && chartData.labels.length > 0 ? (
+              <div className="h-[500px]">
+                <Line data={chartData} options={{
+                    // Se houver apenas um ponto, esconde a legenda para não poluir
+                    plugins: {
+                        legend: { display: chartData.labels.length > 1 } 
+                    },
+                            scales: { 
+                                x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 20 } },
+                                y: { ticks: { callback: (value) => `${Number(value).toFixed(2)}%` } } 
+                            }
+                        }} />
+                      </div>
+                    ) : (
+                      <div className="h-[500px] flex items-center justify-center text-center text-gray-500 p-4">
+                        Sem dados para exibir o gráfico de evolução.
+                      </div>
+                    )}
                 </div>
             </div>
-        </div>
-    )}
+        )}
 
       {showAddModal && (
         <AddParticipantsModal

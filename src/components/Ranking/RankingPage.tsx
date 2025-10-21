@@ -7,7 +7,7 @@ import { Ranking } from '../../types/Ranking';
 import Button from '../Button';
 import CreateRankingModal from './CreateRankingModal';
 import RankingDetail from './RankingDetail';
-import { Trophy } from 'lucide-react';
+import { Trophy, Users } from 'lucide-react';
 
 const ADMIN_PASSWORD = "admin"; // Mude para a senha que você desejar
 
@@ -21,17 +21,25 @@ export default function RankingPage({ onBack }: RankingPageProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRanking, setSelectedRanking] = useState<Ranking | null>(null);
 
-  const fetchRankings = async () => {
+const fetchRankings = async () => {
     setLoading(true);
+    // ✅ A ordenação por dataCriacao continuará funcionando. Documentos sem o campo serão listados por último.
     const rankingsQuery = query(collection(db, "rankings"), orderBy("dataCriacao", "desc"));
     const querySnapshot = await getDocs(rankingsQuery);
-    const fetchedRankings = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Ranking));
+    const fetchedRankings = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            nome: data.nome,
+            participantes: data.participantes,
+            // ✅ Adiciona uma verificação: se o campo existe, converte. Se não, fica undefined.
+            dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : undefined,
+        } as Ranking;
+    });
     setRankings(fetchedRankings);
     setLoading(false);
-  };
+};
+
 
   useEffect(() => {
     fetchRankings();
@@ -146,33 +154,30 @@ export default function RankingPage({ onBack }: RankingPageProps) {
     }
   };
 
-  if (selectedRanking) {
+   if (selectedRanking) {
     return (
       <RankingDetail 
         ranking={selectedRanking} 
         onBack={() => setSelectedRanking(null)}
         onDelete={handleDeleteRanking}
         onAddParticipants={handleAddParticipants}
-        onRemoveParticipant={handleRemoveParticipant} // Passa a nova função
+        onRemoveParticipant={handleRemoveParticipant}
       />
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 animate-fade-in">
-      <header className="flex justify-between items-center mb-8 pb-4 border-b">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+      <header className="flex flex-col sm:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
             <h1 className="text-3xl font-bold text-gray-800">Rankings de Performance</h1>
         </div>
-        <Button onClick={onBack} variant="secondary">Voltar ao Painel</Button>
+        <div className="flex gap-4 mt-4 sm:mt-0">
+            <Button onClick={handleCreateClick}>Criar Novo Ranking</Button>
+            <Button onClick={onBack} variant="secondary">Voltar ao Painel</Button>
+        </div>
       </header>
-
-      <div className="mb-6 text-right">
-        <Button onClick={handleCreateClick}>
-          Criar Novo Ranking
-        </Button>
-      </div>
 
       {loading ? (
         <p className="text-center text-gray-600">Carregando rankings...</p>
@@ -184,15 +189,18 @@ export default function RankingPage({ onBack }: RankingPageProps) {
               <div
                 key={ranking.id}
                 onClick={() => setSelectedRanking(ranking)}
-                className="p-5 bg-white rounded-lg shadow-md cursor-pointer hover:shadow-lg hover:border-blue-500 border-2 border-transparent transition-all"
+                className="p-5 bg-white rounded-lg shadow-md cursor-pointer hover:shadow-lg hover:ring-2 hover:ring-marista-blue transition-all group"
               >
-                <h3 className="text-xl font-semibold text-blue-700">{ranking.nome}</h3>
-                <p className="text-sm text-gray-600 mt-1">{ranking.participantes.length} participantes</p>
+                <h3 className="text-xl font-semibold text-marista-blue group-hover:text-marista-dark">{ranking.nome}</h3>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+                    <Users size={16} />
+                    <span>{ranking.participantes.length} participantes</span>
+                </div>
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 py-10 bg-gray-50 rounded-lg">
-                <p>Nenhum ranking foi criado ainda.</p>
+            <div className="text-center text-gray-500 py-10 border-2 border-dashed rounded-lg">
+                <p className="font-medium">Nenhum ranking foi criado ainda.</p>
                 <p className="text-sm mt-2">Clique em "Criar Novo Ranking" para começar.</p>
             </div>
           )}

@@ -148,33 +148,35 @@ export default function AdminPage() {
     return <div className="p-8 text-center">Carregando dados de usuários...</div>;
   }
 
-  return (
+   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold mb-6">Painel do Administrador</h1>
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Painel do Administrador</h1>
+        <p className="text-gray-500 mt-1">Gerencie e visualize os dados de todos os usuários.</p>
+      </header>
 
-      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-3">Filtro de Visualização</h2>
+      <div className="bg-white p-4 rounded-lg shadow-md mb-8">
+        <h2 className="text-xl font-semibold mb-3 text-gray-700">Filtro de Visualização</h2>
         <div>
-            <h3 className="font-medium mb-2">Selecionar Usuários para Exibir ({selectedUserIds.length}/{allUsersData.length}):</h3>
-            <div className="max-h-40 overflow-y-auto border rounded-md p-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            <h3 className="font-medium text-gray-600 mb-2">Selecionar Usuários ({selectedUserIds.length}/{allUsersData.length}):</h3>
+            <div className="max-h-40 overflow-y-auto border rounded-md p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {allUsersData.map(user => (
-                    <label key={user.id} className="flex items-center gap-2 text-sm p-1 hover:bg-gray-100 rounded cursor-pointer">
+                    <label key={user.id} className="flex items-center gap-2 text-sm p-1.5 hover:bg-gray-100 rounded cursor-pointer">
                         <input
                             type="checkbox"
-                            className="h-4 w-4"
+                            className="h-4 w-4 rounded border-gray-300 text-marista-blue focus:ring-marista-blue"
                             checked={selectedUserIds.includes(user.id)}
                             onChange={() => handleToggleUser(user.id)}
                         />
-                        <span className="truncate">{user.id}</span>
+                        <span className="truncate font-medium">{user.id}</span>
                     </label>
                 ))}
             </div>
         </div>
-        {/* ✅ O BOTÃO DE EXPORTAÇÃO EM LOTE FOI REMOVIDO DAQUI */}
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">Resumo das Carteiras</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Resumo das Carteiras</h2>
         {filteredUsers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredUsers.map(user => (
@@ -187,7 +189,10 @@ export default function AdminPage() {
                 ))}
             </div>
         ) : (
-            <p className="text-center text-gray-500 py-8">Nenhum usuário selecionado para exibir. Selecione um ou mais usuários acima.</p>
+            <div className="text-center text-gray-500 py-10 border-2 border-dashed rounded-lg">
+                <p className="font-medium">Nenhum usuário selecionado para exibir.</p>
+                <p className="text-sm mt-2">Marque um ou mais usuários no filtro acima.</p>
+            </div>
         )}
       </div>
     </div>

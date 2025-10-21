@@ -6,9 +6,10 @@ interface VendaAtivoModalProps {
   ativo: Ativo;
 onConfirm: (quantidadeVendida: number, senha: string, comentario: string) => void;
   onClose: () => void;
+  isSubmitting: boolean; // ✅ RECEBA A NOVA PROP
 }
 
-export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtivoModalProps) {
+export default function VendaAtivoModal({ ativo, onConfirm, onClose,isSubmitting }: VendaAtivoModalProps) {
   const [quantidade, setQuantidade] = useState('');
   const [senha, setSenha] = useState('');
   const [comentario, setComentario] = useState(''); // ADICIONE ESTE ESTADO
@@ -107,9 +108,12 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose }: VendaAtiv
           />
         </div>
 
-        <Button onClick={handleConfirm} className="w-full">
-            {ativo.tipo === 'rendaFixa' ? 'Confirmar Resgate' : 'Confirmar Venda'}
-          </Button>
+       <Button onClick={handleConfirm} className="w-full" disabled={isSubmitting}>
+          {isSubmitting 
+            ? 'Processando...' 
+            : (ativo.tipo === 'rendaFixa' ? 'Confirmar Resgate' : 'Confirmar Venda')
+          }
+        </Button>
       </div>
     </div>
   );
