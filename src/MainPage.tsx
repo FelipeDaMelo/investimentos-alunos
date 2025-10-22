@@ -309,19 +309,29 @@ const handleConfirmarDividendos = async (
     let novosAtivos: Ativo[];
 
     if (ativoSemSenha.tipo === 'rendaVariavel') {
-      // Sua lógica para encontrar e atualizar ativos existentes está correta.
-      const existente = ativos.find(a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === (ativoSemSenha as RendaVariavelAtivo).tickerFormatado) as RendaVariavelAtivo | undefined;
+      const ativoVariavelNovo = ativoSemSenha as RendaVariavelAtivo;
+      const existente = ativos.find(a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === ativoVariavelNovo.tickerFormatado) as RendaVariavelAtivo | undefined;
+      
       if (existente) {
-        const novaQuantidade = existente.quantidade + (ativoSemSenha as RendaVariavelAtivo).quantidade;
-        const novoInvestimento = existente.valorInvestido + ativoSemSenha.valorInvestido;
+        const novaQuantidade = existente.quantidade + ativoVariavelNovo.quantidade;
+        const novoInvestimento = existente.valorInvestido + ativoVariavelNovo.valorInvestido;
         const novoPrecoMedio = novoInvestimento / novaQuantidade;
+        
+        // --- INÍCIO DA CORREÇÃO ---
+        const precoDeMercadoAtual = ativoVariavelNovo.valorAtual; // Pega o preço de mercado da nova compra
+
         const atualizado: RendaVariavelAtivo = {
           ...existente,
           quantidade: novaQuantidade,
           valorInvestido: novoInvestimento,
           precoMedio: novoPrecoMedio,
-          valorAtual: novoPrecoMedio,
-          patrimonioPorDia: { ...existente.patrimonioPorDia, [new Date().toISOString().split('T')[0]]: novaQuantidade * novoPrecoMedio }
+          // ✅ CORRIGIDO: Usa o preço de mercado atual, não o preço médio.
+          valorAtual: precoDeMercadoAtual, 
+          patrimonioPorDia: { 
+            ...existente.patrimonioPorDia, 
+            // ✅ CORRIGIDO: Calcula o patrimônio com base no preço de mercado.
+            [new Date().toISOString().split('T')[0]]: novaQuantidade * precoDeMercadoAtual 
+          }
         };
         novosAtivos = ativos.map(a => a.id === existente.id ? atualizado : a);
       } else {
