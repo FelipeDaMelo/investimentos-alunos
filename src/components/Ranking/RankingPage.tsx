@@ -175,8 +175,7 @@ export default function RankingPage({ onBack }: RankingPageProps) {
               </div>
               {/* --- HIERARQUIA DE TÍTULO ATUALIZADA --- */}
               <div>
-                <p className="text-lg font-semibold text-gray-600">Painel de Classificação</p>
-                <h1 className="text-3xl sm:text-5xl font-bold text-gray-800 leading-none">
+                    <h1 className="text-3xl sm:text-5xl font-bold text-gray-800 leading-none">
                     <span>Simul</span>
                     <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 bg-[length:200%_auto] animate-text-shine animate-text-pulse">AÇÃO</span>
                 </h1>
