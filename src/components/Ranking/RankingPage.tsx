@@ -7,7 +7,8 @@ import { Ranking } from '../../types/Ranking';
 import Button from '../Button';
 import CreateRankingModal from './CreateRankingModal';
 import RankingDetail from './RankingDetail';
-import { Trophy, Users } from 'lucide-react';
+import { Trophy, Users, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ADMIN_PASSWORD = "admin"; // Mude para a senha que você desejar
 
@@ -21,9 +22,8 @@ export default function RankingPage({ onBack }: RankingPageProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRanking, setSelectedRanking] = useState<Ranking | null>(null);
 
-const fetchRankings = async () => {
+  const fetchRankings = async () => {
     setLoading(true);
-    // ✅ A ordenação por dataCriacao continuará funcionando. Documentos sem o campo serão listados por último.
     const rankingsQuery = query(collection(db, "rankings"), orderBy("dataCriacao", "desc"));
     const querySnapshot = await getDocs(rankingsQuery);
     const fetchedRankings = querySnapshot.docs.map(doc => {
@@ -32,14 +32,12 @@ const fetchRankings = async () => {
             id: doc.id,
             nome: data.nome,
             participantes: data.participantes,
-            // ✅ Adiciona uma verificação: se o campo existe, converte. Se não, fica undefined.
             dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : undefined,
         } as Ranking;
     });
     setRankings(fetchedRankings);
     setLoading(false);
-};
-
+  };
 
   useEffect(() => {
     fetchRankings();
@@ -166,56 +164,75 @@ const fetchRankings = async () => {
     );
   }
 
-  return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
-      <header className="flex flex-col sm:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-3xl font-bold text-gray-800">Rankings de Performance</h1>
-        </div>
-        <div className="flex gap-4 mt-4 sm:mt-0">
-            <Button onClick={handleCreateClick}>Criar Novo Ranking</Button>
-            <Button onClick={onBack} variant="secondary">Voltar ao Painel</Button>
-        </div>
-      </header>
-
-      {loading ? (
-        <p className="text-center text-gray-600">Carregando rankings...</p>
-      ) : (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700">Rankings Disponíveis</h2>
-          {rankings.length > 0 ? (
-            rankings.map(ranking => (
-              <div
-                key={ranking.id}
-                onClick={() => setSelectedRanking(ranking)}
-                className="p-5 bg-white rounded-lg shadow-md cursor-pointer hover:shadow-lg hover:ring-2 hover:ring-marista-blue transition-all group"
-              >
-                <h3 className="text-xl font-semibold text-marista-blue group-hover:text-marista-dark">{ranking.nome}</h3>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
-                    <Users size={16} />
-                    <span>{ranking.participantes.length} participantes</span>
-                </div>
+   return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+        {/* ===== CABEÇALHO COM HIERARQUIA INVERTIDA ===== */}
+        <header className="bg-white/70 backdrop-blur-md border border-white/50 shadow-lg rounded-2xl p-6 mb-10 flex flex-col lg:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-4 w-full lg:w-auto">
+              <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-full shadow-md shrink-0">
+                <Trophy className="w-8 h-8 text-white" />
               </div>
-            ))
-          ) : (
-            <div className="text-center text-gray-500 py-10 border-2 border-dashed rounded-lg">
-                <p className="font-medium">Nenhum ranking foi criado ainda.</p>
-                <p className="text-sm mt-2">Clique em "Criar Novo Ranking" para começar.</p>
-            </div>
-          )}
-        </div>
-      )}
+              {/* --- HIERARQUIA DE TÍTULO ATUALIZADA --- */}
+              <div>
+                <p className="text-lg font-semibold text-gray-600">Painel de Classificação</p>
+                <h1 className="text-4xl sm:text-5xl font-bold text-gray-800 leading-none">
+                    <span>Simul</span>
+                    <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 bg-[length:200%_auto] animate-text-shine animate-text-pulse">AÇÃO</span>
+                </h1>
+              </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 w-full lg:w-auto shrink-0">
+              <Button onClick={handleCreateClick} className="!bg-blue-600 hover:!bg-blue-700 !shadow-lg flex-grow sm:flex-grow-0">Criar Novo Ranking</Button>
+              <Button onClick={onBack} variant="secondary" className="!bg-white/80 hover:!bg-white flex-grow sm:flex-grow-0">Voltar ao Painel</Button>
+          </div>
+        </header>
 
-      {showCreateModal && (
-        <CreateRankingModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            fetchRankings();
-          }}
-        />
-      )}
+        {loading ? (
+          <p className="text-center text-gray-600">Carregando rankings...</p>
+        ) : (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4 px-2">Rankings Disponíveis</h2>
+            {rankings.length > 0 ? (
+              rankings.map((ranking, index) => (
+                <motion.div
+                  key={ranking.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  onClick={() => setSelectedRanking(ranking)}
+                  className="group flex items-center justify-between p-6 bg-white/70 backdrop-blur-md border border-white/50 shadow-md rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-blue-300"
+                >
+                  <div>
+                    <h3 className="text-xl font-semibold text-blue-800 transition-colors group-hover:text-blue-600">{ranking.nome}</h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                        <Users size={16} />
+                        <span>{ranking.participantes.length} participantes</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
+                </motion.div>
+              ))
+            ) : (
+              <div className="text-center text-gray-600 py-12 bg-white/60 backdrop-blur-md border-2 border-dashed rounded-2xl">
+                  <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="font-medium text-lg">Nenhum ranking foi criado ainda.</p>
+                  <p className="text-sm mt-2">Clique em "Criar Novo Ranking" para começar.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showCreateModal && (
+          <CreateRankingModal
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={() => {
+              setShowCreateModal(false);
+              fetchRankings();
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }

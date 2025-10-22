@@ -8,6 +8,22 @@ export default {
   ],
   theme: {
     extend: {
+
+      animation: {
+        'text-pulse': 'text-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'text-shine': 'text-shine 3s linear infinite',
+      },
+      keyframes: {
+        'text-pulse': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.05)' },
+        },
+        'text-shine': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+      },
+
       fontFamily: {
         // Adiciona a fonte Poppins como principal
         sans: ['Poppins', 'sans-serif', 'Inter'],

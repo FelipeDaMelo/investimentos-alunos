@@ -73,21 +73,29 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto p-4 animate-fade-in">
-        <header className="bg-gradient-to-r from-indigo-700 to-blue-600 p-6 rounded-2xl shadow-2xl mb-8 flex flex-col md:flex-row items-center justify-between">
-          <div className="flex items-center gap-4 mb-6 md:mb-0">
-            <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
-              <Trophy className="w-8 h-8 text-yellow-300" />
+        {/* ===== CABEÇALHO FINAL COM LAYOUT DE 3 PARTES ===== */}
+        <header className="bg-gradient-to-r from-indigo-700 to-blue-600 p-6 rounded-2xl shadow-2xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          
+          {/* --- PARTE ESQUERDA: MARCA --- */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-full shadow-md shrink-0">
+              <Trophy className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-white tracking-tight">
-                {formatRankingName(ranking.nome)}
-              </h1>
-              <p className="text-indigo-100 text-sm font-medium opacity-80">
-                Quadro de Classificação
-              </p>
-            </div>
+            <p className="font-bold text-white text-2xl"> {/* Alterado de text-xl para text-2xl */}
+              <span>Simul</span>
+              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-white bg-[length:200%_auto] animate-text-shine animate-text-pulse">AÇÃO</span>
+            </p>
           </div>
-          <div className="flex gap-3">
+
+          {/* --- PARTE CENTRAL: TÍTULO DO RANKING --- */}
+          <div className="text-center">
+            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+              {formatRankingName(ranking.nome)}
+            </h1>
+          </div>
+          
+          {/* --- PARTE DIREITA: BOTÕES DE AÇÃO --- */}
+          <div className="flex gap-3 shrink-0">
             <Button onClick={() => setShowAddModal(true)} className="!bg-green-500 hover:!bg-green-600 text-white border-none shadow-md flex items-center gap-2 !py-2.5 !px-4" title="Adicionar participantes">
               <UserPlus className="w-5 h-5" />
               <span className="hidden sm:inline">Adicionar</span>
@@ -107,7 +115,6 @@ export default function RankingDetail({ ranking, onBack, onDelete, onAddParticip
           <div className="w-full">
             <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Classificação Atual</h2>
             
-            {/* ===== PÓDIO COM CORES VIBRANTES ===== */}
             <div className="flex items-end justify-center gap-4 sm:gap-6 px-2 sm:px-0 mb-10">
               {/* --- 2º LUGAR (PRATA) --- */}
               <div className="w-1/3">
