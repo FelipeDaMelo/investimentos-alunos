@@ -16,23 +16,34 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose,isSubmitting
 
   const isRendaVariavel = ativo.tipo === 'rendaVariavel';
 
-  const handleConfirm = () => {
+const handleConfirm = () => {
     const quantidadeNumerica = parseFloat(quantidade.replace(',', '.'));
+    const senhaValida = senha.length === 6;
 
-    if (senha.length !== 6) {
+    if (!senhaValida) {
       alert('A senha deve conter 6 dígitos.');
       return;
     }
 
     if (isRendaVariavel) {
-    const tolerancia = Number.EPSILON; // Define uma pequena tolerância para a comparação
-if (isNaN(quantidadeNumerica) || quantidadeNumerica <= 0 || (quantidadeNumerica - (ativo as any).quantidade) > tolerancia) {
-  alert('Quantidade inválida.');
-  return;
-}
-    }
+      const availableAmount = (ativo as any).quantidade;
+      // Tolerância para cobrir diferenças de arredondamento de até 10 casas decimais
+      const tolerancia = 1e-9; 
 
-    onConfirm(isRendaVariavel ? quantidadeNumerica : 1, senha, comentario);
+      // 1. A validação agora usa a tolerância correta
+      if (isNaN(quantidadeNumerica) || quantidadeNumerica <= 0 || quantidadeNumerica > availableAmount + tolerancia) {
+        alert('Quantidade inválida.');
+        return;
+      }
+      
+      // 2. Garante que a quantidade a ser vendida não exceda o saldo real
+      const quantidadeFinal = Math.min(quantidadeNumerica, availableAmount);
+      onConfirm(quantidadeFinal, senha, comentario);
+
+    } else {
+      // Lógica para Renda Fixa (não precisa de alteração)
+      onConfirm(1, senha, comentario);
+    }
   };
 
   return (
