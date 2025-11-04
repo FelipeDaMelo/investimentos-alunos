@@ -25,10 +25,11 @@ export default function VendaAtivoModal({ ativo, onConfirm, onClose,isSubmitting
     }
 
     if (isRendaVariavel) {
-      if (isNaN(quantidadeNumerica) || quantidadeNumerica <= 0 || quantidadeNumerica > (ativo as any).quantidade) {
-        alert('Quantidade inválida.');
-        return;
-      }
+    const tolerancia = Number.EPSILON; // Define uma pequena tolerância para a comparação
+if (isNaN(quantidadeNumerica) || quantidadeNumerica <= 0 || (quantidadeNumerica - (ativo as any).quantidade) > tolerancia) {
+  alert('Quantidade inválida.');
+  return;
+}
     }
 
     onConfirm(isRendaVariavel ? quantidadeNumerica : 1, senha, comentario);
