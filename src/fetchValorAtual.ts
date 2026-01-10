@@ -1,5 +1,3 @@
-//src/fetchValorAtual.ts
-
 const cache = new Map<string, string>();
 
 const fetchValorAtual = async (ticker: string) => {
@@ -11,7 +9,7 @@ const fetchValorAtual = async (ticker: string) => {
     let tickerCorrigido = ticker.trim().toUpperCase();
     let valorAtual: string = 'Erro ao carregar';
 
-    // Casos especiais para taxas do Banco Central
+    // 1. Taxas do Banco Central
     if (tickerCorrigido === 'SELIC') {
       const valor = await fetchTaxaBCB(11);
       valorAtual = valor !== null ? valor.toFixed(5) : 'Erro';
@@ -20,17 +18,16 @@ const fetchValorAtual = async (ticker: string) => {
       valorAtual = valor !== null ? valor.toFixed(5) : 'Erro';
     } else if (tickerCorrigido === 'IPCA') {
       const valorMensal = await fetchTaxaBCB(433);
-const taxaDiaria = valorMensal !== null
-  ? (((Math.pow(1 + valorMensal / 100, 1 / 21)) - 1) * 100).toFixed(5)
-  : 'Erro';
-valorAtual = taxaDiaria;
-    } else {
-      // Ações brasileiras ou BDRs da B3 (ex: ITUB4, AAPL34)
+      const taxaDiaria = valorMensal !== null
+        ? (((Math.pow(1 + valorMensal / 100, 1 / 21)) - 1) * 100).toFixed(5)
+        : 'Erro';
+      valorAtual = taxaDiaria;
+    } 
+    // 2. Ativos de Renda Variável (Ações, FIIs, Criptos)
+    else {
       if (/^[A-Z]{4}\d{1,2}$/.test(tickerCorrigido)) {
         tickerCorrigido += '.SA';
-      }
-      // Criptomoedas (ex: BTC, ETH)
-      else if (/^[A-Z]{2,5}$/.test(tickerCorrigido)) {
+      } else if (/^[A-Z]{2,5}$/.test(tickerCorrigido)) {
         tickerCorrigido += '-USD';
       }
       
@@ -38,13 +35,8 @@ valorAtual = taxaDiaria;
       const data = await res.json();
 
       if (data && data.valorAtual) {
+        // A API agora já entrega tudo pronto em Reais (BRL)
         valorAtual = data.valorAtual;
-
-        if (tickerCorrigido.includes('-USD')) {
-          const valorEmUSD = parseFloat(valorAtual);
-          const cotacaoDolarBRL = await getCotacaoDolarBRL();
-          valorAtual = (valorEmUSD * cotacaoDolarBRL).toFixed(2);
-        }
       }
     }
 
@@ -71,15 +63,6 @@ const fetchTaxaBCB = async (codigoSerie: number): Promise<number | null> => {
   }
 };
 
-const getCotacaoDolarBRL = async (): Promise<number> => {
-  try {
-    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-    const data = await res.json();
-    return data.rates.BRL;
-  } catch (error) {
-    console.error('Erro ao obter cotação do dólar para BRL', error);
-    return 5.0;
-  }
-};
+// getCotacaoDolarBRL foi removida pois não é mais necessária!
 
 export default fetchValorAtual;
