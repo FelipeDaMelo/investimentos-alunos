@@ -1,3 +1,5 @@
+//src/fetchValorAtual.ts
+
 const cache = new Map<string, string>();
 
 const fetchValorAtual = async (ticker: string) => {
