@@ -1,6 +1,17 @@
 // api/fetch-valor.ts
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import yahooFinance from 'yahoo-finance2';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+type BrapiQuoteResult = {
+  symbol?: string;
+  regularMarketPrice?: number;
+  currency?: string;
+};
+
+type BrapiQuoteResponse = {
+  results?: BrapiQuoteResult[];
+  error?: boolean;
+  message?: string;
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { ticker } = req.query;
@@ -10,20 +21,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Forçamos o 'result' como 'any' para evitar o erro de 'never' no build
-    const result: any = await yahooFinance.quote(ticker);
-    
-    // Agora o TypeScript não reclamará desta linha:
-    const valorAtual = result?.regularMarketPrice;
+    const tickerLimpo = ticker.trim().toUpperCase();
 
-    if (typeof valorAtual === 'number') {
-      res.status(200).json({ valorAtual: valorAtual.toFixed(2) });
-    } else {
-      res.status(404).json({ error: 'Valor atual não disponível' });
+    const token = process.env.BRAPI_TOKEN; // configure na Vercel
+    const url = new URL(`https://brapi.dev/api/quote/${encodeURIComponent(tickerLimpo)}`);
+
+    if (token) url.searchParams.set('token', token);
+
+    const response = await fetch(url.toString(), {
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      return res.status(response.status).json({
+        error: 'Erro ao buscar valor do ativo',
+        details: text || `HTTP ${response.status}`,
+      });
     }
-  } catch (error: any) {
+
+    const data = (await response.json()) as BrapiQuoteResponse;
+
+    const valor = data?.results?.[0]?.regularMarketPrice;
+
+    if (typeof valor === 'number' && Number.isFinite(valor)) {
+      return res.status(200).json({ valorAtual: valor.toFixed(2) });
+    }
+
+    return res.status(404).json({
+      error: 'Valor atual não disponível',
+      details: data?.message || null,
+    });
+  } catch (error) {
     console.error(error);
-    // Retornamos o erro 500, mas com a mensagem real para ajudar no debug
-    res.status(500).json({ error: 'Erro ao buscar valor do ativo', message: error.message });
+    return res.status(500).json({ error: 'Erro ao buscar valor do ativo' });
   }
 }
