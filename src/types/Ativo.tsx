@@ -21,6 +21,7 @@ interface BaseAtivo {
   senha?: string;
   subtipo?: string;
   quantidade?: number;
+  logo?: string;
 }
 
 export interface RendaFixaAtivo extends BaseAtivo {

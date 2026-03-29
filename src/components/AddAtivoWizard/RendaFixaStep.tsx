@@ -48,9 +48,9 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
     try {
       setCarregandoTaxas(true);
       setErroTaxas(null);
-      const cdi = await fetchValorAtual('CDI');
-      const selic = await fetchValorAtual('SELIC');
-      const ipca = await fetchValorAtual('IPCA');
+      const { valor: cdi } = await fetchValorAtual('CDI');
+      const { valor: selic } = await fetchValorAtual('SELIC');
+      const { valor: ipca } = await fetchValorAtual('IPCA');
       
       if (cdi === 'Erro ao carregar' || selic === 'Erro ao carregar' || ipca === 'Erro ao carregar') {
         throw new Error('Falha na sincronização com os indicadores');

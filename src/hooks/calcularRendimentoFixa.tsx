@@ -44,10 +44,12 @@ const calcularRendimentoTotalFixa = async (
     let taxaDiariaIndexada = 0;
 
     if (percentualCDI > 0) {
-      const cdiDiario = parseFloat(await fetchValorAtual('CDI'));
+      const { valor: cdiStr } = await fetchValorAtual('CDI');
+      const cdiDiario = parseFloat(cdiStr);
       taxaDiariaIndexada = (cdiDiario/100) * (percentualCDI / 100);
     } else if (percentualSELIC > 0) {
-      const selicDiaria = parseFloat(await fetchValorAtual('SELIC'));
+      const { valor: selicStr } = await fetchValorAtual('SELIC');
+      const selicDiaria = parseFloat(selicStr);
       taxaDiariaIndexada = (selicDiaria/100) * (percentualSELIC / 100);
     }
     
@@ -63,7 +65,8 @@ if (ativo.categoriaFixa === 'hibrida') {
     const taxaDiariaPre = Math.pow(1 + taxaPrefixada / 100, 1 / 252) - 1;
 
     // 2. Busca a taxa MENSAL do IPCA e converte para diária
-    const ipcaMensal = parseFloat(await fetchValorAtual('IPCA'));
+    const { valor: ipcaStr } = await fetchValorAtual('IPCA');
+    const ipcaMensal = parseFloat(ipcaStr);
     const taxaDiariaIpca = Math.pow(1 + ipcaMensal / 100, 1 / 21) - 1;
 
     // 3. Compõe as duas taxas para encontrar a taxa total diária.

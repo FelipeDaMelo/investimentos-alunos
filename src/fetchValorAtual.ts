@@ -1,6 +1,11 @@
-const cache = new Map<string, string>();
+export interface FetchValorResponse {
+  valor: string;
+  logo?: string;
+}
 
-const fetchValorAtual = async (ticker: string) => {
+const cache = new Map<string, FetchValorResponse>();
+
+const fetchValorAtual = async (ticker: string): Promise<FetchValorResponse> => {
   try {
     if (cache.has(ticker)) {
       return cache.get(ticker)!;
@@ -8,6 +13,7 @@ const fetchValorAtual = async (ticker: string) => {
 
     let tickerCorrigido = ticker.trim().toUpperCase();
     let valorAtual: string = 'Erro ao carregar';
+    let logo: string | undefined;
 
     // 1. Taxas do Banco Central
     if (tickerCorrigido === 'SELIC') {
@@ -35,16 +41,17 @@ const fetchValorAtual = async (ticker: string) => {
       const data = await res.json();
 
       if (data && data.valorAtual) {
-        // A API agora já entrega tudo pronto em Reais (BRL)
         valorAtual = data.valorAtual;
+        logo = data.logo;
       }
     }
 
-    cache.set(ticker, valorAtual);
-    return valorAtual;
+    const result = { valor: valorAtual, logo };
+    cache.set(ticker, result);
+    return result;
   } catch (error) {
     console.error('Erro ao buscar valor do ativo:', error);
-    return 'Erro ao carregar';
+    return { valor: 'Erro ao carregar' };
   }
 };
 

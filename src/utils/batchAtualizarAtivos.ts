@@ -26,12 +26,14 @@ export async function batchAtualizarAtivos(usersToUpdate: any[], hoje: string): 
 
   // 2. Resolver Cotações (Sequential safe fetching)
   const priceMap: Record<string, number> = {};
+  const logoMap: Record<string, string | undefined> = {};
   for (const ticker of Array.from(uniqueTickers)) {
     try {
-      const valorStr = await fetchValorAtual(ticker);
+      const { valor: valorStr, logo } = await fetchValorAtual(ticker);
       const valor = parseFloat(valorStr);
       if (!isNaN(valor) && valor > 0) {
         priceMap[ticker] = valor;
+        logoMap[ticker] = logo;
       }
     } catch(e) {
       console.warn(`[Batch Update] Erro resolvendo ${ticker}`, e);
@@ -59,11 +61,13 @@ export async function batchAtualizarAtivos(usersToUpdate: any[], hoje: string): 
         const ativoVar = ativo as RendaVariavelAtivo;
         // Usa o preço novo. Se a API falhou para aquele ticket específico, mantém o preço antigo para não destruir o patrimônio
         const precoNovo = priceMap[ativoVar.tickerFormatado] || ativoVar.valorAtual; 
+        const logoNovo = logoMap[ativoVar.tickerFormatado] || ativoVar.logo;
         const patrimonio = precoNovo * ativoVar.quantidade;
         
         return {
           ...ativo,
           valorAtual: precoNovo,
+          logo: logoNovo,
           patrimonioPorDia: {
             ...ativo.patrimonioPorDia,
             [hoje]: patrimonio,

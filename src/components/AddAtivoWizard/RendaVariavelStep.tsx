@@ -24,6 +24,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     subtipo: 'acao' as 'acao' | 'fii' | 'criptomoeda',
     quantidade: '',
     precoAtual: 0,
+    logo: '' as string | undefined,
     loadingPreco: false,
     errorPreco: ''
   });
@@ -51,12 +52,13 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       setForm(prev => ({ ...prev, loadingPreco: true, errorPreco: '' }));
       setDividendoFII(null);
       const tickerFormatado = formatarTicker(form.nome, form.subtipo);
-      const precoString = await fetchValorAtual(tickerFormatado);
+      const { valor: precoString, logo } = await fetchValorAtual(tickerFormatado);
       if (precoString === 'Erro ao carregar') throw new Error('Não foi possível obter o preço');
       const preco = parseFloat(precoString);
       setForm(prev => ({
         ...prev,
         precoAtual: preco,
+        logo: logo,
         loadingPreco: false,
         nome: formatarTickerParaExibicao(prev.nome, prev.subtipo),
       }));
@@ -112,7 +114,8 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       id: Date.now().toString(),
       senha,
       compras: [{ valor: valorTotal, data: new Date().toISOString() }],
-      dividendo: dividendoFII ?? 0
+      dividendo: dividendoFII ?? 0,
+      logo: form.logo
     };
     onSubmit(ativoCompleto, comentario);
   };

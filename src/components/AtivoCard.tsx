@@ -72,8 +72,21 @@ const cardBgClass =
 
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: cor }}>
-            {isRendaVariavel ? <ShoppingCart size={24} /> : <BadgeDollarSign size={24} />}
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg overflow-hidden bg-white border border-slate-50" style={{ backgroundColor: ativo.logo ? 'transparent' : cor }}>
+            {ativo.logo ? (
+              <img 
+                src={ativo.logo} 
+                alt={ativo.nome} 
+                className="w-full h-full object-contain p-1 animate-fade-in"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.style.backgroundColor = cor;
+                  // Opcionalmente poderia renderizar o ícone aqui se a imagem falhar
+                }}
+              />
+            ) : (
+              isRendaVariavel ? <ShoppingCart size={24} /> : <BadgeDollarSign size={24} />
+            )}
           </div>
           <div>
             <h3 className="font-bold text-slate-800 text-lg leading-tight">{ativo.nome}</h3>

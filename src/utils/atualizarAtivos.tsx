@@ -38,7 +38,7 @@ export async function atualizarAtivos(
       } else { // Renda Variável
         const ativoVar = ativo as RendaVariavelAtivo;
         try {
-          const valorAtualString = await fetchValorAtual(ativoVar.tickerFormatado);
+          const { valor: valorAtualString, logo } = await fetchValorAtual(ativoVar.tickerFormatado);
           const valorAtual = parseFloat(valorAtualString);
           
           if (isNaN(valorAtual)) { // Proteção caso a API retorne algo inesperado
@@ -50,6 +50,7 @@ export async function atualizarAtivos(
           return {
             ...ativo,
             valorAtual,
+            logo: logo || ativo.logo, // Atualiza a logo se vier da API, senão mantém a que já tinha
             patrimonioPorDia: {
               ...ativo.patrimonioPorDia,
               [hoje]: patrimonio,
