@@ -31,18 +31,24 @@ export function calculateUserMetrics(userData: any) {
   }
 
   // =================================================================================
-  // LÓGICA 3: CALCULAR A RENTABILIDADE (ROI)
-  // Esta lógica é idêntica ao hook `useMemo` para `variacaoPercentual` em MainPage.tsx
+  // LÓGICA 3: CALCULAR A RENTABILIDADE (SISTEMA DE COTAS)
+  // Utiliza o 'totalCotas' (se existir) para blindar o ROI contra depósitos/aportes novos.
   // =================================================================================
   let rentabilidade = 0;
-  // Apenas calcula a rentabilidade se houver algum valor aportado para evitar divisão por zero.
-  if (totalAportado > 0) {
+  
+  if (userData.totalCotas && userData.totalCotas > 0 && valorTotalAtual > 0) {
+    // A cota inicial do sistema é sempre = 1 (R$ 1.000 de depósito viram 1.000 cotas).
+    const valorCotaAtual = valorTotalAtual / userData.totalCotas;
+    rentabilidade = (valorCotaAtual - 1) * 100;
+  } else if (totalAportado > 0) {
+    // Fallback retrocompatível para usuários legados sem o campo 'totalCotas'
     const ganhoReal = valorTotalAtual - totalAportado;
     rentabilidade = (ganhoReal / totalAportado) * 100;
   }
 
   return {
     valorTotalAtual,
-    rentabilidade, // Este valor agora representa o ROI (ex: 2.04%)
+    rentabilidade, 
+    totalAportado, // Exportado também para caso seja necessário auditar
   };
 }

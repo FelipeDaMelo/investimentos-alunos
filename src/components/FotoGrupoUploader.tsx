@@ -10,6 +10,7 @@ interface FotoGrupoUploaderProps {
   fotoUrlAtual?: string;
   onConfirmUpload: (file: File, senhaDigitada: string) => Promise<void>;
   onTriggerDelete: () => void; // Prop para avisar a MainPage para abrir o modal de exclusão
+  size?: 'small' | 'medium' | 'large';
 }
 
 export default function FotoGrupoUploader({
@@ -17,7 +18,14 @@ export default function FotoGrupoUploader({
   fotoUrlAtual,
   onConfirmUpload,
   onTriggerDelete,
+  size = 'medium',
 }: FotoGrupoUploaderProps) {
+  const sizeClasses = {
+    small: 'w-10 h-10',
+    medium: 'w-20 h-20',
+    large: 'w-32 h-32'
+  }[size];
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // --- Estados de Controle ---
@@ -65,7 +73,7 @@ export default function FotoGrupoUploader({
   };
 
   return (
-    <div className="relative w-20 h-20 group">
+    <div className={`relative ${sizeClasses} group`}>
       {/* Input de arquivo escondido */}
       <input
         type="file"
@@ -79,7 +87,7 @@ export default function FotoGrupoUploader({
       <button
         type="button"
         onClick={() => setShowMenu(true)}
-        className="w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer block"
+        className={`${sizeClasses} rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer block`}
         aria-label="Abrir menu de opções do grupo"
       >
 <img

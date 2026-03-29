@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react';
 import { Ativo } from '../types/Ativo';
 import { db } from '../firebaseConfig';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore';
 import { atualizarAtivos } from '../utils/atualizarAtivos'; // Importa a nossa função orquestradora
 
 type AtualizarAtivosCallback = (ativosAtualizados: Ativo[]) => void;
@@ -44,17 +44,47 @@ const useAtualizarAtivos = (
         console.log('Realizando atualização automática de ativos...');
         
         try {
-          // Chama a nossa função orquestradora principal que contém toda a lógica correta.
-          const ativosAtualizados = await atualizarAtivos(ativosRef.current, hoje);
+          // 1. Primeiro, obtemos os preços e rendimentos atualizados com base na lista que temos agora.
+          // Note que isso pode levar alguns segundos.
+          const ativosComNovosPrecos = await atualizarAtivos(ativosRef.current, hoje);
           
-          // Salva os ativos atualizados e a nova data de atualização no Firestore.
-          await updateDoc(docRef, {
-            ativos: ativosAtualizados,
-            ultimaAtualizacao: hoje,
-          });
+          // 2. Agora usamos uma TRANSAÇÃO para salvar, garantindo que não vamos atropelar 
+          // novos ativos que possam ter sido adicionados durante os segundos acima.
+          await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(docRef);
+            if (!userDoc.exists()) return;
 
-          // Chama o callback para atualizar o estado na MainPage.
-          atualizarCallback(ativosAtualizados);
+            const ativosNoBanco = (userDoc.data().ativos || []) as Ativo[];
+
+            // 3. MERGE SEGURO:
+            // Percorremos os ativos QUE ESTÃO NO BANCO agora e aplicamos os novos preços 
+            // que calculamos no passo 1 (se o ativo ainda existir).
+            const mergeFinal = ativosNoBanco.map(ativoBanco => {
+              const atualizado = ativosComNovosPrecos.find(a => a.id === ativoBanco.id);
+              if (atualizado) {
+                // Preservamos o objeto do banco (que pode ter quantidades novas) 
+                // e apenas atualizamos o valor e o histórico de patrimônio do dia.
+                return {
+                  ...ativoBanco,
+                  valorAtual: atualizado.valorAtual,
+                  patrimonioPorDia: {
+                    ...ativoBanco.patrimonioPorDia,
+                    [hoje]: atualizado.patrimonioPorDia[hoje]
+                  }
+                };
+              }
+              return ativoBanco; // Se for um ativo novo que não estava no passo 1, mantemos ele como está.
+            });
+
+            transaction.update(docRef, {
+              ativos: mergeFinal,
+              ultimaAtualizacao: hoje,
+            });
+
+            // 4. Atualiza o estado da UI
+            atualizarCallback(mergeFinal);
+          });
+          
           console.log('Atualização automática concluída com sucesso.');
 
         } catch (error) {

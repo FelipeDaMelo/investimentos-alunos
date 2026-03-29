@@ -37,9 +37,9 @@ const AtivoCard: React.FC<AtivoCardProps> = ({ ativo, onSell, cor, onInformarDiv
     ? (ativo as RendaVariavelAtivo).valorInvestido / (ativo as RendaVariavelAtivo).quantidade
     : 0;
 
-  const rendimentoPercentual = isRendaVariavel && precoMedio > 0
-    ? (((ativo as RendaVariavelAtivo).valorAtual / precoMedio) - 1) * 100
-    : 0;
+  const rendimentoPercentual = isRendaVariavel 
+    ? (precoMedio > 0 ? (((ativo as RendaVariavelAtivo).valorAtual / precoMedio) - 1) * 100 : 0)
+    : (ativo.valorInvestido > 0 ? ((ativo.valorAtual / ativo.valorInvestido) - 1) * 100 : 0);
 
   const rendimentoTotal = isRendaVariavel
     ? ((rendimentoPercentual / 100) * (ativo as RendaVariavelAtivo).valorInvestido)
@@ -61,181 +61,78 @@ const cardBgClass =
     : 'bg-white dark:bg-gray-800'; // Fundo padrão
 
   return (
-<div 
-   className={`p-4 rounded-xl shadow-lg border-l-4 
-             transform hover:-translate-y-1 hover:shadow-2xl 
-             transition-all duration-300 ease-out 
-             ${cardBgClass} `} // ✅ Agora ${cardBgClass} é a única fonte da cor de fundo
-  style={{ borderColor: cor }}
->
-      <div className="flex-1">
-        <div className="flex justify-between items-start">
+    <div 
+      className={`bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-blue-100 group animate-fade-in`}
+    >
+      {/* Barra lateral de cor */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1.5" 
+        style={{ backgroundColor: cor }}
+      ></div>
+
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: cor }}>
+            {isRendaVariavel ? <ShoppingCart size={24} /> : <BadgeDollarSign size={24} />}
+          </div>
           <div>
-            <h3 className="font-bold text-lg">{ativo.nome}</h3>
-            <span className={`text-xs px-2 py-1 rounded capitalize font-medium
-  ${ativo.tipo === 'rendaFixa' ? 'bg-gray-100 text-gray-700' :
-    ativo.subtipo === 'acao' ? 'bg-blue-100 text-blue-800' :
-    ativo.subtipo === 'fii' ? 'bg-purple-100 text-purple-800' :
-    'bg-yellow-100 text-yellow-800'}`}>
-  {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' :
-    ativo.subtipo === 'acao' ? 'Ação' :
-    ativo.subtipo === 'fii' ? 'Fundo Imobiliário' : 'Criptomoeda'}
-</span>
-          </div>
-          <div className="text-right">
-            <p className="font-medium">{formatCurrency(ativo.valorAtual)}</p>
-            <p className="text-sm text-gray-500">{formatDate(ativo.dataInvestimento)}</p>
+            <h3 className="font-bold text-slate-800 text-lg leading-tight">{ativo.nome}</h3>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">
+              {ativo.tipo === 'rendaFixa' ? 'Renda Fixa' :
+               ativo.subtipo === 'acao' ? 'Ação' :
+               ativo.subtipo === 'fii' ? 'Fundo Imobiliário' : 'Criptomoeda'}
+            </p>
           </div>
         </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div>Investido:</div>
-          <div className="font-medium">{formatCurrency(ativo.valorInvestido)}</div>
-
-          {ativo.tipo === 'rendaFixa' && (
-            <>
-<div>Rendimento:</div>
-<div className="text-sm font-semibold text-green-700 bg-green-100 rounded px-2 py-1">
-  {formatCurrency(ativo.valorAtual - ativo.valorInvestido)} (▲ {(100 * (ativo.valorAtual - ativo.valorInvestido) / ativo.valorInvestido).toFixed(2)}%)
-</div>
-
-
-              <div>Tipo de Rendimento:</div>
-              <div className="capitalize">{ativo.categoriaFixa}</div>
-
-              {/* Prefixada */}
-              {ativo.categoriaFixa === 'prefixada' && (
-                <>
-                  <div>Taxa Prefixada (a.a):</div>
-                  <div>{(ativo.parametrosFixa.taxaPrefixada ?? 0).toFixed(2)}%</div>
-                </>
-              )}
-
-              {/* Pós-fixada */}
-              {ativo.categoriaFixa === 'posFixada' && (
-                <>
-                  {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
-                    <>
-                      <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}%  CDI</div>
-                    </>
-                  )}
-                  {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
-                    <>
-                      <div>Percentual:</div>
-                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}% SELIC</div>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Híbrida */}
-              {ativo.categoriaFixa === 'hibrida' && (
-                <>
-                  {/* Taxa Prefixada (sempre aparece) */}
-                  <div>Taxa Prefixada:</div>
-                  <div>{(ativo.parametrosFixa.taxaPrefixada ?? 0).toFixed(2)}%</div>
-
-                  {/* 
-                    Verifica se existe PELO MENOS UM percentual para mostrar o título "Percentual:" 
-                    Isto evita que o título apareça sozinho.
-                  */}
-                  {((ativo.parametrosFixa.ipca ?? 0) > 0 || 
-                    (ativo.parametrosFixa.percentualCDI ?? 0) > 0 || 
-                    (ativo.parametrosFixa.percentualSELIC ?? 0) > 0) && (
-                    <div>Percentual:</div>
-                  )}
-
-                  {/* 
-                    Container vazio para o grid alinhar corretamente. 
-                    Só é necessário se houver pelo menos um percentual.
-                  */}
-                  {((ativo.parametrosFixa.ipca ?? 0) > 0 || 
-                    (ativo.parametrosFixa.percentualCDI ?? 0) > 0 || 
-                    (ativo.parametrosFixa.percentualSELIC ?? 0) > 0) && (
-                    <div></div>
-                  )}
-
-                  {/* Mostra o IPCA apenas se for maior que zero */}
-                  {(ativo.parametrosFixa.ipca ?? 0) > 0 && (
-                    <>
-                      <div></div> {/* Coluna da esquerda vazia para alinhar */}
-                      <div>{(ativo.parametrosFixa.ipca ?? 0).toFixed(2)}% IPCA</div>
-                    </>
-                  )}
-
-                  {/* Mostra o CDI apenas se for maior que zero */}
-                  {(ativo.parametrosFixa.percentualCDI ?? 0) > 0 && (
-                    <>
-                      <div></div> {/* Coluna da esquerda vazia para alinhar */}
-                      <div>{(ativo.parametrosFixa.percentualCDI ?? 0).toFixed(2)}% CDI</div>
-                    </>
-                  )}
-
-                  {/* Mostra o SELIC apenas se for maior que zero */}
-                  {(ativo.parametrosFixa.percentualSELIC ?? 0) > 0 && (
-                    <>
-                      <div></div> {/* Coluna da esquerda vazia para alinhar */}
-                      <div>{(ativo.parametrosFixa.percentualSELIC ?? 0).toFixed(2)}% SELIC</div>
-                    </>
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-          {/* Renda Variável */}
-          {isRendaVariavel && (
-            <>
-              <div>Quantidade:</div>
-              <div>{(ativo as RendaVariavelAtivo).quantidade.toFixed(8)}</div>
-
-              <div>Preço médio:</div>
-              <div>{formatCurrency(precoMedio)}</div>
-
-<div>Rendimento:</div>
-<div
-  className={`
-    text-sm font-semibold rounded px-2 py-1
-    ${rendimentoTotal >= 0
-      ? 'text-green-700 bg-green-100'
-      : 'text-red-700 bg-red-100'}
-  `}
->
-  {formatCurrency(rendimentoTotal)} ({rendimentoTotal >= 0 ? '▲' : '▼'} {Math.abs(rendimentoPercentual).toFixed(2)}%)
-</div>
-            </>
-          )}
-        </div>
-
-        {isRendaVariavel && (ativo as RendaVariavelAtivo).compras?.length > 1 && (
-          <div className="mt-3">
-            <h4 className="font-semibold text-sm">Histórico de Compras:</h4>
-            <ul className="list-disc list-inside text-xs text-gray-600">
-              {(ativo as RendaVariavelAtivo).compras.map((compra, index) => (
-                <li key={index}>
-                  {formatCurrency(compra.valor)} - {formatDate(compra.data)}
-                </li>
-              ))}
-            </ul>
+        <div className="text-right">
+          <p className="text-xl font-bold text-slate-900 leading-tight">
+            {formatCurrency(isRendaVariavel ? (ativo as RendaVariavelAtivo).valorAtual * (ativo as RendaVariavelAtivo).quantidade : ativo.valorAtual)}
+          </p>
+          <div className={`flex items-center justify-end gap-0.5 text-xs font-bold ${rendimentoCard >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {rendimentoCard >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+            {Math.abs(rendimentoPercentual).toFixed(2)}%
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="flex justify-between mt-auto pt-4">
-        <Button onClick={() => onSell(ativo.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
-          {ativo.tipo === 'rendaFixa'
-            ? <><BadgeDollarSign className="w-5 h-4.5 inline-block mr-1" /> Resgatar</>
-            : <><ShoppingCart className="w-5 h-4.5 inline-block mr-1" /> Vender</>}
-        </Button>
+      <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-8 text-sm">
+        <div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Quantidade</p>
+          <p className="font-bold text-slate-700">{isRendaVariavel ? (ativo as RendaVariavelAtivo).quantidade.toFixed(4) : '1.0000'}</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Preço Médio</p>
+          <p className="font-bold text-slate-700">{formatCurrency(precoMedio || ativo.valorInvestido)}</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Investido</p>
+          <p className="font-bold text-slate-700">{formatCurrency(ativo.valorInvestido)}</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Resultado</p>
+          <p className={`font-bold ${rendimentoCard >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {rendimentoCard >= 0 ? '+' : ''}{formatCurrency(rendimentoCard)}
+          </p>
+        </div>
+      </div>
 
-        {onInformarDividendo && ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii' && (
-          <Button
-            onClick={onInformarDividendo} 
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+      <div className="mt-auto pt-4 border-t border-slate-50 flex gap-2">
+        <button 
+          onClick={() => onSell(ativo.id)}
+          className="flex-1 bg-slate-50 hover:bg-slate-100 text-blue-600 font-bold py-3 rounded-2xl transition-colors flex items-center justify-center gap-2 group/btn"
+        >
+          <ShoppingCart size={18} className="group-hover/btn:scale-110 transition-transform" />
+          <span>{ativo.tipo === 'rendaFixa' ? 'Resgatar' : 'Vender'}</span>
+        </button>
+
+        {onInformarDividendo && (
+          <button 
+            onClick={onInformarDividendo}
+            className="p-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-2xl transition-colors"
+            title="Informar Dividendo"
           >
-            <HandCoins className="w-5 h-4.5 inline-block mr-1" /> Informar Dividendo
-          </Button>
+            <HandCoins size={20} />
+          </button>
         )}
       </div>
     </div>

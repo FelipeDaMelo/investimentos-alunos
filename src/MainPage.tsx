@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { db } from './firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from './firebaseConfig';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, deleteDoc, runTransaction, query, collection, orderBy, getDocs } from 'firebase/firestore';
 import { deleteObject } from 'firebase/storage';
 import { mesEncerrado } from './utils/mesEncerrado';
 import { motion } from 'framer-motion';
@@ -35,7 +35,7 @@ import useAtualizarAtivos from './hooks/useAtualizarAtivos';
 import { atualizarAtivos } from './utils/atualizarAtivos';
 import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from './hooks/useAtualizarAtivos';
 import FotoGrupoUploader from './components/FotoGrupoUploader';
-import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download, LogOut, Trophy } from 'lucide-react';
+import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download, LogOut, Trophy, TrendingUp, TrendingDown, ChevronRight, Users } from 'lucide-react';
 import { Link } from 'react-router-dom'; // ✅ 1. Importe o Link
 import { verificarImpostoMensal } from './hooks/verificarImpostoMensal';
 import { ResumoIR } from './components/ResumoIR';
@@ -44,9 +44,22 @@ import { calcularSaldoVariavel, calcularSaldoFixa } from './utils/ativoHelpers';
 import { RegistroHistorico } from './hooks/RegistroHistorico';
 import ExcluirGrupoModal from './components/ExcluirGrupoModal';
 import { verificarDividendosPendentes } from './utils/verificarDividendos';
+import Header from './components/Header';
+import SummaryCards from './components/SummaryCards';
+import Sidebar from './components/Sidebar';
+import AllocationCharts from './components/AllocationCharts';
 import InformarDividendosPendentesModal, { PendenciaDividendo, DividendoPreenchido } from './components/InformarDividendosPendentesModal';
-Chart.register(zoomPlugin);
-ChartJS.register(CategoryScale, LinearScale, LogarithmicScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  LogarithmicScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  zoomPlugin
+);
 
 const CORES_UNICAS = [
   '#2E86AB', '#F18F01', '#73BA9B', '#D95D39', '#587B7F',
@@ -62,7 +75,10 @@ interface MainPageProps {
   variavel: number;
   nomeGrupo: string;
   senha: string;
+  fotoGrupo: string | null;
+  setFotoGrupo: (url: string | null) => void;
   onLogout: () => void;
+  onUploadConfirmado: (file: File, senhaDigitada: string) => Promise<void>;
 }
 
 const formatCurrency = (value: number) => {
@@ -70,7 +86,17 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
-export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGrupo, onLogout }: Omit<MainPageProps, 'senha'>) {
+export default function MainPage({
+  login,
+  valorInvestido,
+  fixo,
+  variavel,
+  nomeGrupo,
+  fotoGrupo,
+  setFotoGrupo,
+  onLogout,
+  onUploadConfirmado
+}: Omit<MainPageProps, 'senha'>) {
   const [ativos, setAtivos] = useState<Ativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [valorFixaDisponivel, setValorFixaDisponivel] = useState(0);
@@ -88,76 +114,59 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
   const [showDividendosPendentesModal, setShowDividendosPendentesModal] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
   const [showAtualizarModal, setShowAtualizarModal] = useState(false);
-  const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
   const [showTransferencia, setShowTransferencia] = useState(false);
   const [escalaY, setEscalaY] = useState<'linear' | 'logarithmic'>('linear');
   const [resumosIR, setResumosIR] = useState<ResumoIR[] | null>(null);
-  const [mostrarModalIR, setMostrarModalIR] = useState(false);  
+  const [mostrarModalIR, setMostrarModalIR] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [totalCotas, setTotalCotas] = useState(0);
   const [valorCotaAtual, setValorCotaAtual] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ ADICIONE ESTA LINHA
- 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [valorTotalOntem, setValorTotalOntem] = useState(0);
+  const [meusRankings, setMeusRankings] = useState<{ nome: string, rank: number, total: number, id: string }[]>([]);
+  const [rankingData, setRankingData] = useState<{ nome: string, pontos: number, patrimonio?: number, foto?: string, rank?: number }[]>([]);
 
-  // A função que faz a verificação e o upload.
-  const handleUploadConfirmado = async (file: File, senhaDigitada: string) => {
-
-      // --- INÍCIO DOS LOGS DE DEPURAÇÃO ---
-  const auth = getAuth();
-  const currentUser = auth.currentUser;
-
-  console.log("--- VERIFICAÇÃO DE AUTH ---");
-  if (currentUser) {
-    console.log("STATUS: Usuário autenticado encontrado no cliente.");
-    console.log("UID do Usuário:", currentUser.uid);
-  } else {
-    console.error("STATUS: ERRO CRÍTICO! auth.currentUser é nulo.");
-    alert("Sua sessão parece ter expirado. Por favor, faça o login novamente para completar esta ação.");
-    return; // Para a execução imediatamente
-  }
-  console.log("--------------------------");
-  // --- FIM DOS LOGS DE DEPURAÇÃO ---
-  
-    // 1. Verifica a senha
-    if (senhaDigitada !== senhaSalva) {
-      alert('Senha incorreta!');
-      // Lança um erro para o componente filho saber que falhou.
-      throw new Error("Senha incorreta");
-    }
- console.log("Tentando fazer upload para o login:", login);
-    // 2. Se a senha estiver correta, faz o upload.
-    try {
-      const storageRef = ref(storage, `fotosGrupos/${login}-${new Date().getTime()}.jpg`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      await updateDoc(doc(db, 'usuarios', login), { fotoGrupo: url });
-      setFotoGrupo(url); // Atualiza a UI imediatamente
-} catch (error: any) {
-  // Loga o objeto de erro completo para podermos inspecioná-lo.
-  console.error("### ERRO DETALHADO DO STORAGE ###", error); 
-  
-  let mensagem = 'Erro ao enviar imagem. Verifique o console para mais detalhes.';
-  
-  // O Firebase Storage retorna erros com uma propriedade 'code'.
-  if (error.code) {
-    switch (error.code) {
-      case 'storage/unauthorized':
-        mensagem = 'Erro de permissão. Verifique as regras de segurança do Storage.';
-        break;
-      case 'storage/invalid-argument':
-         mensagem = 'Erro: Os dados enviados para o upload são inválidos.';
-         break;
-      default:
-        mensagem = `Erro desconhecido do Storage: ${error.code}`;
-    }
-  }
-  
-  alert(mensagem);
-  throw error;
-}
+  const openModal = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    setShowWizard(false);
+    setShowVendaModal(false);
+    setShowDepositar(false);
+    setMostrarModalIR(false);
+    setShowDeleteModal(false);
+    setShowTransferencia(false);
+    setShowHistorico(false);
+    setShowDividendosPendentesModal(false);
+    setShowAtualizarModal(false);
+    setter(true);
   };
 
   const chartRef = useRef<Chart<'line'> | null>(null);
+
+  const isAnyModalOpen = showWizard || showVendaModal || showDepositar || showHistorico ||
+    showDividendosPendentesModal || showAtualizarModal ||
+    showTransferencia || mostrarModalIR || showDeleteModal;
+
+  const getActiveModal = () => {
+    if (showWizard) return 'wizard';
+    if (showDepositar) return 'depositar';
+    if (showTransferencia) return 'transferir';
+    if (showHistorico) return 'historico';
+    if (mostrarModalIR) return 'ir';
+    if (showAtualizarModal) return 'atualizar';
+    if (showDeleteModal) return 'delete';
+    return null;
+  };
+
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto'; // Or '' to remove the inline style
+    }
+
+    return () => {
+      document.body.style.overflow = 'auto'; // Reset on unmount
+    };
+  }, [isAnyModalOpen]);
 
   useEffect(() => {
     const carregarDadosIniciais = async () => {
@@ -168,7 +177,7 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setFotoGrupo(data?.fotoGrupo || null);
+          // setFotoGrupo(data?.fotoGrupo || null); // Removido: agora vem via props
           setAtivos(data?.ativos || []);
           setHistorico((data?.historico || []) as RegistroHistorico[]);
           setSenhaSalva(data?.senha || '');
@@ -177,6 +186,18 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
             const datasOrdenadas = Object.keys(data.valorCotaPorDia).sort();
             const ultimaData = datasOrdenadas[datasOrdenadas.length - 1];
             setValorCotaAtual(data.valorCotaPorDia[ultimaData] || 1);
+          }
+          if (data?.patrimonioPorDia) {
+            const datasOrdenadas = Object.keys(data.patrimonioPorDia).sort();
+            // Se hoje já foi salvo, pegamos a penúltima. Se não, pegamos a última.
+            const hoje = new Date().toISOString().split('T')[0];
+            const ultimaData = datasOrdenadas[datasOrdenadas.length - 1];
+            if (ultimaData === hoje && datasOrdenadas.length > 1) {
+              const penultimaData = datasOrdenadas[datasOrdenadas.length - 2];
+              setValorTotalOntem(data.patrimonioPorDia[penultimaData] || 0);
+            } else {
+              setValorTotalOntem(data.patrimonioPorDia[ultimaData] || 0);
+            }
           }
         }
       } catch (err) {
@@ -187,6 +208,80 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
       }
     };
     carregarDadosIniciais();
+
+    const fetchMiniRanking = async () => {
+      try {
+        // 1. Busca todos os rankings
+        const rankingsQuery = query(collection(db, "rankings"));
+        const rankingsSnapshot = await getDocs(rankingsQuery);
+
+        const rankingsParticipando: any[] = [];
+        rankingsSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.participantes && data.participantes.includes(login)) {
+            rankingsParticipando.push({ id: doc.id, ...data });
+          }
+        });
+
+        // 2. Para cada ranking que participo, calcula minha posição
+        const resumosRankings: any[] = [];
+        const usersSnapshot = await getDocs(collection(db, "usuarios"));
+        const allUsersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        for (const r of rankingsParticipando) {
+          const participantes = allUsersData.filter(u => r.participantes.includes(u.id));
+          participantes.sort((a: any, b: any) => (b.rentabilidade || 0) - (a.rentabilidade || 0));
+          const myIdx = participantes.findIndex(u => u.id === login);
+          if (myIdx !== -1) {
+            resumosRankings.push({
+              id: r.id,
+              nome: r.nome,
+              rank: myIdx + 1,
+              total: participantes.length
+            });
+          }
+        }
+        setMeusRankings(resumosRankings);
+
+        // 3. Leaderboard padrão (do primeiro ranking ou global)
+        let leaderboardData: any[] = [];
+        if (rankingsParticipando.length > 0) {
+          const r = rankingsParticipando[0];
+          const participantesMapped = allUsersData
+            .filter(u => r.participantes.includes(u.id))
+            .map((u: any) => ({
+              nome: u.id,
+              pontos: u.rentabilidade || 0,
+              patrimonio: u.patrimonioTotal || 0,
+              foto: u.fotoGrupo
+            }));
+          participantesMapped.sort((a: any, b: any) => b.pontos - a.pontos);
+
+          const top5 = participantesMapped.slice(0, 5);
+          const userIdx = participantesMapped.findIndex(u => u.nome === login);
+          if (userIdx !== -1 && userIdx >= 5) {
+            leaderboardData = [...top5, { ...participantesMapped[userIdx], rank: userIdx + 1 }];
+          } else {
+            leaderboardData = top5.map((u, i) => ({ ...u, rank: i + 1 }));
+          }
+        } else {
+          // Fallback global
+          const global = [...allUsersData].sort((a: any, b: any) => (b.rentabilidade || 0) - (a.rentabilidade || 0));
+          leaderboardData = global.slice(0, 5).map((u: any, i) => ({
+            nome: u.id,
+            pontos: u.rentabilidade || 0,
+            patrimonio: u.patrimonioTotal || 0,
+            foto: u.fotoGrupo,
+            rank: i + 1
+          }));
+        }
+        setRankingData(leaderboardData);
+
+      } catch (err) {
+        console.error("Erro ao carregar mini-ranking:", err);
+      }
+    };
+    fetchMiniRanking();
   }, [login]);
 
   useEffect(() => {
@@ -194,6 +289,32 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     const saldoVariavelCalculado = calcularSaldoVariavel(historico);
     setValorFixaDisponivel(saldoFixaCalculado);
     setValorVariavelDisponivel(saldoVariavelCalculado);
+  }, [historico]);
+
+  // Lógica para capturar ações vindo de outras páginas via Sidebar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+
+    if (action) {
+      if (action === 'wizard') openModal(setShowWizard);
+      if (action === 'depositar') openModal(setShowDepositar);
+      if (action === 'transferir') openModal(setShowTransferencia);
+      if (action === 'historico') openModal(setShowHistorico);
+      if (action === 'atualizar') openModal(setShowAtualizarModal);
+      if (action === 'ir') {
+        const triggerIR = async () => {
+          const resumos = await verificarImpostoMensal(historico);
+          setResumosIR(resumos);
+          openModal(setMostrarModalIR);
+        };
+        triggerIR();
+      }
+
+      // Limpa o parâmetro da URL para não reabrir ao atualizar a página
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
   }, [historico]);
 
   useAtualizarAtivos(ativos, (ativosAtualizados) => {
@@ -214,243 +335,284 @@ export default function MainPage({ login, valorInvestido, fixo, variavel, nomeGr
     }
     verificarBloqueio();
   }, [login]);
-  
 
-// ADICIONE estas duas novas funções no lugar das antigas
 
-// 1. Função para VERIFICAR as pendências e ABRIR o modal
-const handleVerificarDividendos = (ativoFII: RendaVariavelAtivo) => {
-  const pendencias = verificarDividendosPendentes(ativoFII, historico);
-  setAtivoDividendo(ativoFII); // Guarda o FII para usarmos o nome e ticker no modal
-  setPendenciasDividendo(pendencias);
-  setShowDividendosPendentesModal(true);
-};
+  // ADICIONE estas duas novas funções no lugar das antigas
 
-// 2. Função para CONFIRMAR e salvar os dividendos informados no modal
-const handleConfirmarDividendos = async (
-  dividendos: DividendoPreenchido[],
-  senhaDigitada: string
-) => {
-  if (senhaDigitada !== senhaSalva) {
-    alert('Senha incorreta!');
-    return;
-  }
-  if (!ativoDividendo) return;
+  // 1. Função para VERIFICAR as pendências e ABRIR o modal
+  const handleVerificarDividendos = (ativoFII: RendaVariavelAtivo) => {
+    const pendencias = verificarDividendosPendentes(ativoFII, historico);
+    setAtivoDividendo(ativoFII); // Guarda o FII para usarmos o nome e ticker no modal
+    setPendenciasDividendo(pendencias);
+    openModal(setShowDividendosPendentesModal);
+  };
 
-  setLoading(true);
-  try {
-    const novosRegistros: RegistroHistorico[] = [];
-    const docRef = doc(db, 'usuarios', login);
-
-    for (const dividendo of dividendos) {
-      const pendenciaOriginal = pendenciasDividendo.find(p => p.mesApuracao === dividendo.mesApuracao);
-      if (!pendenciaOriginal) continue;
-
-      const valorTotal = dividendo.valorPorCota * pendenciaOriginal.quantidadeNaqueleMes;
-
-      const novoRegistro: RegistroHistorico = {
-        tipo: 'dividendo',
-        valor: valorTotal,
-        nome: ativoDividendo.nome,
-        data: new Date().toISOString(),
-        mesApuracao: dividendo.mesApuracao,
-      };
-      
-      novosRegistros.push(novoRegistro);
-      await updateDoc(docRef, { historico: arrayUnion(novoRegistro) });
+  // 2. Função para CONFIRMAR e salvar os dividendos informados no modal
+  const handleConfirmarDividendos = async (
+    dividendos: DividendoPreenchido[],
+    senhaDigitada: string
+  ) => {
+    if (senhaDigitada !== senhaSalva) {
+      alert('Senha incorreta!');
+      return;
     }
+    if (!ativoDividendo) return;
 
-    setHistorico(prev => [...prev, ...novosRegistros]);
-    setShowDividendosPendentesModal(false);
-    alert('Dividendos registrados com sucesso!');
+    setLoading(true);
+    try {
+      const novosRegistros: RegistroHistorico[] = [];
+      const docRef = doc(db, 'usuarios', login);
 
-  } catch (error) {
-    console.error("Erro ao registrar dividendos:", error);
-    alert("Ocorreu um erro ao registrar os dividendos.");
-  } finally {
-    setLoading(false);
-  }
-};
+      for (const dividendo of dividendos) {
+        const pendenciaOriginal = pendenciasDividendo.find(p => p.mesApuracao === dividendo.mesApuracao);
+        if (!pendenciaOriginal) continue;
+
+        const valorTotal = dividendo.valorPorCota * pendenciaOriginal.quantidadeNaqueleMes;
+
+        const novoRegistro: RegistroHistorico = {
+          tipo: 'dividendo',
+          valor: valorTotal,
+          nome: ativoDividendo.nome,
+          data: new Date().toISOString(),
+          mesApuracao: dividendo.mesApuracao,
+        };
+
+        novosRegistros.push(novoRegistro);
+        await updateDoc(docRef, { historico: arrayUnion(novoRegistro) });
+      }
+
+      setHistorico(prev => [...prev, ...novosRegistros]);
+      setShowDividendosPendentesModal(false);
+      alert('Dividendos registrados com sucesso!');
+
+    } catch (error) {
+      console.error("Erro ao registrar dividendos:", error);
+      alert("Ocorreu um erro ao registrar os dividendos.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeposito = async (valor: number, destino: 'fixa' | 'variavel', senhaDigitada: string): Promise<boolean> => {
     if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return false; }
-        const novasCotas = valor / valorCotaAtual;
-    const novoTotalCotas = totalCotas + novasCotas;
-    
-    const novoRegistro: RegistroHistorico = { 
-      tipo: 'deposito', 
-      valor, 
-      destino, 
-      data: new Date().toISOString() 
-    };
 
-    // Atualiza o documento no Firestore com o novo total de cotas e o registro do histórico
-    await updateDoc(doc(db, 'usuarios', login), { 
-      historico: arrayUnion(novoRegistro),
-      totalCotas: novoTotalCotas 
-    });
+    try {
+      await runTransaction(db, async (transaction) => {
+        const docRef = doc(db, 'usuarios', login);
+        const userDoc = await transaction.get(docRef);
 
-    // Atualiza os estados locais
-    setHistorico(prev => [...prev, novoRegistro]);
-    setTotalCotas(novoTotalCotas);
+        if (!userDoc.exists()) throw new Error("Documento não encontrado");
 
-    return true;
+        const data = userDoc.data();
+        const totalCotasLocal = data.totalCotas || 0;
+        const valorCotaAtualLocal = valorCotaAtual; // Usamos o estado local para o valor da cota, ou poderíamos recalcular.
+
+        const novasCotas = valor / valorCotaAtualLocal;
+        const novoTotalCotas = totalCotasLocal + novasCotas;
+
+        const novoRegistro: RegistroHistorico = {
+          tipo: 'deposito',
+          valor,
+          destino,
+          data: new Date().toISOString()
+        };
+
+        transaction.update(docRef, {
+          historico: arrayUnion(novoRegistro),
+          totalCotas: novoTotalCotas
+        });
+
+        // Atualizamos o estado local após o sucesso da transação
+        setTotalCotas(novoTotalCotas);
+        setHistorico(prev => [...prev, novoRegistro]);
+      });
+      return true;
+    } catch (e) {
+      console.error("Erro no depósito:", e);
+      return false;
+    }
   };
 
- const handleAddAtivo = async (novoAtivo: AtivoComSenha, comentario: string) => { 
-  console.log("OBJETO RECEBIDO DO FORMULÁRIO:", novoAtivo);
-  if (novoAtivo.senha !== senhaSalva) {
-    alert('Senha incorreta!');
-    return false;
-  }
-  const { senha: _, ...ativoSemSenha } = novoAtivo;
+  const handleAddAtivo = async (novoAtivo: AtivoComSenha, comentario: string) => {
+    if (novoAtivo.senha !== senhaSalva) {
+      alert('Senha incorreta!');
+      return false;
+    }
+    const { senha: _, ...ativoSemSenha } = novoAtivo;
 
-  try {
-    let novosAtivos: Ativo[];
+    try {
+      await runTransaction(db, async (transaction) => {
+        const docRef = doc(db, 'usuarios', login);
+        const userDoc = await transaction.get(docRef);
+        if (!userDoc.exists()) throw new Error("Usuário não encontrado");
 
-    if (ativoSemSenha.tipo === 'rendaVariavel') {
-      const ativoVariavelNovo = ativoSemSenha as RendaVariavelAtivo;
-      const existente = ativos.find(a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === ativoVariavelNovo.tickerFormatado) as RendaVariavelAtivo | undefined;
-      
-      if (existente) {
-        const novaQuantidade = existente.quantidade + ativoVariavelNovo.quantidade;
-        const novoInvestimento = existente.valorInvestido + ativoVariavelNovo.valorInvestido;
-        const novoPrecoMedio = novoInvestimento / novaQuantidade;
-        
-        // --- INÍCIO DA CORREÇÃO ---
-        const precoDeMercadoAtual = ativoVariavelNovo.valorAtual; // Pega o preço de mercado da nova compra
+        const data = userDoc.data();
+        const ativosAtuais = (data.ativos || []) as Ativo[];
+        let novosAtivos: Ativo[];
 
-        const atualizado: RendaVariavelAtivo = {
-          ...existente,
-          quantidade: novaQuantidade,
-          valorInvestido: novoInvestimento,
-          precoMedio: novoPrecoMedio,
-          // ✅ CORRIGIDO: Usa o preço de mercado atual, não o preço médio.
-          valorAtual: precoDeMercadoAtual, 
-          patrimonioPorDia: { 
-            ...existente.patrimonioPorDia, 
-            // ✅ CORRIGIDO: Calcula o patrimônio com base no preço de mercado.
-            [new Date().toISOString().split('T')[0]]: novaQuantidade * precoDeMercadoAtual 
+        if (ativoSemSenha.tipo === 'rendaVariavel') {
+          const ativoVariavelNovo = ativoSemSenha as RendaVariavelAtivo;
+          const existente = ativosAtuais.find(a => a.tipo === 'rendaVariavel' && (a as RendaVariavelAtivo).tickerFormatado === ativoVariavelNovo.tickerFormatado) as RendaVariavelAtivo | undefined;
+
+          if (existente) {
+            const novaQuantidade = existente.quantidade + ativoVariavelNovo.quantidade;
+            const novoInvestimento = existente.valorInvestido + ativoVariavelNovo.valorInvestido;
+            const novoPrecoMedio = novoInvestimento / novaQuantidade;
+            const precoDeMercadoAtual = ativoVariavelNovo.valorAtual;
+
+            const atualizado: RendaVariavelAtivo = {
+              ...existente,
+              quantidade: novaQuantidade,
+              valorInvestido: novoInvestimento,
+              precoMedio: novoPrecoMedio,
+              valorAtual: precoDeMercadoAtual,
+              patrimonioPorDia: {
+                ...existente.patrimonioPorDia,
+                [new Date().toISOString().split('T')[0]]: novaQuantidade * precoDeMercadoAtual
+              }
+            };
+            novosAtivos = ativosAtuais.map(a => a.id === existente.id ? atualizado : a);
+          } else {
+            novosAtivos = [...ativosAtuais, ativoSemSenha as Ativo];
           }
+        } else {
+          novosAtivos = [...ativosAtuais, ativoSemSenha as Ativo];
+        }
+
+        const novoRegistro: RegistroHistorico = {
+          tipo: 'compra',
+          valor: ativoSemSenha.valorInvestido,
+          nome: ativoSemSenha.nome,
+          categoria: ativoSemSenha.tipo,
+          data: new Date().toISOString(),
+          comentario: comentario,
         };
-        novosAtivos = ativos.map(a => a.id === existente.id ? atualizado : a);
-      } else {
-        novosAtivos = [...ativos, ativoSemSenha as Ativo];
-      }
-    } else {
-      novosAtivos = [...ativos, ativoSemSenha as Ativo];
+
+        if (ativoSemSenha.tipo === 'rendaVariavel') {
+          const ativoVariavel = ativoSemSenha as RendaVariavelAtivo;
+          novoRegistro.subtipo = ativoVariavel.subtipo;
+          novoRegistro.quantidade = ativoVariavel.quantidade;
+        }
+
+        transaction.update(docRef, {
+          ativos: novosAtivos,
+          historico: arrayUnion(novoRegistro)
+        });
+
+        // Atualiza estado local após sucesso
+        setAtivos(novosAtivos);
+        setHistorico(prev => [...prev, novoRegistro]);
+      });
+      return true;
+    } catch (err) {
+      setError('Erro ao adicionar ativo');
+      console.error(err);
+      return false;
     }
-
-    setAtivos(novosAtivos);
-
-    // --- INÍCIO DA CORREÇÃO ---
-    
-    // Cria o objeto base para o registro do histórico
-    const novoRegistro: Partial<RegistroHistorico> = {
-      tipo: 'compra',
-      valor: ativoSemSenha.valorInvestido,
-      nome: ativoSemSenha.nome,
-      categoria: ativoSemSenha.tipo,
-      data: new Date().toISOString(),
-      comentario: comentario, // ADICIONE ESTA LINHA
-    };
-    
-    // Se for Renda Variável, adicionamos os campos específicos
-    if (ativoSemSenha.tipo === 'rendaVariavel') {
-      // Usamos 'as RendaVariavelAtivo' para dizer ao TypeScript:
-      // "Neste bloco, pode ter certeza que é um ativo de Renda Variável".
-      const ativoVariavel = ativoSemSenha as RendaVariavelAtivo;
-      
-      novoRegistro.subtipo = ativoVariavel.subtipo;
-      novoRegistro.quantidade = ativoVariavel.quantidade;
-    }
-
-    // --- FIM DA CORREÇÃO ---
-    
-    console.log("OBJETO 'novoRegistro' CRIADO PARA O HISTÓRICO:", novoRegistro);
-
-    await updateDoc(doc(db, 'usuarios', login), {
-      ativos: novosAtivos,
-      historico: arrayUnion(novoRegistro as RegistroHistorico)
-    });
-
-    setHistorico(prev => [...prev, novoRegistro as RegistroHistorico]);
-    return true;
-
-  } catch (err) {
-    setError('Erro ao adicionar ativo');
-    console.error(err);
-    return false;
-  }
-};
+  };
 
   const handleSellAtivo = (id: string) => {
     const ativo = ativos.find(a => a.id === id);
     if (!ativo) return;
     setAtivoSelecionado(ativo);
-    setShowVendaModal(true);
+    openModal(setShowVendaModal);
   };
 
-const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, comentario: string) => {
+  const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, comentario: string) => {
     if (isSubmitting) return;
     if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
     if (!ativoSelecionado) return;
-    setIsSubmitting(true); // <<<<<< ATIVA O "TRAVÃO"
-    
-    const docRef = doc(db, 'usuarios', login);
+
+    setIsSubmitting(true);
+
     try {
-    if (ativoSelecionado.tipo === 'rendaFixa') {
-      const { calcularImpostoRenda } = await import('./hooks/calcularImpostoRenda');
-      const resultadoIR = calcularImpostoRenda(ativoSelecionado.dataInvestimento, ativoSelecionado.valorInvestido, ativoSelecionado.valorAtual);
+      await runTransaction(db, async (transaction) => {
+        const docRef = doc(db, 'usuarios', login);
+        const userDoc = await transaction.get(docRef);
+        if (!userDoc.exists()) throw new Error("Usuário não encontrado");
 
-      const registroVenda: RegistroHistorico = {
-        tipo: 'venda', valor: resultadoIR.valorLiquido, valorBruto: ativoSelecionado.valorAtual, valorLiquido: resultadoIR.valorLiquido,
-        imposto: resultadoIR.imposto, diasAplicado: resultadoIR.diasAplicado, nome: ativoSelecionado.nome, categoria: 'rendaFixa', data: new Date().toISOString(), comentario: comentario,
-      };
-      const ativosRestantes = ativos.filter(a => a.id !== ativoSelecionado.id);
-      setAtivos(ativosRestantes);
-      
-      await updateDoc(docRef, { ativos: ativosRestantes, historico: arrayUnion(registroVenda) });
-      setHistorico(prev => [...prev, registroVenda]);
+        const data = userDoc.data();
+        const ativosAtuais = (data.ativos || []) as Ativo[];
 
-    } else { // Renda Variável
-      const valorVenda = quantidadeVendida * ativoSelecionado.valorAtual;
-      const novoRegistroVenda: RegistroHistorico = {
-        tipo: 'venda', valor: valorVenda, nome: ativoSelecionado.nome, categoria: 'rendaVariavel', subtipo: ativoSelecionado.subtipo, quantidade: quantidadeVendida, data: new Date().toISOString(), comentario: comentario,
-      };
-      const novaQuantidade = ativoSelecionado.quantidade - quantidadeVendida;
-      
-      if (Math.abs(novaQuantidade) < 1e-8) {
-        const ativosRestantes = ativos.filter(a => a.id !== ativoSelecionado.id);
-        setAtivos(ativosRestantes);
-        await updateDoc(docRef, { ativos: ativosRestantes, historico: arrayUnion(novoRegistroVenda) });
-      } else {
-// Quando uma venda acontece, atualize o ativo da seguinte forma:
-       const ativosAtualizados = ativos.map(a => 
-        (a.id === ativoSelecionado.id && a.tipo === 'rendaVariavel') 
-          ? { 
-          ...a, 
-          quantidade: novaQuantidade, // Atualiza a quantidade (isto já estava certo)
-          valorInvestido: novaQuantidade * a.precoMedio // ✅ Adiciona esta linha para corrigir o valor investido
-          } 
-           : a
-                );
-        setAtivos(ativosAtualizados);
-        await updateDoc(docRef, { ativos: ativosAtualizados, historico: arrayUnion(novoRegistroVenda) });
-      }
-      setHistorico(prev => [...prev, novoRegistroVenda]);
-    }
-} catch (error) {
-        console.error("Erro ao confirmar a venda:", error);
-        alert("Ocorreu um erro ao processar a venda. Tente novamente.");
-    
+        // Localiza o ativo real no banco (pode ter mudado desde que abrimos o modal)
+        const ativoNoBanco = ativosAtuais.find(a => a.id === ativoSelecionado.id);
+        if (!ativoNoBanco) throw new Error("Ativo não encontrado no banco de dados.");
+
+        let novosAtivos: Ativo[];
+        let registroVenda: RegistroHistorico;
+
+        if (ativoNoBanco.tipo === 'rendaFixa') {
+          const valorSolicitado = quantidadeVendida; // Amount requested in VendaAtivoModal (R$)
+          const proporcao = valorSolicitado / ativoNoBanco.valorAtual;
+          const valorInvestidoProporcional = ativoNoBanco.valorInvestido * proporcao;
+
+          const { calcularImpostoRenda } = await import('./hooks/calcularImpostoRenda');
+          const resultadoIR = calcularImpostoRenda(ativoNoBanco.dataInvestimento, valorInvestidoProporcional, valorSolicitado);
+
+          registroVenda = {
+            tipo: 'venda', valor: resultadoIR.valorLiquido, valorBruto: valorSolicitado, valorLiquido: resultadoIR.valorLiquido,
+            imposto: resultadoIR.imposto, diasAplicado: resultadoIR.diasAplicado, nome: ativoNoBanco.nome, categoria: 'rendaFixa', data: new Date().toISOString(), comentario: comentario,
+          };
+
+          if (proporcao >= 0.999999) {
+            novosAtivos = ativosAtuais.filter(a => a.id !== ativoNoBanco.id);
+          } else {
+            const restoValorInvestido = ativoNoBanco.valorInvestido - valorInvestidoProporcional;
+            const restoValorAtual = ativoNoBanco.valorAtual - valorSolicitado;
+            const hoje = new Date().toISOString().split('T')[0];
+            const patrimonioAtualizado = { ...ativoNoBanco.patrimonioPorDia, [hoje]: restoValorAtual };
+
+            novosAtivos = ativosAtuais.map(a => 
+              a.id === ativoNoBanco.id 
+                ? { ...a, valorInvestido: restoValorInvestido, valorAtual: restoValorAtual, patrimonioPorDia: patrimonioAtualizado } 
+                : a
+            );
+          }
+
+        } else { // Renda Variável
+          const ativoRV = ativoNoBanco as RendaVariavelAtivo;
+          if (quantidadeVendida > ativoRV.quantidade) throw new Error("Quantidade insuficiente.");
+
+          const valorVenda = quantidadeVendida * ativoRV.valorAtual;
+          registroVenda = {
+            tipo: 'venda', valor: valorVenda, nome: ativoRV.nome, categoria: 'rendaVariavel', subtipo: ativoRV.subtipo, quantidade: quantidadeVendida, data: new Date().toISOString(), comentario: comentario,
+          };
+
+          const novaQuantidade = ativoRV.quantidade - quantidadeVendida;
+
+          if (Math.abs(novaQuantidade) < 1e-8) {
+            novosAtivos = ativosAtuais.filter(a => a.id !== ativoRV.id);
+          } else {
+            novosAtivos = ativosAtuais.map(a =>
+              (a.id === ativoRV.id)
+                ? {
+                  ...a,
+                  quantidade: novaQuantidade,
+                  valorInvestido: novaQuantidade * (a as RendaVariavelAtivo).precoMedio
+                }
+                : a
+            );
+          }
+        }
+
+        transaction.update(docRef, {
+          ativos: novosAtivos,
+          historico: arrayUnion(registroVenda)
+        });
+
+        // Atualiza estado local após sucesso
+        setAtivos(novosAtivos);
+        setHistorico(prev => [...prev, registroVenda]);
+      });
+    } catch (error: any) {
+      console.error("Erro ao confirmar a venda:", error);
+      alert(error.message || "Ocorreu um erro ao processar a venda.");
     } finally {
-        // Este bloco é executado SEMPRE, com sucesso ou com erro.
-        setShowVendaModal(false);
-        setAtivoSelecionado(null);
-        setIsSubmitting(false); // <<<<<< LIBERTA O "TRAVÃO"
+      setShowVendaModal(false);
+      setAtivoSelecionado(null);
+      setIsSubmitting(false);
     }
-};
+  };
 
 
   const coresAtivos = useMemo(() => {
@@ -461,7 +623,7 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, 
   const getCorAtivo = (ativoId: string) => coresAtivos[ativoId] || CORES_UNICAS[0];
 
   const allDates = useMemo(() => Array.from(new Set(ativos.flatMap(a => Object.keys(a.patrimonioPorDia)))).sort(), [ativos]);
-  
+
   const chartData = useMemo(() => ({
     labels: allDates.map(date => {
       const [ano, mes, dia] = date.split('-');
@@ -488,15 +650,15 @@ const confirmarVenda = async (quantidadeVendida: number, senhaDigitada: string, 
   }, [chartData]);
 
   const totalAportado = useMemo(() => {
-  // Esta é a forma mais robusta e simples:
-  // Soma o valor de TODAS as transações do tipo 'deposito' encontradas no histórico.
-  // Isso funciona porque o Login.tsx já registra o aporte inicial como 'deposito'.
-  return historico
-    .filter(registro => registro.tipo === 'deposito')
-    .reduce((soma, deposito) => soma + deposito.valor, 0);
-}, [historico]); // Roda sempre que o histórico for atualizado
-  
-const valorTotalAtual = useMemo(() => {
+    // Esta é a forma mais robusta e simples:
+    // Soma o valor de TODAS as transações do tipo 'deposito' encontradas no histórico.
+    // Isso funciona porque o Login.tsx já registra o aporte inicial como 'deposito'.
+    return historico
+      .filter(registro => registro.tipo === 'deposito')
+      .reduce((soma, deposito) => soma + deposito.valor, 0);
+  }, [historico]); // Roda sempre que o histórico for atualizado
+
+  const valorTotalAtual = useMemo(() => {
     const valorAtivos = ativos.reduce((total, ativo) => {
       const dataHoje = new Date().toISOString().split('T')[0];
       let valorDoAtivo = 0;
@@ -507,7 +669,7 @@ const valorTotalAtual = useMemo(() => {
       } else { // Renda Fixa
         valorDoAtivo = ativo.patrimonioPorDia?.[dataHoje] ?? ativo.valorAtual;
       }
-      
+
       // ✅ A CORREÇÃO ESTÁ AQUI: Arredonda o valor de CADA ativo antes de somar ao total
       return total + parseFloat(valorDoAtivo.toFixed(2));
 
@@ -516,30 +678,30 @@ const valorTotalAtual = useMemo(() => {
     // O resto da soma continua igual
     return valorAtivos + valorFixaDisponivel + valorVariavelDisponivel;
 
-}, [ativos, valorFixaDisponivel, valorVariavelDisponivel]);
-  
-const variacaoPercentual = useMemo(() => {
-  // Se não houve aportes, não há variação. Evita divisão por zero.
-  if (totalAportado === 0) {
-    return 0;
-  }
-  
-  // O ganho real é a diferença entre o que a carteira vale agora
-  // e tudo o que foi colocado nela.
-  const ganhoReal = valorTotalAtual - totalAportado;
-  
-  // A rentabilidade é calculada sobre o total aportado.
-  return (ganhoReal / totalAportado) * 100;
-  
-}, [valorTotalAtual, totalAportado]); // Agora depende do valor total e do total aportado
+  }, [ativos, valorFixaDisponivel, valorVariavelDisponivel]);
+
+  const variacaoPercentual = useMemo(() => {
+    // Se não houve aportes, não há variação. Evita divisão por zero.
+    if (totalAportado === 0) {
+      return 0;
+    }
+
+    // O ganho real é a diferença entre o que a carteira vale agora
+    // e tudo o que foi colocado nela.
+    const ganhoReal = valorTotalAtual - totalAportado;
+
+    // A rentabilidade é calculada sobre o total aportado.
+    return (ganhoReal / totalAportado) * 100;
+
+  }, [valorTotalAtual, totalAportado]); // Agora depende do valor total e do total aportado
 
 
- useEffect(() => {
+  useEffect(() => {
     // Só executa se tivermos os dados necessários para o cálculo
     if (valorTotalAtual > 0 && totalCotas > 0 && !loading && login) {
       // 1. Calcula o novo valor da cota
       const novoValorCota = valorTotalAtual / totalCotas;
-      
+
       // 2. Arredonda os valores para salvar no DB
       const valorPatrimonioArredondado = parseFloat(valorTotalAtual.toFixed(2));
       const valorCotaArredondado = parseFloat(novoValorCota.toFixed(6)); // Cotas precisam de mais precisão
@@ -553,350 +715,464 @@ const variacaoPercentual = useMemo(() => {
 
       updateDoc(docRef, {
         [`patrimonioPorDia.${hoje}`]: valorPatrimonioArredondado,
-        [`valorCotaPorDia.${hoje}`]: valorCotaArredondado
+        [`valorCotaPorDia.${hoje}`]: valorCotaArredondado,
+        rentabilidade: variacaoPercentual, // Salva para o ranking global
+        patrimonioTotal: valorPatrimonioArredondado // Salva para o ranking global
       }).catch(err => {
         console.error("Erro ao salvar dados diários de patrimônio e cota:", err);
       });
     }
-  }, [valorTotalAtual, totalCotas, login, loading]);
-
+  }, [valorTotalAtual, totalCotas, login, loading, variacaoPercentual]); // Added variacaoPercentual to dependencies
 
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-{/* ===== INÍCIO DO NOVO CABEÇALHO ===== */}
-<header className="bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-xl shadow-2xl p-6 mb-8 w-full">
-  <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-    
-    {/* Lado Esquerdo: Foto do Grupo */}
-    <div className="flex-shrink-0">
-  <FotoGrupoUploader 
-              login={login} 
-              fotoUrlAtual={fotoGrupo || undefined}
-              onConfirmUpload={handleUploadConfirmado}
-              // PROP ADICIONADA: Passamos a função para abrir o modal de exclusão
-              onTriggerDelete={() => setShowDeleteModal(true)} 
-            />
-    </div>
-
-    {/* Centro: Título e Subtítulo */}
-    <div className="text-center sm:text-left flex-grow">
-      <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white drop-shadow-md">
-        {nomeGrupo}
-      </h1>
-      <p className="text-blue-200 text-sm md:text-base mt-1">
-        Painel de Controle de Investimentos
-      </p>
-    </div>
-
-    {/* Lado Direito (Opcional): Um resumo ou status */}
-    <div className="hidden md:flex flex-col items-end bg-black bg-opacity-20 p-3 rounded-lg">
-      <p className="text-xs text-blue-300 font-semibold uppercase tracking-wider">Patrimônio Total</p>
-      <p className="text-2xl font-bold text-white">
-        {formatCurrency(valorTotalAtual)}
-      </p>
-    </div>
- <Button 
-              onClick={onLogout} 
-              variant="danger" 
-              className="!py-2 !px-3" // Usando ! para sobrescrever o padding padrão e deixar o botão menor
-              title="Sair e voltar para a tela de login"
-            >
-              <LogOut className="w-5 h-5" />
-            </Button>
-  </div>
-</header>
-{/* ===== FIM DO NOVO CABEÇALHO ===== */}
-
-      {error && <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4">{error}</div>}
-      {loading && <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-xl mb-4">Carregando...</div>}
-
-      <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-lg mb-6 text-left min-h-[220px]">
-        <h2 className="text-xl font-semibold mb-4">Saldo Disponível para Novos Investimentos</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 shadow-sm w-full sm:w-auto">
-            <span className="text-gray-700 text-xs font-semibold uppercase tracking-wide mb-1 block">Renda Fixa</span>
-            <span className="text-lg font-bold text-gray-800">{formatCurrency(valorFixaDisponivel)}</span>
-          </div>
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 shadow-sm w-full sm:w-auto">
-            <span className="text-gray-700 text-xs font-semibold uppercase tracking-wide mb-1 block">Renda Variável / Criptomoedas</span>
-            <span className="text-lg font-bold text-gray-800">{formatCurrency(valorVariavelDisponivel)}</span>
-          </div>
-          <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm w-full sm:w-auto">
-            <div className="flex items-center gap-1 text-blue-800 font-semibold uppercase tracking-wide text-xs mb-1">
-              <Wallet className="w-5 h-4.5" /><span>Valor total da carteira</span>
-            </div>
-            <div className="text-gray-900 text-lg font-bold">{formatCurrency(valorTotalAtual)}</div>
-            <div className={`text-sm font-semibold flex items-center ${variacaoPercentual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {variacaoPercentual >= 0 ? <><CircleArrowUp className="w-4 h-4 mr-1" />{Math.abs(variacaoPercentual).toFixed(2)}%</> : <><CircleArrowDown className="w-4 h-4 mr-1" />{Math.abs(variacaoPercentual).toFixed(2)}%</>}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:justify-center sm:items-center gap-2 sm:container mx-auto mt-4">
-          <Button onClick={() => setShowDepositar(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow w-full sm:w-auto"><Receipt className="w-5 h-4.5 inline-block mr-1" /> Depositar</Button>
-          <Button onClick={() => setShowTransferencia(true)} className="bg-indigo-800 hover:bg-indigo-900 text-white shadow w-full sm:w-auto"><ArrowRightLeft className="w-5 h-4.5 inline-block mr-1" /> Transferir</Button>
-          <Button onClick={() => setShowHistorico(true)} className="bg-violet-900 hover:bg-violet-950 text-white shadow w-full sm:w-auto"><ReceiptText className="w-5 h-4.5 inline-block mr-1" /> Ver Extrato</Button>
-        </div>
-      </div>
-
-      <div className="flex justify-center gap-4 mb-6 flex-wrap">
-        <Button onClick={() => setShowWizard(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow"><SquarePlus className="w-5 h-4.5 inline-block mr-1" /> Adicionar Novo Ativo</Button>
-        <Button onClick={() => setShowAtualizarModal(true)} disabled={bloqueado} className="bg-green-600 hover:bg-green-700 text-white shadow"><Calculator className="w-5 h-4.5 inline-block mr-1" /> Atualizar Valores de Investimentos</Button>
-        <Button onClick={async () => {
-          console.log('📘 Histórico enviado para verificarImpostoMensal:', historico);
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar
+        login={login}
+        fotoGrupo={fotoGrupo}
+        onLogout={onLogout}
+        onUploadConfirmado={onUploadConfirmado}
+        onTriggerDelete={() => openModal(setShowDeleteModal)}
+        onShowWizard={() => openModal(setShowWizard)}
+        onShowDepositar={() => openModal(setShowDepositar)}
+        onShowTransferencia={() => openModal(setShowTransferencia)}
+        onShowHistorico={() => openModal(setShowHistorico)}
+        onShowAtualizar={() => openModal(setShowAtualizarModal)}
+        onVerificarIR={async () => {
           const resumos: ResumoIR[] = await verificarImpostoMensal(historico);
-          console.log('🔍 Resumos IR:', resumos);
           setResumosIR(resumos);
-          setMostrarModalIR(true);
-        }} className="bg-red-600 hover:bg-red-700 text-white shadow">🦁 Informar Imposto de Renda</Button>
-                {/* ✅ 4. ADICIONE O LINK COM O BOTÃO AQUI */}
-        <Link to="/ranking">
-            <Button className="bg-yellow-500 hover:bg-yellow-600 text-white shadow">
-                <Trophy className="w-5 h-4.5 inline-block mr-1" /> Ver Rankings
-            </Button>
-        </Link>
-      </div>
+          openModal(setMostrarModalIR);
+        }}
+        bloqueadoAtualizar={bloqueado}
+        activeModal={getActiveModal()}
+      />
 
-      {ativos.length > 0 ? (
-        <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {ativos.map((ativo, index) => (
-                <motion.div
-                    key={ativo.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                    <AtivoCard 
-                        ativo={ativo} 
-                        onSell={handleSellAtivo} 
-                        cor={getCorAtivo(ativo.id)} 
-                        onInformarDividendo={
-                            (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
-                            ? () => handleVerificarDividendos(ativo)
-                            : undefined
-                        } 
+      <div className="flex-1 flex flex-col w-full bg-gray-50/50 transition-all duration-500 relative">
+        <div className={`flex-1 flex flex-col p-4 pb-28 md:p-10 md:pb-10 ${isAnyModalOpen ? 'overflow-hidden' : 'overflow-y-auto'} custom-scrollbar`}>
+          <Header
+            login={login}
+            nomeGrupo={nomeGrupo}
+            fotoGrupo={fotoGrupo}
+            onLogout={onLogout}
+            onUploadConfirmado={onUploadConfirmado}
+            onTriggerDelete={() => openModal(setShowDeleteModal)}
+            valorTotalAtual={valorTotalAtual}
+            formatCurrency={formatCurrency}
+          />
+
+          {error && <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4">{error}</div>}
+          {loading && <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-4 py-3 rounded-xl mb-4">Carregando...</div>}
+
+          <SummaryCards
+            valorFixaDisponivel={valorFixaDisponivel}
+            valorVariavelDisponivel={valorVariavelDisponivel}
+            valorTotalAtual={valorTotalAtual}
+            variacaoPercentual={variacaoPercentual}
+            formatCurrency={formatCurrency}
+          />
+
+          {ativos.length > 0 ? (
+            <>
+              {/* Dashboard Hub: Gráfico + Mini Ranking */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10 w-full animate-fade-in delay-150">
+
+                {/* Gráfico (2/3 no Desktop) */}
+                <div className="xl:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-slate-800">Evolução do Patrimônio</h2>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={escalaY}
+                        onChange={(e) => setEscalaY(e.target.value as any)}
+                        className="bg-slate-50 border-none text-slate-600 text-sm font-bold px-4 py-2 rounded-xl focus:ring-0 cursor-pointer"
+                      >
+                        <option value="linear">Escala Linear</option>
+                        <option value="logarithmic">Escala Logarítmica</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="h-[350px] w-full">
+                    <Line
+                      ref={chartRef}
+                      data={{
+                        ...chartData,
+                        datasets: chartData.datasets.map(ds => ({
+                          ...ds,
+                          tension: 0.4,
+                          pointRadius: 2,
+                          borderWidth: 3,
+                          fill: true,
+                          backgroundColor: 'rgba(59, 130, 246, 0.05)'
+                        }))
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'center',
+                            labels: {
+                              usePointStyle: true,
+                              pointStyle: 'circle',
+                              padding: 20,
+                              color: '#64748b',
+                              font: { size: 12, weight: 'bold' }
+                            }
+                          },
+                          zoom: {
+                            zoom: {
+                              wheel: { enabled: true },
+                              pinch: { enabled: true },
+                              drag: {
+                                enabled: true,
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderColor: 'rgba(59, 130, 246, 0.4)',
+                                borderWidth: 1
+                              },
+                              mode: 'x',
+                            },
+                            pan: {
+                              enabled: true,
+                              mode: 'x',
+                            }
+                          },
+                          tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 12,
+                            cornerRadius: 12,
+                            callbacks: {
+                              label: (ctx) => ` ${ctx.dataset.label}: ${formatCurrency(Number(ctx.raw))}`
+                            }
+                          }
+                        },
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                          x: {
+                            type: 'category',
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            title: { display: true, text: 'Período', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                          },
+                          y: {
+                            type: escalaY,
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => formatCurrency(Number(v)) },
+                            title: { display: true, text: 'Valor (R$)', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                          }
+                        }
+                      }}
                     />
-                </motion.div>
-            ))}
-        </div>
+                  </div>
 
+                  <div className="mt-6 flex justify-center gap-4 p-2">
+                    <button
+                      onClick={() => chartRef.current?.resetZoom()}
+                      className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all flex items-center gap-2 shadow-sm"
+                    >
+                      <RefreshCw size={16} /> Resetar Zoom
+                    </button>
+                    <button
+                      onClick={() => {
+                        const canvas = chartRef.current?.canvas;
+                        if (canvas) {
+                          const link = document.createElement('a');
+                          link.download = `evolucao_${nomeGrupo}.png`;
+                          link.href = canvas.toDataURL('image/png');
+                          link.click();
+                        }
+                      }}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                    >
+                      <Download size={16} /> Baixar Gráfico
+                    </button>
+                  </div>
+                </div>
 
-          <div className="mt-8 bg-white p-4 rounded-xl shadow-lg border-2 border-gray-200 relative">
-            <div className="flex flex-col items-center mb-4">
-              <h2 className="text-xl font-semibold text-center mb-2">📈 Evolução do Patrimônio</h2>
-              <select value={escalaY} onChange={(e) => { setEscalaY(e.target.value as 'linear' | 'logarithmic'); localStorage.setItem('escalaY', e.target.value); }} className="bg-gray-600 text-white px-4 py-2 rounded-md font-semibold text-sm shadow">
-                <option value="linear">Escala Linear</option>
-                <option value="logarithmic">Escala Logarítmica</option>
-              </select>
-            </div>
-            <div className="h-[500px] overflow-x-auto min-w-[600px] bg-white">
-              <Line ref={chartRef} data={{...chartData, datasets: chartData.datasets.map(ds => ({ ...ds, tension: 0.3, pointRadius: 3 }))}} options={{
-                responsive: true, maintainAspectRatio: false,devicePixelRatio: window.devicePixelRatio,
-                plugins: {
-                  zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: false }, pinch: { enabled: true }, drag: { enabled: true, backgroundColor: 'rgba(0,0,0,0.1)', borderColor: 'rgba(0,0,0,0.25)', borderWidth: 1, modifierKey: 'ctrl' }, mode: 'xy' }},
-                  legend: { display: true, position: 'top', labels: { boxWidth: 10, boxHeight: 10, padding: 15, usePointStyle: true, pointStyle: 'circle' },
-                    onHover: (event) => { const target = event?.native?.target as HTMLElement | null; if (target) target.style.cursor = 'pointer'; },
-                    onLeave: (event) => { const target = event?.native?.target as HTMLElement | null; if (target) target.style.cursor = 'default'; },
-                    onClick: (e, legendItem, legend) => {
-                      const ci = legend.chart;
-                      const index = legendItem.datasetIndex;
-                      if (index !== undefined) {
-                        const meta = ci.getDatasetMeta(index);
-                        meta.hidden = !meta.hidden;
-                        ci.update();
+                {/* Mini Ranking (1/3 no Desktop) */}
+                <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 flex flex-col h-full">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Seus Rankings</h2>
+                    <Link to="/ranking" className="text-blue-600 text-sm font-bold hover:underline flex items-center gap-1">
+                      Ver todos <ChevronRight size={14} />
+                    </Link>
+                  </div>
+
+                  {meusRankings.length > 0 ? (
+                    <div className="space-y-4 mb-8">
+                      {meusRankings.map((rk) => (
+                        <div key={rk.id} className="bg-slate-50 rounded-3xl p-4 border border-slate-100 flex items-center justify-between transition-all hover:border-blue-200">
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{rk.nome}</p>
+                            <p className="text-lg font-bold text-slate-700">
+                              {rk.rank}º <span className="text-slate-400 font-medium text-sm">de {rk.total}</span>
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600">
+                            <Trophy size={20} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 border-2 border-dashed border-slate-100 rounded-[2.5rem]">
+                      <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                        <Trophy size={32} />
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium">Cadastre ativos para competir nos rankings globais.</p>
+                    </div>
+                  )}
+
+                  {/* Ranking Global - Sua Posição (Simulado pelo rankingData se houver) */}
+                  <div className="mt-auto pt-6 border-t border-slate-50">
+                    <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
+                      <div className="flex justify-between items-start mb-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Global</p>
+                        <Trophy size={16} className="text-yellow-400" />
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-2xl font-black tracking-tight">#{rankingData.findIndex(u => u.nome === login) + 1 || '-'}</p>
+                          <p className="text-[10px] font-bold opacity-60">Sua Posição Geral</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-blue-400">{rankingData.length} Grupos</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Allocation Hub */}
+              <AllocationCharts 
+                ativos={ativos} 
+                caixaFixa={valorFixaDisponivel} 
+                caixaVariavel={valorVariavelDisponivel} 
+              />
+
+              {/* Seção Minha Carteira */}
+              <div className="flex justify-between items-center mb-6 animate-fade-in delay-300">
+                <h2 className="text-2xl font-bold text-slate-800">Minha Carteira</h2>
+                <button
+                  onClick={() => openModal(setShowWizard)}
+                  className="text-blue-600 font-bold text-sm hover:underline"
+                >
+                  Nova Operação
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 pb-12">
+                {ativos.map((ativo, index) => (
+                  <motion.div
+                    key={ativo.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    whileHover={{ scale: 1.02, y: -5 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                  >
+                    <AtivoCard
+                      ativo={ativo}
+                      onSell={handleSellAtivo}
+                      cor={getCorAtivo(ativo.id)}
+                      onInformarDividendo={
+                        (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
+                          ? () => handleVerificarDividendos(ativo)
+                          : undefined
                       }
-                    }
-                  },
-                  tooltip: { mode: 'nearest', intersect: true, callbacks: { label: (ctx) => { const val = Number(ctx.raw); const ds = ctx.dataset; const firstVal = ds.data.find(v => typeof v === 'number' && v > 0) as number; const variation = firstVal ? (((val - firstVal) / firstVal) * 100).toFixed(2) : '0'; return ` ${ds.label}: ${formatCurrency(val)} (${variation}%)`; } } },
-                  title: { display: true, text: 'Gráfico de acompanhamento da evolução da carteira de investimentos', font: { size: 20 } },
-                },
-                scales: {
-                  x: { type: 'category', ticks: { autoSkip: true, maxTicksLimit: 20, callback: function(_, index) { const rawDate = chartData.labels?.[index]; if (!rawDate) return ''; const [dia, mes] = rawDate.split('/'); return `${dia}/${mes}`; }, maxRotation: 45, minRotation: 0 } },
-                  y: { type: escalaY, min: minY, max: maxY, ticks: { callback: (value) => formatCurrency(Number(value)) } }
-                },
-                interaction: { mode: 'nearest', axis: 'x', intersect: false }
-              }} />
-            </div>
-            <div className="mt-4 flex justify-center gap-4">
-              <Button variant="secondary" onClick={() => chartRef.current?.resetZoom()}><RefreshCw className="w-4 h-4 mr-2 inline" /> Resetar Zoom</Button>
-              <Button variant="primary" onClick={() => { const canvas = chartRef.current?.canvas; if (canvas) { const link = document.createElement('a'); link.download = `grafico_patrimonio_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.png`; link.href = canvas.toDataURL('image/png'); link.click(); } }}><Download className="w-4 h-4 mr-2 inline" /> Baixar Gráfico</Button>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-xl">Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.</div>
-      )}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-xl">Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.</div>
+          )}
+        </div> {/* This closing div was missing in the original code, it closes the "flex-1 flex flex-col p-4 md:p-10 overflow-y-auto custom-scrollbar" div */}
 
-      {showWizard && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"><AddAtivoWizard onClose={() => setShowWizard(false)} onAddAtivo={handleAddAtivo} valorFixaDisponivel={valorFixaDisponivel} valorVariavelDisponivel={valorVariavelDisponivel} quantidadeAtivos={ativos.length} /></div>}
-      
-      {showVendaModal && ativoSelecionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <VendaAtivoModal 
-            ativo={ativoSelecionado} 
-            onClose={() => setShowVendaModal(false)} 
-            onConfirm={confirmarVenda} 
-            isSubmitting={isSubmitting} // ✅ PASSE A NOVA PROP
+        {showWizard && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+            <AddAtivoWizard
+              onClose={() => setShowWizard(false)}
+              onAddAtivo={handleAddAtivo}
+              valorFixaDisponivel={valorFixaDisponivel}
+              valorVariavelDisponivel={valorVariavelDisponivel}
+              quantidadeAtivos={ativos.length}
             />
-        </div>
-      )}
+          </div>
+        )}
+
+        {showVendaModal && ativoSelecionado && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+            <VendaAtivoModal
+              ativo={ativoSelecionado}
+              onClose={() => setShowVendaModal(false)}
+              onConfirm={confirmarVenda}
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        )}
 
         {showDepositar && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <DepositarModal 
-          onClose={() => setShowDepositar(false)} 
-          onConfirm={handleDeposito} 
-        />
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+            <DepositarModal
+              onClose={() => setShowDepositar(false)}
+              onConfirm={handleDeposito}
+              saldoFixa={valorFixaDisponivel}
+              saldoVariavel={valorVariavelDisponivel}
+            />
+          </div>
+        )}
+
+        {mostrarModalIR && resumosIR && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+            <DeduzirIRModal
+              resumosIR={resumosIR}
+              saldoVariavel={valorVariavelDisponivel}
+              onClose={() => setMostrarModalIR(false)}
+              onConfirm={async (senhaDigitada) => {
+                if (senhaDigitada !== senhaSalva) {
+                  alert('Senha incorreta!');
+                  return false;
+                }
+
+                for (const resumo of resumosIR) {
+                  if (resumo.imposto > 0 && mesEncerrado(resumo.mes)) {
+                    const registroIR: RegistroHistorico = {
+                      tipo: 'ir',
+                      valor: resumo.imposto,
+                      categoria: 'rendaVariavel',
+                      subtipo: resumo.subtipo as 'acao' | 'fii' | 'criptomoeda',
+                      data: new Date().toISOString(),
+                      mesApuracao: resumo.mes
+                    };
+
+                    setValorVariavelDisponivel(prev => prev - resumo.imposto);
+                    setHistorico(prev => [...prev, registroIR]);
+
+                    const docRef = doc(db, 'usuarios', login);
+                    await updateDoc(docRef, {
+                      historico: arrayUnion(registroIR),
+                    });
+                  }
+                }
+
+                setMostrarModalIR(false);
+                alert('Dedução de Imposto de Renda confirmada e salva com sucesso!');
+                return true;
+              }}
+            />
+          </div>
+        )}
+
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+            <ExcluirGrupoModal
+              nomeGrupo={nomeGrupo}
+              onClose={() => setShowDeleteModal(false)}
+              onConfirm={async (senhaDigitada) => {
+                if (senhaDigitada !== senhaSalva) {
+                  alert('Senha incorreta!');
+                  return;
+                }
+
+                setLoading(true);
+                try {
+                  // 1. Apaga o documento do Firestore
+                  await deleteDoc(doc(db, "usuarios", login));
+                  if (fotoGrupo) {
+                    const fotoRef = ref(storage, fotoGrupo);
+                    await deleteObject(fotoRef).catch((error) => {
+                      if (error.code !== 'storage/object-not-found') throw error;
+                    });
+                  }
+                  alert('Grupo excluído com sucesso. Você será desconectado.');
+                  window.location.reload();
+                } catch (error) {
+                  console.error("Erro ao excluir grupo:", error);
+                  alert("Ocorreu um erro ao tentar excluir o grupo.");
+                  setLoading(false);
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {showTransferencia && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+            <TransferenciaModal
+              saldoFixa={valorFixaDisponivel}
+              saldoVariavel={valorVariavelDisponivel}
+              onClose={() => setShowTransferencia(false)}
+              onConfirm={async (valor, direcao, senhaDigitada) => {
+                if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
+                if (valor <= 0) { alert('Digite um valor válido.'); return; }
+
+                if (direcao === 'fixa-variavel' && valor > valorFixaDisponivel) { alert('Saldo insuficiente em Renda Fixa.'); return; }
+                if (direcao === 'variavel-fixa' && valor > valorVariavelDisponivel) { alert('Saldo insuficiente em Renda Variável.'); return; }
+
+                const novoRegistro: RegistroHistorico = {
+                  tipo: 'transferencia', valor, data: new Date().toISOString(), destino: direcao === 'fixa-variavel' ? 'variavel' : 'fixa'
+                };
+                await updateDoc(doc(db, 'usuarios', login), { historico: arrayUnion(novoRegistro) });
+                setHistorico(prev => [...prev, novoRegistro]);
+                setShowTransferencia(false);
+              }}
+            />
+          </div>
+        )}
+
+        {showHistorico && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+            <HistoricoModal
+              historico={historico}
+              onClose={() => setShowHistorico(false)}
+              nomeGrupo={nomeGrupo}
+            />
+          </div>
+        )}
+
+        {showDividendosPendentesModal && ativoDividendo && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+            <InformarDividendosPendentesModal
+              nomeFII={ativoDividendo.nome}
+              tickerFII={ativoDividendo.tickerFormatado}
+              pendencias={pendenciasDividendo}
+              onClose={() => setShowDividendosPendentesModal(false)}
+              onConfirm={handleConfirmarDividendos}
+            />
+          </div>
+        )}
+
+        {showAtualizarModal && (
+          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+            <AtualizarInvestimentosModal
+              onClose={() => setShowAtualizarModal(false)}
+              onConfirm={async (senha) => {
+                if (senha !== senhaSalva) {
+                  alert('Senha incorreta!');
+                  return;
+                }
+                const hoje = new Date().toISOString().split('T')[0];
+                const atualizados = await atualizarAtivos(ativos, hoje);
+                setAtivos(atualizados);
+                await updateDoc(doc(db, 'usuarios', login), {
+                  ativos: atualizados,
+                  ultimaAtualizacao: hoje,
+                });
+                await salvarUltimaAtualizacaoManual(login);
+                setBloqueado(true);
+                setTimeout(() => setBloqueado(false), 1 * 60 * 1000);
+                setShowAtualizarModal(false);
+              }}
+            />
+          </div>
+        )}
       </div>
-       )}
-
-      {mostrarModalIR && resumosIR && (
-  <DeduzirIRModal
-    resumosIR={resumosIR}
-    onClose={() => setMostrarModalIR(false)}
-    onConfirm={async (senhaDigitada) => {
-      if (senhaDigitada !== senhaSalva) {
-        alert('Senha incorreta!');
-        return false; // Indica falha na senha
-      }
-
-      // Loop através dos resumos que o verificarImpostoMensal já filtrou como dedutíveis
-      for (const resumo of resumosIR) {
-        if (resumo.imposto > 0 && mesEncerrado(resumo.mes)) {// Dupla checagem, embora verificarImpostoMensal já deva filtrar
-          const registroIR: RegistroHistorico = {
-            tipo: 'ir',
-            valor: resumo.imposto,
-            categoria: 'rendaVariavel', // Assumindo que IR é sempre para RV aqui
-            subtipo: resumo.subtipo as 'acao' | 'fii' | 'criptomoeda',
-             data: new Date().toISOString(),  // Data de referência para o mês
-            mesApuracao: resumo.mes // <-- A LINHA MÁGICA QUE SALVA O CONTEXTO
-          };
-
-          // Atualiza o saldo local (isso era feito em verificarImpostoMensal)
-          setValorVariavelDisponivel(prev => prev - resumo.imposto);
-
-          // Adiciona ao histórico local (isso era feito em verificarImpostoMensal)
-          setHistorico(prev => [...prev, registroIR]);
-
-          // Atualiza o Firebase (isso era feito em verificarImpostoMensal)
-          const docRef = doc(db, 'usuarios', login);
-          await updateDoc(docRef, {
-            historico: arrayUnion(registroIR),
-          });
-        }
-      }
-
-      setMostrarModalIR(false); // Fecha o modal após a dedução
-      alert('Dedução de Imposto de Renda confirmada e salva com sucesso!');
-      return true; // Indica sucesso
-    }}
-  />
-)}
-
-      {showDeleteModal && (
-        <ExcluirGrupoModal
-          nomeGrupo={nomeGrupo}
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={async (senhaDigitada) => {
-            if (senhaDigitada !== senhaSalva) {
-              alert('Senha incorreta!');
-              return; // Não retorna false, apenas para a execução
-            }
-            
-            setLoading(true);
-            try {
-              // 1. Apaga o documento do Firestore
-              await deleteDoc(doc(db, "usuarios", login));
-
-              // 2. Apaga a foto do Storage (se existir)
-              if (fotoGrupo) {
-                  // Esta é uma forma mais segura de obter a referência do que apenas a URL
-                  const fotoRef = ref(storage, fotoGrupo);
-                  await deleteObject(fotoRef).catch((error) => {
-                    // Ignora o erro se o arquivo não for encontrado (pode já ter sido apagado)
-                    if (error.code !== 'storage/object-not-found') {
-                      throw error;
-                    }
-                  });
-              }
-              
-              // 3. Desloga o usuário
-              alert('Grupo excluído com sucesso. Você será desconectado.');
-              // Força o recarregamento da página, que resultará em logout
-              window.location.reload(); 
-
-            } catch (error) {
-              console.error("Erro ao excluir grupo:", error);
-              alert("Ocorreu um erro ao tentar excluir o grupo.");
-              setLoading(false);
-            }
-          }}
-        />
-      )}
-
-      {showTransferencia && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <TransferenciaModal onClose={() => setShowTransferencia(false)} onConfirm={async (valor, direcao, senhaDigitada) => {
-            if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
-            if (valor <= 0) { alert('Digite um valor válido.'); return; }
-
-            if (direcao === 'fixa-variavel' && valor > valorFixaDisponivel) { alert('Saldo insuficiente em Renda Fixa.'); return; }
-            if (direcao === 'variavel-fixa' && valor > valorVariavelDisponivel) { alert('Saldo insuficiente em Renda Variável.'); return; }
-
-            const novoRegistro: RegistroHistorico = {
-              tipo: 'transferencia', valor, data: new Date().toISOString(), destino: direcao === 'fixa-variavel' ? 'variavel' : 'fixa'
-            };
-            await updateDoc(doc(db, 'usuarios', login), { historico: arrayUnion(novoRegistro) });
-            setHistorico(prev => [...prev, novoRegistro]);
-            setShowTransferencia(false);
-          }} />
-        </div>
-      )}
-
-      {showHistorico && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <HistoricoModal
-            historico={historico}
-            onClose={() => setShowHistorico(false)}
-            nomeGrupo={nomeGrupo} 
-          />
-        </div>
-      )}
-
-     {showDividendosPendentesModal && ativoDividendo && (
-  <InformarDividendosPendentesModal
-    nomeFII={ativoDividendo.nome}
-    tickerFII={ativoDividendo.tickerFormatado}
-    pendencias={pendenciasDividendo}
-    onClose={() => setShowDividendosPendentesModal(false)}
-    onConfirm={handleConfirmarDividendos}
-  />
-)}
-
-      {showAtualizarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <AtualizarInvestimentosModal
-            onClose={() => setShowAtualizarModal(false)}
-            onConfirm={async (senha) => {
-              if (senha !== senhaSalva) {
-                alert('Senha incorreta!');
-                return;
-              }
-              const hoje = new Date().toISOString().split('T')[0];
-              const atualizados = await atualizarAtivos(ativos, hoje);
-              setAtivos(atualizados);
-              await updateDoc(doc(db, 'usuarios', login), {
-                ativos: atualizados,
-                ultimaAtualizacao: hoje,
-              });
-              await salvarUltimaAtualizacaoManual(login);
-              setBloqueado(true);
-              setTimeout(() => setBloqueado(false), 1 * 60 * 1000);
-              setShowAtualizarModal(false);
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }

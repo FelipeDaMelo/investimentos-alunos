@@ -8,12 +8,18 @@ import Login from './Login';
 import MainPage from './MainPage';
 import RankingPage from './components/Ranking/RankingPage';
 import AdminPage from './components/Admin/AdminPage'; // ✅ Importe a nova página
+import NovidadesMercado from './components/Novidades/NovidadesMercado';
+import { db, storage } from './firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const App = () => {
   const [valorInvestido, setValorInvestido] = useState<number>(0);
   const [fixo, setFixo] = useState<number>(0);
   const [variavel, setVariavel] = useState<number>(0);
   const [nomeGrupo, setNomeGrupo] = useState<string>('');
+  const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
+  const [senhaSalva, setSenhaSalva] = useState<string>('');
   const [login, setLogin] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
@@ -35,13 +41,17 @@ const App = () => {
       valorInvestido: number,
       fixo: number,
       variavel: number,
-      nomeGrupo: string
+      nomeGrupo: string,
+      senha: string,
+      fotoGrupo: string | null
     ) => {
       setValorInvestido(valorInvestido);
       setFixo(fixo);
       setVariavel(variavel);
       setNomeGrupo(nomeGrupo);
       setLogin(nomeGrupo);
+      setSenhaSalva(senha);
+      setFotoGrupo(fotoGrupo);
     },
     []
   );
@@ -58,6 +68,32 @@ const App = () => {
     window.scrollTo(0, 0); 
   }, [navigate]);
 
+  const handleImpersonate = useCallback((userId: string, fotoGrupo: string | null) => {
+    setLogin(userId);
+    setFotoGrupo(fotoGrupo || null);
+    navigate('/');
+    window.scrollTo(0, 0);
+  }, [navigate]);
+
+  const handleUploadConfirmado = useCallback(async (file: File, senhaDigitada: string) => {
+    if (!login) return;
+    if (senhaDigitada !== senhaSalva) {
+      alert('Senha incorreta!');
+      throw new Error("Senha incorreta");
+    }
+    try {
+      const storageRef = ref(storage, `fotosGrupos/${login}-${new Date().getTime()}.jpg`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      await updateDoc(doc(db, 'usuarios', login), { fotoGrupo: url });
+      setFotoGrupo(url);
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      alert("Erro ao enviar imagem.");
+      throw error;
+    }
+  }, [login, senhaSalva]);
+
   if (!isAuthReady) {
     return <div>Inicializando sessão...</div>;
   }
@@ -66,7 +102,7 @@ const App = () => {
   // O componente <Routes> age como um "switch" que renderiza o componente
   // correspondente à URL atual do navegador.
   return (
-    <div className="min-h-screen relative pb-20">
+    <div className="relative">
       <Routes>
         {/* Rota Raiz ("/"): Mostra Login OU MainPage dependendo do estado 'login' */}
         <Route 
@@ -81,28 +117,60 @@ const App = () => {
                 fixo={fixo} 
                 variavel={variavel} 
                 nomeGrupo={nomeGrupo} 
+                fotoGrupo={fotoGrupo}
+                setFotoGrupo={setFotoGrupo}
                 onLogout={handleLogout}
+                onUploadConfirmado={handleUploadConfirmado}
               />
             )
           } 
         />
 
-        {/* Rota do Ranking ("/ranking"): Mostra sempre a RankingPage */}
         <Route 
           path="/ranking" 
           element={
             <RankingPage 
-              // O botão "voltar" dentro de RankingPage agora usa o histórico do navegador
               onBack={() => navigate(-1)} 
+              login={login || ''}
+              fotoGrupo={fotoGrupo}
+              onLogout={handleLogout}
+              onUploadConfirmado={handleUploadConfirmado}
             />
           } 
         />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route 
+                path="/admin" 
+                element={
+                  !login ? (
+                    <Login onLogin={handleLogin} />
+                  ) : (
+                    <AdminPage 
+                      login={login}
+                      fotoGrupo={fotoGrupo}
+                      onLogout={handleLogout}
+                      onUploadConfirmado={handleUploadConfirmado}
+                      onImpersonate={handleImpersonate}
+                    />
+                  )
+                } 
+              />
+              <Route 
+                path="/novidades" 
+                element={
+                  !login ? (
+                    <Login onLogin={handleLogin} />
+                  ) : (
+                    <NovidadesMercado 
+                      login={login}
+                      fotoGrupo={fotoGrupo}
+                      onLogout={handleLogout}
+                      onUploadConfirmado={handleUploadConfirmado}
+                    />
+                  )
+                } 
+              />
       </Routes>
 
-      <footer className="app-footer">
-        Desenvolvido por Prof. Dr. Felipe Damas Melo
-      </footer>
     </div>
   );
 };

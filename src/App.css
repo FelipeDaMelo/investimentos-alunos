@@ -6,13 +6,10 @@
 
 /* Root container */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  padding-bottom: 4rem; /* espaço para o rodapé fixo */
+  width: 100%;
   position: relative;
   min-height: 100vh;
-  @apply font-sans; /* Usa Inter conforme tailwind.config.js */
+  @apply font-sans;
 }
 
 /* Logo e animação */
@@ -55,15 +52,6 @@
   color: #888;
 }
 
-/* Estilo para os cards de ativos */
-div > div {
-  background-color: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-}
 
 /* Tipografia básica */
 h3 {
