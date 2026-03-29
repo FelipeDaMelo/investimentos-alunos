@@ -160,48 +160,84 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen relative flex flex-col font-sans overflow-hidden">
-      {/* Background Image Container - Forced to 100% to fit entirely */}
-      <div
-        className="absolute inset-0 z-0 bg-[length:100%_100%] bg-center bg-no-repeat transition-all duration-1000"
+      {/* Background Image Container - DYNAMIC SWAP */}
+      <div 
+        className="absolute inset-0 z-0 bg-[length:100%_100%] bg-center bg-no-repeat transition-all duration-1000 block md:hidden" 
+        style={{ backgroundImage: `url('/login-bg-mobile.png')` }}
+      />
+      <div 
+        className="absolute inset-0 z-0 bg-[length:100%_100%] bg-center bg-no-repeat transition-all duration-1000 hidden md:block" 
         style={{ backgroundImage: `url('/login-bg.png')` }}
       />
+      
+      {/* ----------------- DESKTOP LAYOUT (HIDDEN ON MOBILE) ----------------- */}
+      <div className="hidden md:contents">
+        {/* HEADER SECTION (Top Right) */}
+        <header className="absolute top-10 right-10 z-20 flex items-center gap-4">
+          <button 
+            onClick={() => setView('platform')}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black shadow-lg shadow-blue-500/20 transition-all active:scale-95 text-[13px] uppercase tracking-wider"
+          >
+            Acessar Plataforma
+          </button>
+          <button 
+            onClick={handleAdminAccess}
+            className="px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-black shadow-sm transition-all active:scale-95 text-[13px] uppercase tracking-wider"
+          >
+            Acesso Restrito
+          </button>
+        </header>
 
-      {/* HEADER SECTION (Top Right) */}
-      <header className="absolute top-10 right-10 z-20 flex items-center gap-4">
-        <button
-          onClick={() => setView('platform')}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black shadow-lg shadow-blue-500/20 transition-all active:scale-95 text-[13px] uppercase tracking-wider"
-        >
-          Acessar Plataforma
-        </button>
-        <button
-          onClick={handleAdminAccess}
-          className="px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-black shadow-sm transition-all active:scale-95 text-[13px] uppercase tracking-wider"
-        >
-          Acesso Restrito
-        </button>
-      </header>
+        {/* MAIN CONTENT AREA */}
+        <main className="relative z-10 flex-1 w-full flex items-center">
+          <button 
+            onClick={handleDemoAccess}
+            disabled={verificando}
+            className="absolute left-[7.5%] top-[60%] group px-8 py-5 bg-white shadow-2xl rounded-2xl flex flex-col items-start gap-1 transition-all hover:shadow-blue-200/50 active:scale-95 border-l-4 border-blue-600"
+          >
+            <span className="text-blue-600 font-black text-lg flex items-center gap-2">
+              {verificando ? 'Iniciando...' : 'Faça um teste grátis'}
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </span>
+            <span className="text-slate-500 font-bold text-xs uppercase tracking-tight">conhecer a plataforma completa</span>
+          </button>
+        </main>
+      </div>
 
-      {/* MAIN CONTENT AREA */}
-      <main className="relative z-10 flex-1 w-full">
-        {/* FIXED TEST / DEMO BUTTON (Mid Left) - Aligned with the 'A' in 'Aprenda' */}
-        <button
-          onClick={handleDemoAccess}
-          disabled={verificando}
-          className="absolute left-[7.5%] top-[60%] group px-8 py-5 bg-white shadow-2xl rounded-2xl flex flex-col items-start gap-1 transition-all hover:shadow-blue-200/50 active:scale-95 border-l-4 border-blue-600"
-        >
-          <span className="text-blue-600 font-black text-lg flex items-center gap-2">
-            {verificando ? 'Iniciando...' : 'Faça um teste grátis'}
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </span>
-          <span className="text-slate-500 font-bold text-xs uppercase tracking-tight">conhecer a plataforma completa</span>
-        </button>
-      </main>
+      {/* ----------------- MOBILE LAYOUT (HIDDEN ON DESKTOP) ----------------- */}
+      <div className="md:hidden relative z-10 flex-1 flex flex-col justify-end p-8 pb-16">
+        <div className="space-y-4">
+          <button 
+            onClick={handleDemoAccess}
+            disabled={verificando}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-black shadow-xl shadow-blue-600/30 flex items-center justify-center gap-3 active:scale-95 transition-all mb-2"
+          >
+            <Sparkles size={20} />
+            {verificando ? 'Iniciando Simulação...' : 'Testar Agora (Grátis)'}
+          </button>
+
+          <button 
+            onClick={() => setView('platform')}
+            className="w-full bg-white/90 backdrop-blur-md p-5 rounded-2xl font-black text-slate-800 shadow-lg flex items-center justify-center gap-3 active:scale-95"
+          >
+            <Briefcase size={20} className="text-blue-600" />
+            Acessar Plataforma
+          </button>
+
+          <button 
+            onClick={handleAdminAccess}
+            className="w-full bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl font-black text-white shadow-lg flex items-center justify-center gap-3 active:scale-95 border border-white/10"
+          >
+            <ShieldAlert size={20} className="text-slate-400" />
+            Acesso Restrito
+          </button>
+        </div>
+      </div>
 
       {/* FORM MODAL OVERLAY */}
       {view !== 'menu' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-[2.5rem] p-8 sm:p-10 shadow-3xl border border-white/60 animate-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-3xl border border-white/60 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
 
             <button
               onClick={() => { setView('menu'); setErro(''); }}
