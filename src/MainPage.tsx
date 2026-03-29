@@ -19,6 +19,7 @@ import {
   Tooltip,
   Legend,
   Chart,
+  Filler,
 } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import AtivoCard from './components/AtivoCard';
@@ -58,6 +59,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  Filler,
   zoomPlugin
 );
 
