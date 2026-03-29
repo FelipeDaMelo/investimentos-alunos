@@ -37,6 +37,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [selicAtual, setSelicAtual] = useState<number | null>(null);
   const [IPCAAtual, setIPCAAtual] = useState<number | null>(null);
   const [carregandoTaxas, setCarregandoTaxas] = useState(false);
+  const [erroTaxas, setErroTaxas] = useState<string | null>(null);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string>('');
   const [indiceHibrido, setIndiceHibrido] = useState<'CDI' | 'SELIC' | 'IPCA'>('IPCA');
   const [senha, setSenha] = useState('');
@@ -46,9 +47,15 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const carregarTaxas = async () => {
     try {
       setCarregandoTaxas(true);
+      setErroTaxas(null);
       const cdi = await fetchValorAtual('CDI');
       const selic = await fetchValorAtual('SELIC');
       const ipca = await fetchValorAtual('IPCA');
+      
+      if (cdi === 'Erro ao carregar' || selic === 'Erro ao carregar' || ipca === 'Erro ao carregar') {
+        throw new Error('Falha na sincronização com os indicadores');
+      }
+
       setCdiAtual(parseFloat(cdi));
       setSelicAtual(parseFloat(selic));
       setIPCAAtual(parseFloat(ipca));
@@ -56,6 +63,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       setUltimaAtualizacao(`${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`);
     } catch (error) {
       console.error('Erro ao buscar taxas:', error);
+      setErroTaxas('Não foi possível sincronizar as taxas atuais. Tente novamente.');
     } finally {
       setCarregandoTaxas(false);
     }
@@ -246,6 +254,17 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
               </button>
             </div>
           </div>
+
+          {erroTaxas && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center text-red-500 shadow-sm shrink-0">
+                <Info size={14} />
+              </div>
+              <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight leading-tight">
+                {erroTaxas}
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4 relative z-10">
             {form.categoriaFixa === 'posFixada' && (

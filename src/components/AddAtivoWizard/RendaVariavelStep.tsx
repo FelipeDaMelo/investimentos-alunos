@@ -172,7 +172,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
                 type="text"
                 value={form.nome}
                 onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                className="w-full bg-transparent px-5 py-4 text-slate-700 font-bold focus:bg-white transition-all outline-none"
+                className={`w-full bg-transparent px-5 py-4 text-slate-700 font-bold focus:bg-white transition-all outline-none ${form.errorPreco ? 'border-red-500' : ''}`}
                 placeholder={`Ex: ${exemplosTicker[form.subtipo][0]}`}
                 required
               />
@@ -183,6 +183,11 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
               )}
             </div>
           </div>
+          {form.errorPreco && (
+            <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight ml-2 mt-1 animate-in fade-in slide-in-from-top-1">
+              {form.errorPreco === 'Não foi possível obter o preço' ? 'Ativo não encontrado ou indisponível' : form.errorPreco}
+            </p>
+          )}
         </div>
       </div>
 
