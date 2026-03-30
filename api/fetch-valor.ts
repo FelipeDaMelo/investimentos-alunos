@@ -1,27 +1,42 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+const getDolarRate = async (token: string): Promise<number> => {
+  try {
+    const res = await fetch(`https://brapi.dev/api/quote/USDBRL=X?token=${token}`);
+    const data: any = await res.json();
+    return data.results?.[0]?.regularMarketPrice || 5.0; // Fallback seguro
+  } catch (e) {
+    console.warn('[API] Erro ao buscar cotação do dólar:', e);
+    return 5.0;
+  }
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { ticker, type } = req.query; // Adicionamos 'type' para maior precisão
+  const { ticker, type } = req.query;
   const token = process.env.BRAPI_TOKEN;
 
   if (!ticker || typeof ticker !== 'string' || ticker.trim() === '') {
     return res.status(400).json({ error: 'Ticker inválido ou vazio' });
   }
 
-  // 1. Normalização
+  if (!token) {
+    return res.status(500).json({ error: 'BRAPI_TOKEN não configurado' });
+  }
+
   const tickerUpper = ticker.trim().toUpperCase();
   const baseTicker = tickerUpper.split('-')[0];
 
   try {
     let valor: number | undefined;
     let logo: string | undefined;
+    let currency: string | undefined;
     let tipoIdentificado: 'stock' | 'crypto' | undefined;
 
-    // SEÇÃO A: TENTATIVA COMO CRIPTOMOEDA (Prioritária se type=crypto ou se o ticker tiver sufixo de moeda)
+    // SEÇÃO A: TENTATIVA COMO CRIPTOMOEDA
     const isCryptoRequested = type === 'crypto' || tickerUpper.includes('-USD') || tickerUpper.includes('-BRL');
     
     if (isCryptoRequested) {
-      // 1. Tentar API v2 (Especializada)
+      // 1. Tentar API v2 (Especializada - Ideal pois já permite currency=BRL)
       try {
         const cryptoRes = await fetch(
           `https://brapi.dev/api/v2/crypto?coin=${baseTicker}&currency=BRL&token=${token}`
@@ -32,13 +47,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (coin && typeof coin.regularMarketPrice === 'number') {
           valor = coin.regularMarketPrice;
           logo = coin.coinImageUrl || coin.coinIcon;
+          currency = 'BRL'; // V2 com currency=BRL já vem convertido
           tipoIdentificado = 'crypto';
         }
       } catch (e) {
         console.warn(`[API] Erro na v2/crypto para ${baseTicker}:`, e);
       }
 
-      // 2. Se falhar (ex: plano free bloqueado), tentar Quote API com sufixo completo (BTC-USD, etc)
+      // 2. Fallback: Quote API (Geralmente retorna em USD para moedas)
       if (!valor) {
         try {
           const suffix = tickerUpper.includes('-') ? tickerUpper : `${baseTicker}-USD`;
@@ -51,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (result && typeof result.regularMarketPrice === 'number') {
              valor = result.regularMarketPrice;
              logo = result.logourl;
+             currency = result.currency || (suffix.includes('-USD') ? 'USD' : 'BRL');
              tipoIdentificado = 'crypto';
           }
         } catch (e) {
@@ -59,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // SEÇÃO B: TENTATIVA COMO AÇÃO/FII (Se ainda não encontramos valor)
+    // SEÇÃO B: TENTATIVA COMO AÇÃO/FII
     if (!valor) {
       try {
         const quoteRes = await fetch(
@@ -69,10 +86,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const result = quoteData.results?.[0];
 
         if (result && typeof result.regularMarketPrice === 'number') {
-          // Validação extra: Se for BTC/ETH e o preço for suspeito (baixo demais para a moeda real)
-          // mas o usuário NÃO pediu crypto explicitamente, retornamos o que veio (pode ser o ETF).
           valor = result.regularMarketPrice;
           logo = result.logourl;
+          currency = result.currency || 'BRL';
           tipoIdentificado = 'stock';
         }
       } catch (e) {
@@ -80,7 +96,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // 3. Resposta de Sucesso
+    // 3. Conversão de Moeda (Se necessário)
+    if (valor && currency === 'USD') {
+      const dolarRate = await getDolarRate(token);
+      valor = valor * dolarRate;
+    }
+
+    // 4. Resposta de Sucesso
     if (typeof valor === 'number' && Number.isFinite(valor)) {
       return res.status(200).json({
         valorAtual: valor.toFixed(2),
