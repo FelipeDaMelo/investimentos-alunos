@@ -8,7 +8,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const feed = await parser.parseURL('https://www.infomoney.com.br/mercados/rss');
     
     // Pegar as 6 notícias mais recentes
-    const news = feed.items.slice(0, 6).map(item => {
+    const items = Array.isArray(feed.items) ? feed.items : [];
+    const news = items.slice(0, 6).map(item => {
       // Formatar a data para algo legível (ex: "Há 2 horas")
       const pubDate = item.pubDate ? new Date(item.pubDate) : new Date();
       const now = new Date();

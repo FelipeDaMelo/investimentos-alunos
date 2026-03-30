@@ -52,7 +52,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       setForm(prev => ({ ...prev, loadingPreco: true, errorPreco: '' }));
       setDividendoFII(null);
       const tickerFormatado = formatarTicker(form.nome, form.subtipo);
-      const { valor: precoString, logo } = await fetchValorAtual(tickerFormatado);
+      const { valor: precoString, logo } = await fetchValorAtual(tickerFormatado, form.subtipo === 'criptomoeda' ? 'crypto' : 'stock');
       if (precoString === 'Erro ao carregar') throw new Error('Não foi possível obter o preço');
       const preco = parseFloat(precoString);
       setForm(prev => ({

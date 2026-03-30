@@ -38,7 +38,10 @@ export async function atualizarAtivos(
       } else { // Renda Variável
         const ativoVar = ativo as RendaVariavelAtivo;
         try {
-          const { valor: valorAtualString, logo } = await fetchValorAtual(ativoVar.tickerFormatado);
+          const { valor: valorAtualString, logo } = await fetchValorAtual(
+            ativoVar.tickerFormatado, 
+            ativoVar.subtipo === 'criptomoeda' ? 'crypto' : 'stock'
+          );
           const valorAtual = parseFloat(valorAtualString);
           
           if (isNaN(valorAtual)) { // Proteção caso a API retorne algo inesperado

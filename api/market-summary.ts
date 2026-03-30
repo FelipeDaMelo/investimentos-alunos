@@ -3,24 +3,38 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const token = process.env.BRAPI_TOKEN;
 
+  if (!token) {
+    return res.status(500).json({ error: 'Configuração BRAPI_TOKEN ausente' });
+  }
+
   try {
-    // Buscando Ibovespa, Dólar e Bitcoin
-    const response = await fetch(
-      `https://brapi.dev/api/quote/%5EBVSP,USDBRL=X,BTC-BRL?token=${token}`
-    );
+    // Símbolos buscados: Ibovespa, Dólar e Bitcoin
+    // Usamos encodeURIComponent para garantir que caracteres como ^ e = não quebrem a URL
+    const symbols = '^BVSP,USDBRL=X,BTC-BRL';
+    const url = `https://brapi.dev/api/quote/${encodeURIComponent(symbols)}?token=${token}`;
     
+    const response = await fetch(url);
+    const data: any = await response.json();
+
     if (!response.ok) {
-      throw new Error('Erro na resposta da Brapi');
+      console.error('[API Market Summary] Brapi Error:', data);
+      return res.status(response.status).json({ 
+        error: 'Erro na resposta da Brapi', 
+        details: data.message || data 
+      });
     }
 
-    const data = await response.json();
     const results = data.results || [];
+    
+    if (!Array.isArray(results) || results.length === 0) {
+      return res.status(404).json({ error: 'Nenhum dado retornado pela Brapi' });
+    }
 
     const summary = results.map((item: any) => ({
       symbol: item.symbol,
       name: item.shortName || item.symbol,
-      price: item.regularMarketPrice,
-      changePercent: item.regularMarketChangePercent,
+      price: item.regularMarketPrice || 0,
+      changePercent: item.regularMarketChangePercent || 0,
     }));
 
     // Formatação amigável para o front
@@ -32,7 +46,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json(formatted);
   } catch (error) {
-    console.error('Erro ao buscar sumário do mercado:', error);
-    return res.status(500).json({ error: 'Erro ao processar sumário do mercado' });
+    console.error('Erro crítico no sumário do mercado:', error);
+    return res.status(500).json({ 
+      error: 'Erro ao processar sumário do mercado', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }

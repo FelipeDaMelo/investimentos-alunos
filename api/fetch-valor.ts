@@ -1,56 +1,82 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { ticker } = req.query;
+  const { ticker, type } = req.query; // Adicionamos 'type' para maior precisão
   const token = process.env.BRAPI_TOKEN;
 
-  // 1. Validação Inicial
   if (!ticker || typeof ticker !== 'string' || ticker.trim() === '') {
     return res.status(400).json({ error: 'Ticker inválido ou vazio' });
   }
 
-  // 2. Normalização do Ticker (Ex: "BTC-USD" -> "BTC", " petr4 " -> "PETR4")
-  const normalizedTicker = ticker.trim().toUpperCase().split('-')[0];
+  // 1. Normalização
+  const tickerUpper = ticker.trim().toUpperCase();
+  const baseTicker = tickerUpper.split('-')[0];
 
   try {
     let valor: number | undefined;
     let logo: string | undefined;
-    let tipo: 'stock' | 'crypto' | undefined;
+    let tipoIdentificado: 'stock' | 'crypto' | undefined;
 
-    // TENTATIVA 1: Rota de Ações/FIIs
-    try {
-      const quoteRes = await fetch(
-        `https://brapi.dev/api/quote/${encodeURIComponent(normalizedTicker)}?token=${token}`
-      );
-      const quoteData = await quoteRes.json();
-      const result = quoteData.results?.[0];
-
-      if (result && typeof result.regularMarketPrice === 'number') {
-        valor = result.regularMarketPrice;
-        logo = result.logourl;
-        tipo = 'stock';
-      }
-    } catch (e) {
-      console.warn(`[API] Erro na rota de quote para ${normalizedTicker}:`, e);
-    }
-
-    // TENTATIVA 2 (Fallback): Rota de Criptomoedas
-    if (!valor) {
+    // SEÇÃO A: TENTATIVA COMO CRIPTOMOEDA (Prioritária se type=crypto ou se o ticker tiver sufixo de moeda)
+    const isCryptoRequested = type === 'crypto' || tickerUpper.includes('-USD') || tickerUpper.includes('-BRL');
+    
+    if (isCryptoRequested) {
+      // 1. Tentar API v2 (Especializada)
       try {
         const cryptoRes = await fetch(
-          `https://brapi.dev/api/v2/crypto?coin=${normalizedTicker}&currency=BRL&token=${token}`
+          `https://brapi.dev/api/v2/crypto?coin=${baseTicker}&currency=BRL&token=${token}`
         );
         const cryptoData = await cryptoRes.json();
         const coin = cryptoData.coins?.[0];
 
         if (coin && typeof coin.regularMarketPrice === 'number') {
           valor = coin.regularMarketPrice;
-          // BRApi v2 usa coinImageUrl, mas checamos fallbacks por segurança
-          logo = coin.coinImageUrl || coin.coinIcon || coin.logo;
-          tipo = 'crypto';
+          logo = coin.coinImageUrl || coin.coinIcon;
+          tipoIdentificado = 'crypto';
         }
       } catch (e) {
-        console.warn(`[API] Erro na rota de crypto para ${normalizedTicker}:`, e);
+        console.warn(`[API] Erro na v2/crypto para ${baseTicker}:`, e);
+      }
+
+      // 2. Se falhar (ex: plano free bloqueado), tentar Quote API com sufixo completo (BTC-USD, etc)
+      if (!valor) {
+        try {
+          const suffix = tickerUpper.includes('-') ? tickerUpper : `${baseTicker}-USD`;
+          const quoteRes = await fetch(
+            `https://brapi.dev/api/quote/${encodeURIComponent(suffix)}?token=${token}`
+          );
+          const quoteData = await quoteRes.json();
+          const result = quoteData.results?.[0];
+          
+          if (result && typeof result.regularMarketPrice === 'number') {
+             valor = result.regularMarketPrice;
+             logo = result.logourl;
+             tipoIdentificado = 'crypto';
+          }
+        } catch (e) {
+             console.warn(`[API] Erro no fallback quote-crypto para ${tickerUpper}:`, e);
+        }
+      }
+    }
+
+    // SEÇÃO B: TENTATIVA COMO AÇÃO/FII (Se ainda não encontramos valor)
+    if (!valor) {
+      try {
+        const quoteRes = await fetch(
+          `https://brapi.dev/api/quote/${encodeURIComponent(baseTicker)}?token=${token}`
+        );
+        const quoteData = await quoteRes.json();
+        const result = quoteData.results?.[0];
+
+        if (result && typeof result.regularMarketPrice === 'number') {
+          // Validação extra: Se for BTC/ETH e o preço for suspeito (baixo demais para a moeda real)
+          // mas o usuário NÃO pediu crypto explicitamente, retornamos o que veio (pode ser o ETF).
+          valor = result.regularMarketPrice;
+          logo = result.logourl;
+          tipoIdentificado = 'stock';
+        }
+      } catch (e) {
+        console.warn(`[API] Erro na rota de quote para ${baseTicker}:`, e);
       }
     }
 
@@ -59,15 +85,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         valorAtual: valor.toFixed(2),
         logo: logo,
-        tipo: tipo
+        tipo: tipoIdentificado || 'stock'
       });
     }
 
-    // 4. Falha Geral
     return res.status(404).json({
       error: 'Ativo não encontrado',
-      ticker: normalizedTicker,
-      message: "Não foi possível encontrar este ativo como Ação ou Criptomoeda."
+      ticker: baseTicker,
+      message: "Não foi possível encontrar este ativo nas APIs da Brapi."
     });
 
   } catch (error) {

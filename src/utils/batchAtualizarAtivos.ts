@@ -11,14 +11,15 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function batchAtualizarAtivos(usersToUpdate: any[], hoje: string): Promise<any[]> {
   // 1. Dicionário Único de Tickers para prevenir rate-limiting da API
-  const uniqueTickers = new Set<string>();
+  const uniqueAssets = new Map<string, 'stock' | 'crypto'>();
   
   usersToUpdate.forEach(user => {
     (user.ativos || []).forEach((ativo: Ativo) => {
       if (ativo.tipo === 'rendaVariavel') {
         const ativoVar = ativo as RendaVariavelAtivo;
         if (ativoVar.tickerFormatado) {
-          uniqueTickers.add(ativoVar.tickerFormatado);
+          // Mapeia o ticker para o seu tipo para garantir busca correta
+          uniqueAssets.set(ativoVar.tickerFormatado, ativoVar.subtipo === 'criptomoeda' ? 'crypto' : 'stock');
         }
       }
     });
@@ -27,9 +28,10 @@ export async function batchAtualizarAtivos(usersToUpdate: any[], hoje: string): 
   // 2. Resolver Cotações (Sequential safe fetching)
   const priceMap: Record<string, number> = {};
   const logoMap: Record<string, string | undefined> = {};
-  for (const ticker of Array.from(uniqueTickers)) {
+  
+  for (const [ticker, type] of Array.from(uniqueAssets.entries())) {
     try {
-      const { valor: valorStr, logo } = await fetchValorAtual(ticker);
+      const { valor: valorStr, logo } = await fetchValorAtual(ticker, type);
       const valor = parseFloat(valorStr);
       if (!isNaN(valor) && valor > 0) {
         priceMap[ticker] = valor;

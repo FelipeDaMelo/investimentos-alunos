@@ -5,17 +5,18 @@ export interface FetchValorResponse {
 
 const cache = new Map<string, FetchValorResponse>();
 
-const fetchValorAtual = async (ticker: string): Promise<FetchValorResponse> => {
+const fetchValorAtual = async (ticker: string, type?: 'stock' | 'crypto'): Promise<FetchValorResponse> => {
   try {
-    if (cache.has(ticker)) {
-      return cache.get(ticker)!;
+    const cacheKey = `${ticker}_${type || 'auto'}`;
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey)!;
     }
 
     let tickerCorrigido = ticker.trim().toUpperCase();
     let valorAtual: string = 'Erro ao carregar';
     let logo: string | undefined;
 
-    // 1. Taxas do Banco Central
+    // ... (rest of BCB logic) ...
     if (tickerCorrigido === 'SELIC') {
       const valor = await fetchTaxaBCB(11);
       valorAtual = valor !== null ? valor.toFixed(5) : 'Erro';
@@ -31,13 +32,17 @@ const fetchValorAtual = async (ticker: string): Promise<FetchValorResponse> => {
     } 
     // 2. Ativos de Renda Variável (Ações, FIIs, Criptos)
     else {
-      if (/^[A-Z]{4}\d{1,2}$/.test(tickerCorrigido)) {
-        tickerCorrigido += '.SA';
-      } else if (/^[A-Z]{2,5}$/.test(tickerCorrigido)) {
-        tickerCorrigido += '-USD';
+      // Pequena correção: se for ticker puro e não tiver type, tentamos inferir
+      if (!type) {
+        if (/^[A-Z]{4}\d{1,2}$/.test(tickerCorrigido)) {
+          tickerCorrigido += '.SA';
+        } else if (/^[A-Z]{2,5}$/.test(tickerCorrigido)) {
+          tickerCorrigido += '-USD';
+        }
       }
       
-      const res = await fetch(`/api/fetch-valor?ticker=${tickerCorrigido}`);
+      const typeParam = type ? `&type=${type}` : '';
+      const res = await fetch(`/api/fetch-valor?ticker=${tickerCorrigido}${typeParam}`);
       const data = await res.json();
 
       if (data && data.valorAtual) {
@@ -47,7 +52,7 @@ const fetchValorAtual = async (ticker: string): Promise<FetchValorResponse> => {
     }
 
     const result = { valor: valorAtual, logo };
-    cache.set(ticker, result);
+    cache.set(cacheKey, result);
     return result;
   } catch (error) {
     console.error('Erro ao buscar valor do ativo:', error);
