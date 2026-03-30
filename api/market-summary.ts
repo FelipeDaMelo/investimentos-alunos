@@ -8,41 +8,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Símbolos buscados: Ibovespa, Dólar e Bitcoin
-    const symbols = ['^BVSP', 'USDBRL=X', 'BTC-BRL'];
-    // Codificamos cada símbolo individualmente, mas mantemos a vírgula sem codificar
-    const encodedSymbols = symbols.map(s => encodeURIComponent(s)).join(',');
-    const url = `https://brapi.dev/api/quote/${encodedSymbols}?token=${token}`;
-    
-    const response = await fetch(url);
-    const data: any = await response.json();
+    // Fazemos as 3 requisições simultaneamente para os endpoints corretos da Brapi
+    const [ibovRes, dolarRes, btcRes] = await Promise.all([
+      fetch(`https://brapi.dev/api/quote/^BVSP?token=${token}`),
+      fetch(`https://brapi.dev/api/v2/currency?currency=USD-BRL&token=${token}`),
+      fetch(`https://brapi.dev/api/v2/crypto?coin=BTC&currency=BRL&token=${token}`)
+    ]);
 
-    if (!response.ok) {
-      console.error('[API Market Summary] Brapi Error:', data);
-      return res.status(response.status).json({ 
-        error: 'Erro na resposta da Brapi', 
-        details: data.message || data 
-      });
+    // Extraímos os dados em JSON
+    const ibovData: any = await ibovRes.json();
+    const dolarData: any = await dolarRes.json();
+    const btcData: any = await btcRes.json();
+
+    // Verificação de segurança (se a Brapi retornar erro em alguma delas)
+    if (!ibovRes.ok && !dolarRes.ok && !btcRes.ok) {
+      return res.status(400).json({ error: 'Falha ao buscar dados na Brapi' });
     }
 
-    const results = data.results || [];
-    
-    if (!Array.isArray(results) || results.length === 0) {
-      return res.status(404).json({ error: 'Nenhum dado retornado pela Brapi' });
-    }
+    // Extraindo os valores (a estrutura de resposta muda dependendo do endpoint da Brapi)
+    const ibovResult = ibovData.results?.[0] || {};
+    const dolarResult = dolarData.currency?.[0] || {}; // O endpoint /v2/currency retorna um array "currency"
+    const btcResult = btcData.coins?.[0] || {};        // O endpoint /v2/crypto retorna um array "coins"
 
-    const summary = results.map((item: any) => ({
-      symbol: item.symbol,
-      name: item.shortName || item.symbol,
-      price: item.regularMarketPrice || 0,
-      changePercent: item.regularMarketChangePercent || 0,
-    }));
-
-    // Formatação amigável para o front
+    // Formatação amigável padronizada para o seu frontend
     const formatted = {
-      ibov: summary.find((s: any) => s.symbol === '^BVSP'),
-      dolar: summary.find((s: any) => s.symbol === 'USDBRL=X'),
-      btc: summary.find((s: any) => s.symbol === 'BTC-BRL'),
+      ibov: {
+        symbol: '^BVSP',
+        name: 'Ibovespa',
+        price: ibovResult.regularMarketPrice || 0,
+        changePercent: ibovResult.regularMarketChangePercent || 0,
+      },
+      dolar: {
+        symbol: 'USD',
+        name: 'Dólar',
+        price: dolarResult.askPrice || dolarResult.bidPrice || 0, // Brapi usa bid/ask para moedas
+        changePercent: dolarResult.pctChange || 0,
+      },
+      btc: {
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        price: btcResult.regularMarketPrice || 0,
+        changePercent: btcResult.regularMarketChangePercent || 0,
+      },
     };
 
     return res.status(200).json(formatted);
