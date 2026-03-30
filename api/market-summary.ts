@@ -9,9 +9,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Símbolos buscados: Ibovespa, Dólar e Bitcoin
-    // Usamos encodeURIComponent para garantir que caracteres como ^ e = não quebrem a URL
-    const symbols = '^BVSP,USDBRL=X,BTC-BRL';
-    const url = `https://brapi.dev/api/quote/${encodeURIComponent(symbols)}?token=${token}`;
+    const symbols = ['^BVSP', 'USDBRL=X', 'BTC-BRL'];
+    // Codificamos cada símbolo individualmente, mas mantemos a vírgula sem codificar
+    const encodedSymbols = symbols.map(s => encodeURIComponent(s)).join(',');
+    const url = `https://brapi.dev/api/quote/${encodedSymbols}?token=${token}`;
     
     const response = await fetch(url);
     const data: any = await response.json();
