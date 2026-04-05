@@ -88,7 +88,7 @@ const NovidadesMercado: React.FC<NovidadesMercadoProps> = ({
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar 
         login={login}
         fotoGrupo={fotoGrupo}
@@ -98,7 +98,7 @@ const NovidadesMercado: React.FC<NovidadesMercadoProps> = ({
       />
 
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 pb-28 md:p-8 md:pb-8 max-w-[1600px] mx-auto">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto custom-scrollbar-none">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>

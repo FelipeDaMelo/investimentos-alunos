@@ -409,7 +409,7 @@ export default function AdminPage({
           </div>
         </header>
 
-        <main className="flex-1 w-full p-4 pb-28 sm:p-6 md:pb-10 lg:p-10 space-y-10">
+        <main className="flex-1 w-full p-4 sm:p-6 lg:p-10 space-y-10">
           
           {/* Controls Area */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white border-2 border-slate-100 p-4 rounded-[2rem] shadow-sm">

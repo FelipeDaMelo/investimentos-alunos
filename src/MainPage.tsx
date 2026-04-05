@@ -728,7 +728,7 @@ export default function MainPage({
 
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Sidebar
         login={login}
         fotoGrupo={fotoGrupo}
@@ -750,7 +750,7 @@ export default function MainPage({
       />
 
       <div className="flex-1 flex flex-col w-full bg-gray-50/50 transition-all duration-500 relative">
-        <div className={`flex-1 flex flex-col p-4 pb-28 md:p-10 md:pb-10 ${isAnyModalOpen ? 'overflow-hidden' : 'overflow-y-auto'} custom-scrollbar`}>
+        <div className={`flex-1 flex flex-col p-4 md:p-10 ${isAnyModalOpen ? 'overflow-hidden' : 'overflow-y-auto'} custom-scrollbar`}>
           <Header
             login={login}
             nomeGrupo={nomeGrupo}

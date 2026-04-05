@@ -102,7 +102,7 @@ export default function AddParticipantsModal({ onClose, onConfirm, currentPartic
                 <p className="col-span-full text-center text-slate-400 p-4 text-sm font-bold">Carregando usuários...</p>
               ) : filteredUsers.length > 0 ? (
                 filteredUsers.map(user => (
-                  <label key={user.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white cursor-pointer transition-colors group border border-transparent hover:border-slate-200 shadow-sm hover:shadow-md">
+                  <label key={user.id} onClick={() => handleToggleUser(user.id)} className="flex items-center justify-between p-3 rounded-xl hover:bg-white cursor-pointer transition-colors group border border-transparent hover:border-slate-200 shadow-sm hover:shadow-md">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <img src={user.fotoGrupo || "/logo-marista.png"} alt={user.id} className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm shrink-0" />
                       <span className={`font-bold truncate transition-colors ${selectedUsers.includes(user.id) ? 'text-slate-800' : 'text-slate-600'}`}>{user.id}</span>

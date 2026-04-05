@@ -14,13 +14,13 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 
 const App = () => {
-  const [valorInvestido, setValorInvestido] = useState<number>(0);
-  const [fixo, setFixo] = useState<number>(0);
-  const [variavel, setVariavel] = useState<number>(0);
-  const [nomeGrupo, setNomeGrupo] = useState<string>('');
-  const [fotoGrupo, setFotoGrupo] = useState<string | null>(null);
-  const [senhaSalva, setSenhaSalva] = useState<string>('');
-  const [login, setLogin] = useState<string | null>(null);
+  const [valorInvestido, setValorInvestido] = useState<number>(() => Number(sessionStorage.getItem('valorInvestido')) || 0);
+  const [fixo, setFixo] = useState<number>(() => Number(sessionStorage.getItem('fixo')) || 0);
+  const [variavel, setVariavel] = useState<number>(() => Number(sessionStorage.getItem('variavel')) || 0);
+  const [nomeGrupo, setNomeGrupo] = useState<string>(() => sessionStorage.getItem('nomeGrupo') || '');
+  const [fotoGrupo, setFotoGrupo] = useState<string | null>(() => sessionStorage.getItem('fotoGrupo'));
+  const [senhaSalva, setSenhaSalva] = useState<string>(() => sessionStorage.getItem('senhaSalva') || '');
+  const [login, setLogin] = useState<string | null>(() => sessionStorage.getItem('login'));
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   // Hook do React Router para permitir a navegação entre as rotas
@@ -52,6 +52,15 @@ const App = () => {
       setLogin(nomeGrupo);
       setSenhaSalva(senha);
       setFotoGrupo(fotoGrupo);
+
+      // Persistir no sessionStorage
+      sessionStorage.setItem('valorInvestido', valorInvestido.toString());
+      sessionStorage.setItem('fixo', fixo.toString());
+      sessionStorage.setItem('variavel', variavel.toString());
+      sessionStorage.setItem('nomeGrupo', nomeGrupo);
+      sessionStorage.setItem('login', nomeGrupo);
+      sessionStorage.setItem('senhaSalva', senha);
+      if (fotoGrupo) sessionStorage.setItem('fotoGrupo', fotoGrupo);
     },
     []
   );
@@ -64,6 +73,11 @@ const App = () => {
     setFixo(0);
     setVariavel(0);
     setNomeGrupo('');
+    setSenhaSalva('');
+    setFotoGrupo(null);
+    
+    sessionStorage.clear();
+    
     navigate('/'); 
     window.scrollTo(0, 0); 
   }, [navigate]);
@@ -71,6 +85,11 @@ const App = () => {
   const handleImpersonate = useCallback((userId: string, fotoGrupo: string | null) => {
     setLogin(userId);
     setFotoGrupo(fotoGrupo || null);
+    
+    sessionStorage.setItem('login', userId);
+    if (fotoGrupo) sessionStorage.setItem('fotoGrupo', fotoGrupo);
+    else sessionStorage.removeItem('fotoGrupo');
+    
     navigate('/');
     window.scrollTo(0, 0);
   }, [navigate]);
@@ -87,6 +106,7 @@ const App = () => {
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, 'usuarios', login), { fotoGrupo: url });
       setFotoGrupo(url);
+      sessionStorage.setItem('fotoGrupo', url);
     } catch (error) {
       console.error("Erro no upload:", error);
       alert("Erro ao enviar imagem.");

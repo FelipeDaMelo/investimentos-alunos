@@ -8,47 +8,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Fazemos as 3 requisições simultaneamente para os endpoints corretos da Brapi
-    const [ibovRes, dolarRes, btcRes] = await Promise.all([
+    // 1. Buscamos Ibovespa e Bitcoin (Brapi) + Dólar (BCB)
+    const [ibovRes, btcRes, dolarRes] = await Promise.all([
       fetch(`https://brapi.dev/api/quote/^BVSP?token=${token}`),
-      fetch(`https://brapi.dev/api/v2/currency?currency=USD-BRL&token=${token}`),
-      fetch(`https://brapi.dev/api/v2/crypto?coin=BTC&currency=BRL&token=${token}`)
+      fetch(`https://brapi.dev/api/quote/BTC-USD?token=${token}`),
+      fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.10813/dados/ultimos/2?formato=json`) 
     ]);
 
-    // Extraímos os dados em JSON
     const ibovData: any = await ibovRes.json();
-    const dolarData: any = await dolarRes.json();
     const btcData: any = await btcRes.json();
+    const dolarData: any = await dolarRes.json();
 
-    // Verificação de segurança (se a Brapi retornar erro em alguma delas)
-    if (!ibovRes.ok && !dolarRes.ok && !btcRes.ok) {
-      return res.status(400).json({ error: 'Falha ao buscar dados na Brapi' });
+    // 2. Extração Ibovespa
+    const ibovResult = ibovData.results?.[0] || {};
+    
+    // 3. Extração Dólar (BACEN PTAX Venda - Série 10813)
+    let dolarPrice = 0;
+    let dolarChange = 0;
+    if (dolarData && dolarData.length >= 1) {
+      dolarPrice = parseFloat(dolarData[dolarData.length - 1].valor.replace(',', '.'));
+      if (dolarData.length >= 2) {
+        const previous = parseFloat(dolarData[dolarData.length - 2].valor.replace(',', '.'));
+        dolarChange = ((dolarPrice - previous) / previous) * 100;
+      }
     }
 
-    // Extraindo os valores (a estrutura de resposta muda dependendo do endpoint da Brapi)
-    const ibovResult = ibovData.results?.[0] || {};
-    const dolarResult = dolarData.currency?.[0] || {}; // O endpoint /v2/currency retorna um array "currency"
-    const btcResult = btcData.coins?.[0] || {};        // O endpoint /v2/crypto retorna um array "coins"
+    // 4. Extração Bitcoin (Brapi + Conversão)
+    const btcResult = btcData.results?.[0] || {};
+    const btcPriceUSD = Number(btcResult.regularMarketPrice) || 0;
+    const btcPriceBRL = btcPriceUSD * (dolarPrice || 5.0); // Use PTAX ou fallback de 5.0
 
-    // Formatação amigável padronizada para o seu frontend
     const formatted = {
       ibov: {
         symbol: '^BVSP',
         name: 'Ibovespa',
-        price: ibovResult.regularMarketPrice || 0,
-        changePercent: ibovResult.regularMarketChangePercent || 0,
+        price: Number(ibovResult.regularMarketPrice) || 0,
+        changePercent: Number(ibovResult.regularMarketChangePercent) || 0,
       },
       dolar: {
         symbol: 'USD',
         name: 'Dólar',
-        price: dolarResult.askPrice || dolarResult.bidPrice || 0, // Brapi usa bid/ask para moedas
-        changePercent: dolarResult.pctChange || 0,
+        price: dolarPrice,
+        changePercent: dolarChange,
       },
       btc: {
         symbol: 'BTC',
         name: 'Bitcoin',
-        price: btcResult.regularMarketPrice || 0,
-        changePercent: btcResult.regularMarketChangePercent || 0,
+        price: btcPriceBRL,
+        changePercent: Number(btcResult.regularMarketChangePercent) || 0,
       },
     };
 

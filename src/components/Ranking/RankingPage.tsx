@@ -221,7 +221,7 @@ export default function RankingPage({
         onTriggerDelete={() => { }}
       />
       <main className="flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <div className="w-full p-4 pb-28 md:pb-10 sm:p-6 lg:p-10 animate-fade-in">
+        <div className="w-full p-4 md:pb-10 sm:p-6 lg:p-10 animate-fade-in">
 
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
             <div className="flex items-center gap-6">
