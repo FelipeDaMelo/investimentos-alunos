@@ -39,7 +39,7 @@ export const criarAtivoVariavel = (
       quantidade: novaQuantidade,
       valorInvestido: novoValorInvestido,
       precoMedio: novoPrecoMedio,
-      valorAtual: novaQuantidade * novo.precoMedio,
+      valorAtual: novo.precoMedio,
       dataInvestimento: novo.dataInvestimento,
       compras: [...atual.compras, novaCompra],
       patrimonioPorDia: {
@@ -58,7 +58,7 @@ export const criarAtivoVariavel = (
     id: Date.now().toString(),
     tipo: 'rendaVariavel',
     precoMedio: novo.precoMedio,
-    valorAtual: novo.quantidade * novo.precoMedio,
+    valorAtual: novo.precoMedio,
     patrimonioPorDia: { [hoje]: novo.quantidade * novo.precoMedio },
     compras: [novaCompra]
   };

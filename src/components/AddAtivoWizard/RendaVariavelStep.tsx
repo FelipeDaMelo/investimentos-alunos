@@ -102,6 +102,7 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     if (form.subtipo !== 'criptomoeda' && !Number.isInteger(quantidadeNumerica)) { alert('Para este tipo de ativo, a quantidade deve ser um número inteiro'); return; }
     if (valorTotal > saldoDisponivel) { alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})})`); return; }
 
+    const hoje = new Date().toISOString().split('T')[0];
     const ativoCompleto: RendaVariavelAtivo & { senha: string } = {
       ...form,
       quantidade: quantidadeNumerica,
@@ -109,8 +110,8 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
       tickerFormatado: formatarTicker(form.nome, form.subtipo),
       precoMedio: form.precoAtual,
       tipo: 'rendaVariavel',
-      valorAtual: valorTotal,
-      patrimonioPorDia: {},
+      valorAtual: form.precoAtual,
+      patrimonioPorDia: { [hoje]: valorTotal },
       id: Date.now().toString(),
       senha,
       compras: [{ valor: valorTotal, data: new Date().toISOString() }],

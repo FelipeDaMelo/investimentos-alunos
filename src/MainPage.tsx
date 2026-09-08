@@ -460,7 +460,8 @@ export default function MainPage({
             const novaQuantidade = existente.quantidade + ativoVariavelNovo.quantidade;
             const novoInvestimento = existente.valorInvestido + ativoVariavelNovo.valorInvestido;
             const novoPrecoMedio = novoInvestimento / novaQuantidade;
-            const precoDeMercadoAtual = ativoVariavelNovo.valorAtual;
+            const precoDeMercadoAtual = ativoVariavelNovo.precoMedio;
+            const hoje = new Date().toISOString().split('T')[0];
 
             const atualizado: RendaVariavelAtivo = {
               ...existente,
@@ -470,7 +471,7 @@ export default function MainPage({
               valorAtual: precoDeMercadoAtual,
               patrimonioPorDia: {
                 ...existente.patrimonioPorDia,
-                [new Date().toISOString().split('T')[0]]: novaQuantidade * precoDeMercadoAtual
+                [hoje]: novaQuantidade * precoDeMercadoAtual
               }
             };
             novosAtivos = ativosAtuais.map(a => a.id === existente.id ? atualizado : a);
