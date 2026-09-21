@@ -22,6 +22,8 @@ interface BaseAtivo {
   subtipo?: string;
   quantidade?: number;
   logo?: string;
+  setor?: string;
+  ticker?: string;
 }
 
 export interface RendaFixaAtivo extends BaseAtivo {

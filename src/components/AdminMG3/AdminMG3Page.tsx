@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { storage } from '../../firebaseConfig';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock } from 'lucide-react';
 
 interface AdminMG3PageProps {
@@ -26,6 +28,7 @@ const DEFAULT_SETORES = [
 export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   const [senha, setSenha] = useState('');
   const [autenticado, setAutenticado] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [ativos, setAtivos] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios'>('empresas');
   const [setores, setSetores] = useState<string[]>(DEFAULT_SETORES);
@@ -58,6 +61,25 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
       carregarAtivos();
     } else {
       alert('Senha incorreta!');
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const uniqueName = `${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, `logos_mg3/${uniqueName}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setNovoAtivo({ ...novoAtivo, logo: downloadURL });
+    } catch (error) {
+      console.error("Erro ao subir logo:", error);
+      alert("Erro ao fazer upload da logo.");
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -119,7 +141,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if(confirm('Tem certeza que deseja excluir este ativo do mercado MG3?')) {
+    if (confirm('Tem certeza que deseja excluir este ativo do mercado MG3?')) {
       await deleteDoc(doc(db, 'mg3_mercado', id));
       carregarAtivos();
     }
@@ -165,7 +187,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   };
 
   const handleRemoveSetor = (setorToRemove: string) => {
-    if(!confirm(`Tem certeza que deseja remover o setor ${setorToRemove}?`)) return;
+    if (!confirm(`Tem certeza que deseja remover o setor ${setorToRemove}?`)) return;
     setSetores(prev => prev.filter(s => s !== setorToRemove));
     setCenarios(prev => {
       const newCenarios = { ...prev };
@@ -221,32 +243,28 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   return (
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         <header className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div className="flex items-center gap-4">
-            <div className="bg-blue-100 p-3 rounded-2xl">
-              <Briefcase className="text-blue-600 w-8 h-8" />
-            </div>
+            <img src="/MG3_LOGO.png" alt="MG3 Logo" className="h-16 w-auto" />
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Painel de Administração MG3</h1>
-              <p className="text-slate-500">Mostra Cultural - Gestão do Mercado Paralelo</p>
+              <h1 className="text-3xl font-bold text-slate-800">Painel Administrativo MG3</h1>
+              <p className="text-slate-500">Controle de Ativos e Cenários da Mostra Científica e Cultural</p>
             </div>
           </div>
-          
+
           <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
             <button
               onClick={() => setActiveTab('empresas')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
-                activeTab === 'empresas' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${activeTab === 'empresas' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                }`}
             >
               <LayoutDashboard size={18} /> Empresas
             </button>
             <button
               onClick={() => setActiveTab('cenarios')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
-                activeTab === 'cenarios' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${activeTab === 'cenarios' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                }`}
             >
               <Clock size={18} /> Cenários
             </button>
@@ -255,146 +273,154 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
 
         {activeTab === 'empresas' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit">
-            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <Building2 className="text-slate-400" /> Cadastrar Empresa
-            </h2>
-            
-            <form onSubmit={handleSalvarAtivo} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Ativo</label>
-                <select 
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={novoAtivo.tipo}
-                  onChange={e => setNovoAtivo({...novoAtivo, tipo: e.target.value})}
-                >
-                  <option value="acao">Ação (Renda Variável)</option>
-                  <option value="criptomoeda">Criptomoeda</option>
-                  <option value="rendaFixa">Banco (Renda Fixa)</option>
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Empresa / Banco</label>
-                <input 
-                  required
-                  type="text" 
-                  placeholder="Ex: GLoriaTech"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={novoAtivo.nome}
-                  onChange={e => setNovoAtivo({...novoAtivo, nome: e.target.value})}
-                />
-              </div>
+            <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit">
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <Building2 className="text-slate-400" /> Cadastrar Empresa
+              </h2>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Código (Ticker)</label>
-                <input 
-                  required
-                  type="text" 
-                  placeholder="Ex: GLTE3"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={novoAtivo.ticker}
-                  onChange={e => setNovoAtivo({...novoAtivo, ticker: e.target.value.toUpperCase()})}
-                />
-              </div>
-
-              {novoAtivo.tipo !== 'rendaFixa' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Setor</label>
-                    <select 
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={novoAtivo.setor}
-                      onChange={e => setNovoAtivo({...novoAtivo, setor: e.target.value})}
-                    >
-                      {setores.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Preço Inicial (GLoriaCoins)</label>
-                    <input 
-                      required
-                      type="number" 
-                      step="0.01"
-                      placeholder="Ex: 15.50"
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={novoAtivo.precoAtual}
-                      onChange={e => setNovoAtivo({...novoAtivo, precoAtual: e.target.value})}
-                    />
-                  </div>
-                </>
-              )}
-
-              {novoAtivo.tipo === 'rendaFixa' && (
+              <form onSubmit={handleSalvarAtivo} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Taxa Diária de Rendimento (%)</label>
-                  <input 
-                    required
-                    type="number" 
-                    step="0.001"
-                    placeholder="Ex: 5 para 5% ao dia"
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Ativo</label>
+                  <select
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={novoAtivo.taxaRendimentoDiaria}
-                    onChange={e => setNovoAtivo({...novoAtivo, taxaRendimentoDiaria: e.target.value})}
+                    value={novoAtivo.tipo}
+                    onChange={e => setNovoAtivo({ ...novoAtivo, tipo: e.target.value })}
+                  >
+                    <option value="acao">Ação (Renda Variável)</option>
+                    <option value="criptomoeda">Criptomoeda</option>
+                    <option value="rendaFixa">Banco (Renda Fixa)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Empresa / Banco</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ex: GLoriaTech"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={novoAtivo.nome}
+                    onChange={e => setNovoAtivo({ ...novoAtivo, nome: e.target.value })}
                   />
                 </div>
-              )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">URL da Logo (Opcional)</label>
-                <input 
-                  type="text" 
-                  placeholder="https://..."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={novoAtivo.logo}
-                  onChange={e => setNovoAtivo({...novoAtivo, logo: e.target.value})}
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Código (Ticker)</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ex: GLTE3"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={novoAtivo.ticker}
+                    onChange={e => setNovoAtivo({ ...novoAtivo, ticker: e.target.value.toUpperCase() })}
+                  />
+                </div>
 
-              <button type="submit" className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 mt-4">
-                <TrendingUp size={20} /> Cadastrar Ativo MG3
-              </button>
-            </form>
-          </div>
+                {novoAtivo.tipo !== 'rendaFixa' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Setor</label>
+                      <select
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={novoAtivo.setor}
+                        onChange={e => setNovoAtivo({ ...novoAtivo, setor: e.target.value })}
+                      >
+                        {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Preço Inicial (GLoriaCoins)</label>
+                      <input
+                        required
+                        type="number"
+                        step="0.01"
+                        placeholder="Ex: 15.50"
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={novoAtivo.precoAtual}
+                        onChange={e => setNovoAtivo({ ...novoAtivo, precoAtual: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
 
-          <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-               Mercado Ativo ({ativos.length})
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {ativos.map(ativo => (
-                <div key={ativo.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                  <img src={ativo.logo} alt={ativo.ticker} className="w-12 h-12 rounded-full object-cover bg-slate-100" />
-                  <div className="flex-1">
-                    <h3 className="font-bold text-slate-800">{ativo.ticker}</h3>
-                    <p className="text-xs text-slate-500">{ativo.nome} • {ativo.tipo}</p>
-                    {ativo.tipo === 'rendaFixa' ? (
-                      <p className="text-sm font-medium text-green-600 mt-1">
-                        +{(ativo.taxaRendimentoDiaria * 100).toFixed(2)}% ao dia
-                      </p>
-                    ) : (
-                      <p className="text-sm font-medium text-blue-600 mt-1">
-                        $ {ativo.precoAtual?.toFixed(2)}
-                      </p>
-                    )}
+                {novoAtivo.tipo === 'rendaFixa' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Taxa Diária de Rendimento (%)</label>
+                    <input
+                      required
+                      type="number"
+                      step="0.001"
+                      placeholder="Ex: 5 para 5% ao dia"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={novoAtivo.taxaRendimentoDiaria}
+                      onChange={e => setNovoAtivo({ ...novoAtivo, taxaRendimentoDiaria: e.target.value })}
+                    />
                   </div>
-                  <button onClick={() => handleDelete(ativo.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
-                    <Trash2 size={20} />
-                  </button>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Logo do Ativo (Opcional)</label>
+                  <div className="flex items-center gap-4">
+                    {novoAtivo.logo && (
+                      <img src={novoAtivo.logo} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-1"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                      />
+                    </div>
+                  </div>
+                  {uploadingLogo && <p className="text-sm text-blue-500 mt-1">Enviando imagem...</p>}
                 </div>
-              ))}
-              
-              {ativos.length === 0 && (
-                <div className="col-span-2 text-center p-10 bg-white rounded-3xl border border-dashed border-slate-300">
-                  <p className="text-slate-500">Nenhuma empresa cadastrada no MG3 ainda.</p>
-                </div>
-              )}
+
+                <button type="submit" className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 mt-4">
+                  <TrendingUp size={20} /> Cadastrar Ativo MG3
+                </button>
+              </form>
             </div>
 
+            <div className="lg:col-span-2 space-y-6">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                Mercado Ativo ({ativos.length})
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {ativos.map(ativo => (
+                  <div key={ativo.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                    <img src={ativo.logo} alt={ativo.ticker} className="w-12 h-12 rounded-full object-cover bg-slate-100" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-slate-800">{ativo.ticker}</h3>
+                      <p className="text-xs text-slate-500">{ativo.nome} • {ativo.tipo}</p>
+                      {ativo.tipo === 'rendaFixa' ? (
+                        <p className="text-sm font-medium text-green-600 mt-1">
+                          +{(ativo.taxaRendimentoDiaria * 100).toFixed(2)}% ao dia
+                        </p>
+                      ) : (
+                        <p className="text-sm font-medium text-blue-600 mt-1">
+                          $ {ativo.precoAtual?.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    <button onClick={() => handleDelete(ativo.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                ))}
+
+                {ativos.length === 0 && (
+                  <div className="col-span-2 text-center p-10 bg-white rounded-3xl border border-dashed border-slate-300">
+                    <p className="text-slate-500">Nenhuma empresa cadastrada no MG3 ainda.</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
           </div>
-        </div>
         ) : (
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-8">
             <div className="flex justify-between items-start">
@@ -405,7 +431,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                   Para garantir justiça no simulador, a regra de <b>Variação Líquida Zero</b> exige que o somatório de cada setor no final do dia seja exatos 0%.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={adicionarNoticia}
                 className="px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2"
               >
@@ -415,15 +441,15 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
 
             {/* Gerenciamento de Setores */}
             <div className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border border-slate-100">
-              <input 
-                type="text" 
-                placeholder="Nome do novo setor..." 
+              <input
+                type="text"
+                placeholder="Nome do novo setor..."
                 className="flex-1 p-3 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500"
                 value={novoSetor}
                 onChange={e => setNovoSetor(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddSetor()}
               />
-              <button 
+              <button
                 onClick={handleAddSetor}
                 className="px-6 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition-colors whitespace-nowrap"
               >
@@ -459,7 +485,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                         </td>
                         {cenariosKeys.map(key => (
                           <td key={key} className="p-4 text-center">
-                            <input 
+                            <input
                               type="number"
                               value={cenarios[key]?.[setor] || 0}
                               onChange={e => handleCenarioChange(key, setor, e.target.value)}
@@ -491,7 +517,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                   </p>
                 )}
               </div>
-              <button 
+              <button
                 onClick={handleSalvarCenarios}
                 disabled={!todosZerados || isSavingCenarios}
                 className="px-8 py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"

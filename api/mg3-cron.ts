@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   try {
     const mercadoSnap = await getDocs(collection(db, 'mg3_mercado'));
-    const ativos = mercadoSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const ativos = mercadoSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
 
     let cenariosConfig: any = null;
     let logOperacoes: string[] = [];

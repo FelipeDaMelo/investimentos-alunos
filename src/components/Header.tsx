@@ -12,6 +12,8 @@ interface HeaderProps {
   onUploadConfirmado: (file: File, senhaDigitada: string) => Promise<void>;
   onTriggerDelete: () => void;
   formatCurrency: (value: number) => string;
+  logoSrc?: string;
+  logoAlt?: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -22,7 +24,9 @@ const Header: React.FC<HeaderProps> = ({
   onLogout,
   onUploadConfirmado,
   onTriggerDelete,
-  formatCurrency
+  formatCurrency,
+  logoSrc,
+  logoAlt
 }) => {
   const [showValues, setShowValues] = useState(true);
 
@@ -31,6 +35,11 @@ const Header: React.FC<HeaderProps> = ({
       
       {/* Lado Esquerdo: Perfil e Saudação */}
       <div className="flex items-center gap-4">
+        {logoSrc && (
+          <div className="mr-2">
+            <img src={logoSrc} alt={logoAlt || 'Logo'} className="h-14 w-auto object-contain drop-shadow-sm" />
+          </div>
+        )}
         <div className="relative">
           <FotoGrupoUploader 
             login={login} 

@@ -1,0 +1,176 @@
+            <>
+              {/* Dashboard Hub: Gráfico + Mini Ranking */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10 w-full animate-fade-in delay-150">
+
+                {/* Gráfico (2/3 no Desktop) */}
+                <div className="xl:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-slate-800">Evolução do Patrimônio</h2>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={escalaY}
+                        onChange={(e) => setEscalaY(e.target.value as any)}
+                        className="bg-slate-50 border-none text-slate-600 text-sm font-bold px-4 py-2 rounded-xl focus:ring-0 cursor-pointer"
+                      >
+                        <option value="linear">Escala Linear</option>
+                        <option value="logarithmic">Escala Logarítmica</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="h-[350px] w-full">
+                    <Line
+                      ref={chartRef}
+                      data={{
+                        ...chartData,
+                        datasets: chartData.datasets.map(ds => ({
+                          ...ds,
+                          tension: 0.4,
+                          pointRadius: 2,
+                          borderWidth: 3,
+                          fill: true,
+                          backgroundColor: 'rgba(59, 130, 246, 0.05)'
+                        }))
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'center',
+                            labels: {
+                              usePointStyle: true,
+                              pointStyle: 'circle',
+                              padding: 20,
+                              color: '#64748b',
+                              font: { size: 12, weight: 'bold' }
+                            }
+                          },
+                          zoom: {
+                            zoom: {
+                              wheel: { enabled: true },
+                              pinch: { enabled: true },
+                              drag: {
+                                enabled: true,
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderColor: 'rgba(59, 130, 246, 0.4)',
+                                borderWidth: 1
+                              },
+                              mode: 'x',
+                            },
+                            pan: {
+                              enabled: true,
+                              mode: 'x',
+                            }
+                          },
+                          tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 12,
+                            cornerRadius: 12,
+                            callbacks: {
+                              label: (ctx) => ` ${ctx.dataset.label}: ${formatCurrency(Number(ctx.raw))}`
+                            }
+                          }
+                        },
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                          x: {
+                            type: 'category',
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            title: { display: true, text: 'Período', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                          },
+                          y: {
+                            type: escalaY,
+                            grid: { color: '#f1f5f9' },
+                            border: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => formatCurrency(Number(v)) },
+                            title: { display: true, text: 'Valor (R$)', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-6 flex justify-center gap-4 p-2">
+                    <button
+                      onClick={() => chartRef.current?.resetZoom()}
+                      className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all flex items-center gap-2 shadow-sm"
+                    >
+                      <RefreshCw size={16} /> Resetar Zoom
+                    </button>
+                    <button
+                      onClick={() => {
+                        const canvas = chartRef.current?.canvas;
+                        if (canvas) {
+                          const link = document.createElement('a');
+                          link.download = `evolucao_${nomeGrupo}.png`;
+                          link.href = canvas.toDataURL('image/png');
+                          link.click();
+                        }
+                      }}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                    >
+                      <Download size={16} /> Baixar Gráfico
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mini Ranking (1/3 no Desktop) */}
+                <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 flex flex-col h-full">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Seus Rankings</h2>
+                    <Link to="/ranking" className="text-blue-600 text-sm font-bold hover:underline flex items-center gap-1">
+                      Ver todos <ChevronRight size={14} />
+                    </Link>
+                  </div>
+
+                  {meusRankings.length > 0 ? (
+                    <div className="space-y-4 mb-8">
+                      {meusRankings.map((rk) => (
+                        <div key={rk.id} className="bg-slate-50 rounded-3xl p-4 border border-slate-100 flex items-center justify-between transition-all hover:border-blue-200">
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{rk.nome}</p>
+                            <p className="text-lg font-bold text-slate-700">
+                              {rk.rank}º <span className="text-slate-400 font-medium text-sm">de {rk.total}</span>
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600">
+                            <Trophy size={20} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 border-2 border-dashed border-slate-100 rounded-[2.5rem]">
+                      <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                        <Trophy size={32} />
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium">Cadastre ativos para competir nos rankings globais.</p>
+                    </div>
+                  )}
+
+                  {/* Ranking Global - Sua Posição (Simulado pelo rankingData se houver) */}
+                  <div className="mt-auto pt-6 border-t border-slate-50">
+                    <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
+                      <div className="flex justify-between items-start mb-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Global</p>
+                        <Trophy size={16} className="text-yellow-400" />
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-2xl font-black tracking-tight">#{rankingData.findIndex(u => u.nome === login) + 1 || '-'}</p>
+                          <p className="text-[10px] font-bold opacity-60">Sua Posição Geral</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-blue-400">{rankingData.length} Grupos</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+

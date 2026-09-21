@@ -202,6 +202,11 @@ const App = () => {
                       fotoGrupo={fotoGrupo}
                       onLogout={handleLogout}
                       onUploadConfirmado={handleUploadConfirmado}
+                      valorInvestido={valorInvestido}
+                      fixo={fixo}
+                      variavel={variavel}
+                      nomeGrupo={nomeGrupo}
+                      setFotoGrupo={setFotoGrupo}
                     />
                   )
                 } 

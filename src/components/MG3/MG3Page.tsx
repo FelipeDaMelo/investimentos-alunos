@@ -22,7 +22,7 @@ import {
   Filler,
 } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
-import AtivoCard from '../../components/AtivoCard';
+import MG3AtivoCard from './MG3AtivoCard';
 import AddAtivoWizard from '../../components/AddAtivoWizard';
 import VendaAtivoModal from '../../components/VendaAtivoModal';
 import { Ativo, RendaVariavelAtivo, RendaFixaAtivo, AtivoComSenha } from '../../types/Ativo';
@@ -209,7 +209,7 @@ export default function MG3Page({
             destino: 'fixa', // Pode ser fixa como um "caixa"
             data: new Date().toISOString()
           };
-          
+
           await setDoc(docRef, {
             ativos: [],
             historico: [novoRegistro],
@@ -221,7 +221,7 @@ export default function MG3Page({
               [new Date().toISOString().split('T')[0]]: 1
             }
           });
-          
+
           setAtivos([]);
           setHistorico([novoRegistro]);
           setTotalCotas(100000);
@@ -542,9 +542,9 @@ export default function MG3Page({
           const mercadoRef = doc(db, 'mg3_mercado', mg3Doc.id);
           const mercadoData = await transaction.get(mercadoRef);
           if (mercadoData.exists()) {
-             transaction.update(mercadoRef, {
-                demanda: (mercadoData.data().demanda || 0) + (ativoSemSenha as RendaVariavelAtivo).quantidade
-             });
+            transaction.update(mercadoRef, {
+              demanda: (mercadoData.data().demanda || 0) + (ativoSemSenha as RendaVariavelAtivo).quantidade
+            });
           }
         }
 
@@ -619,9 +619,9 @@ export default function MG3Page({
             const hoje = new Date().toISOString().split('T')[0];
             const patrimonioAtualizado = { ...ativoNoBanco.patrimonioPorDia, [hoje]: restoValorAtual };
 
-            novosAtivos = ativosAtuais.map(a => 
-              a.id === ativoNoBanco.id 
-                ? { ...a, valorInvestido: restoValorInvestido, valorAtual: restoValorAtual, patrimonioPorDia: patrimonioAtualizado } 
+            novosAtivos = ativosAtuais.map(a =>
+              a.id === ativoNoBanco.id
+                ? { ...a, valorInvestido: restoValorInvestido, valorAtual: restoValorAtual, patrimonioPorDia: patrimonioAtualizado }
                 : a
             );
           }
@@ -662,9 +662,9 @@ export default function MG3Page({
           const mercadoRef = doc(db, 'mg3_mercado', mg3Doc.id);
           const mercadoData = await transaction.get(mercadoRef);
           if (mercadoData.exists()) {
-             transaction.update(mercadoRef, {
-                oferta: (mercadoData.data().oferta || 0) + quantidadeVendida
-             });
+            transaction.update(mercadoRef, {
+              oferta: (mercadoData.data().oferta || 0) + quantidadeVendida
+            });
           }
         }
 
@@ -847,402 +847,406 @@ export default function MG3Page({
 
                 {/* Gráfico (2/3 no Desktop) */}
                 <div className="xl:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-slate-800">Evolução do Patrimônio</h2>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={escalaY}
-                        onChange={(e) => setEscalaY(e.target.value as any)}
-                        className="bg-slate-50 border-none text-slate-600 text-sm font-bold px-4 py-2 rounded-xl focus:ring-0 cursor-pointer"
-                      >
-                        <option value="linear">Escala Linear</option>
-                        <option value="logarithmic">Escala Logarítmica</option>
-                      </select>
+                  <div className="flex justify-between items-center mb-8">
+                    <div className="flex items-center gap-4">
+                      <img src="/MG3_LOGO.png" alt="MG3 Logo" className="h-12 w-auto" />
+                      <div>
+                        <h1 className="text-3xl font-bold text-slate-800">Bolsa MG3</h1>
+                        <p className="text-slate-500">Mercado de Ações da Mostra Científica e Cultural</p>
+                      </div>
                     </div>
+                    <select
+                      value={escalaY}
+                      onChange={(e) => setEscalaY(e.target.value as any)}
+                      className="bg-slate-50 border-none text-slate-600 text-sm font-bold px-4 py-2 rounded-xl focus:ring-0 cursor-pointer"
+                    >
+                      <option value="linear">Escala Linear</option>
+                      <option value="logarithmic">Escala Logarítmica</option>
+                    </select>
                   </div>
 
-                  <div className="h-[350px] w-full">
-                    <Line
-                      ref={chartRef}
-                      data={{
-                        ...chartData,
-                        datasets: chartData.datasets.map(ds => ({
-                          ...ds,
-                          tension: 0.4,
-                          pointRadius: 2,
-                          borderWidth: 3,
-                          fill: true,
-                          backgroundColor: 'rgba(59, 130, 246, 0.05)'
-                        }))
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            display: true,
-                            position: 'top',
-                            align: 'center',
-                            labels: {
-                              usePointStyle: true,
-                              pointStyle: 'circle',
-                              padding: 20,
-                              color: '#64748b',
-                              font: { size: 12, weight: 'bold' }
-                            }
-                          },
-                          zoom: {
-                            zoom: {
-                              wheel: { enabled: true },
-                              pinch: { enabled: true },
-                              drag: {
-                                enabled: true,
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                borderColor: 'rgba(59, 130, 246, 0.4)',
-                                borderWidth: 1
-                              },
-                              mode: 'x',
-                            },
-                            pan: {
-                              enabled: true,
-                              mode: 'x',
-                            }
-                          },
-                          tooltip: {
-                            backgroundColor: '#1e293b',
-                            padding: 12,
-                            cornerRadius: 12,
-                            callbacks: {
-                              label: (ctx) => ` ${ctx.dataset.label}: ${formatCurrency(Number(ctx.raw))}`
-                            }
+                <div className="h-[350px] w-full">
+                  <Line
+                    ref={chartRef}
+                    data={{
+                      ...chartData,
+                      datasets: chartData.datasets.map(ds => ({
+                        ...ds,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        borderWidth: 3,
+                        fill: true,
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)'
+                      }))
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: true,
+                          position: 'top',
+                          align: 'center',
+                          labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 20,
+                            color: '#64748b',
+                            font: { size: 12, weight: 'bold' }
                           }
                         },
-                        interaction: { mode: 'index', intersect: false },
-                        scales: {
-                          x: {
-                            type: 'category',
-                            grid: { color: '#f1f5f9' },
-                            border: { display: false },
-                            ticks: { color: '#94a3b8', font: { size: 10 } },
-                            title: { display: true, text: 'Período', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                        zoom: {
+                          zoom: {
+                            wheel: { enabled: true },
+                            pinch: { enabled: true },
+                            drag: {
+                              enabled: true,
+                              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                              borderColor: 'rgba(59, 130, 246, 0.4)',
+                              borderWidth: 1
+                            },
+                            mode: 'x',
                           },
-                          y: {
-                            type: escalaY,
-                            grid: { color: '#f1f5f9' },
-                            border: { display: false },
-                            ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => formatCurrency(Number(v)) },
-                            title: { display: true, text: 'Valor (R$)', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                          pan: {
+                            enabled: true,
+                            mode: 'x',
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: '#1e293b',
+                          padding: 12,
+                          cornerRadius: 12,
+                          callbacks: {
+                            label: (ctx) => ` ${ctx.dataset.label}: ${formatCurrency(Number(ctx.raw))}`
                           }
                         }
-                      }}
-                    />
-                  </div>
-
-                  <div className="mt-6 flex justify-center gap-4 p-2">
-                    <button
-                      onClick={() => chartRef.current?.resetZoom()}
-                      className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all flex items-center gap-2 shadow-sm"
-                    >
-                      <RefreshCw size={16} /> Resetar Zoom
-                    </button>
-                    <button
-                      onClick={() => {
-                        const canvas = chartRef.current?.canvas;
-                        if (canvas) {
-                          const link = document.createElement('a');
-                          link.download = `evolucao_${nomeGrupo}.png`;
-                          link.href = canvas.toDataURL('image/png');
-                          link.click();
+                      },
+                      interaction: { mode: 'index', intersect: false },
+                      scales: {
+                        x: {
+                          type: 'category',
+                          grid: { color: '#f1f5f9' },
+                          border: { display: false },
+                          ticks: { color: '#94a3b8', font: { size: 10 } },
+                          title: { display: true, text: 'Período', color: '#64748b', font: { size: 10, weight: 'bold' } }
+                        },
+                        y: {
+                          type: escalaY,
+                          grid: { color: '#f1f5f9' },
+                          border: { display: false },
+                          ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => formatCurrency(Number(v)) },
+                          title: { display: true, text: 'Valor (R$)', color: '#64748b', font: { size: 10, weight: 'bold' } }
                         }
-                      }}
-                      className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
-                    >
-                      <Download size={16} /> Baixar Gráfico
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mini Ranking (1/3 no Desktop) */}
-                <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 flex flex-col h-full">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Seus Rankings</h2>
-                    <Link to="/ranking" className="text-blue-600 text-sm font-bold hover:underline flex items-center gap-1">
-                      Ver todos <ChevronRight size={14} />
-                    </Link>
-                  </div>
-
-                  {meusRankings.length > 0 ? (
-                    <div className="space-y-4 mb-8">
-                      {meusRankings.map((rk) => (
-                        <div key={rk.id} className="bg-slate-50 rounded-3xl p-4 border border-slate-100 flex items-center justify-between transition-all hover:border-blue-200">
-                          <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{rk.nome}</p>
-                            <p className="text-lg font-bold text-slate-700">
-                              {rk.rank}º <span className="text-slate-400 font-medium text-sm">de {rk.total}</span>
-                            </p>
-                          </div>
-                          <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600">
-                            <Trophy size={20} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 border-2 border-dashed border-slate-100 rounded-[2.5rem]">
-                      <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
-                        <Trophy size={32} />
-                      </div>
-                      <p className="text-xs text-slate-400 font-medium">Cadastre ativos para competir nos rankings globais.</p>
-                    </div>
-                  )}
-
-                  {/* Ranking Global - Sua Posição (Simulado pelo rankingData se houver) */}
-                  <div className="mt-auto pt-6 border-t border-slate-50">
-                    <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
-                      <div className="flex justify-between items-start mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Global</p>
-                        <Trophy size={16} className="text-yellow-400" />
-                      </div>
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <p className="text-2xl font-black tracking-tight">#{rankingData.findIndex(u => u.nome === login) + 1 || '-'}</p>
-                          <p className="text-[10px] font-bold opacity-60">Sua Posição Geral</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-blue-400">{rankingData.length} Grupos</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Allocation Hub */}
-              <AllocationCharts 
-                ativos={ativos} 
-                caixaFixa={valorFixaDisponivel} 
-                caixaVariavel={valorVariavelDisponivel} 
-              />
-
-              {/* Seção Minha Carteira */}
-              <div className="flex justify-between items-center mb-6 animate-fade-in delay-300">
-                <h2 className="text-2xl font-bold text-slate-800">Minha Carteira</h2>
-                <button
-                  onClick={() => openModal(setShowWizard)}
-                  className="text-blue-600 font-bold text-sm hover:underline"
-                >
-                  Nova Operação
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 pb-12">
-                {ativos.map((ativo, index) => (
-                  <motion.div
-                    key={ativo.id}
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    whileHover={{ scale: 1.02, y: -5 }}
-                    transition={{ duration: 0.4, delay: index * 0.05 }}
-                  >
-                    <AtivoCard
-                      ativo={ativo}
-                      onSell={handleSellAtivo}
-                      cor={getCorAtivo(ativo.id)}
-                      onInformarDividendo={
-                        (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
-                          ? () => handleVerificarDividendos(ativo)
-                          : undefined
                       }
-                    />
-                  </motion.div>
-                ))}
+                    }}
+                  />
+                </div>
+
+                <div className="mt-6 flex justify-center gap-4 p-2">
+                  <button
+                    onClick={() => chartRef.current?.resetZoom()}
+                    className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all flex items-center gap-2 shadow-sm"
+                  >
+                    <RefreshCw size={16} /> Resetar Zoom
+                  </button>
+                  <button
+                    onClick={() => {
+                      const canvas = chartRef.current?.canvas;
+                      if (canvas) {
+                        const link = document.createElement('a');
+                        link.download = `evolucao_${nomeGrupo}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                      }
+                    }}
+                    className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                  >
+                    <Download size={16} /> Baixar Gráfico
+                  </button>
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-xl">Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.</div>
+
+              {/* Mini Ranking (1/3 no Desktop) */}
+              <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 flex flex-col h-full">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-black text-slate-800 tracking-tight">Seus Rankings</h2>
+                  <Link to="/ranking" className="text-blue-600 text-sm font-bold hover:underline flex items-center gap-1">
+                    Ver todos <ChevronRight size={14} />
+                  </Link>
+                </div>
+
+                {meusRankings.length > 0 ? (
+                  <div className="space-y-4 mb-8">
+                    {meusRankings.map((rk) => (
+                      <div key={rk.id} className="bg-slate-50 rounded-3xl p-4 border border-slate-100 flex items-center justify-between transition-all hover:border-blue-200">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{rk.nome}</p>
+                          <p className="text-lg font-bold text-slate-700">
+                            {rk.rank}º <span className="text-slate-400 font-medium text-sm">de {rk.total}</span>
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600">
+                          <Trophy size={20} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 border-2 border-dashed border-slate-100 rounded-[2.5rem]">
+                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                      <Trophy size={32} />
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium">Cadastre ativos para competir nos rankings globais.</p>
+                  </div>
+                )}
+
+                {/* Ranking Global - Sua Posição (Simulado pelo rankingData se houver) */}
+                <div className="mt-auto pt-6 border-t border-slate-50">
+                  <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
+                    <div className="flex justify-between items-start mb-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Global</p>
+                      <Trophy size={16} className="text-yellow-400" />
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-2xl font-black tracking-tight">#{rankingData.findIndex(u => u.nome === login) + 1 || '-'}</p>
+                        <p className="text-[10px] font-bold opacity-60">Sua Posição Geral</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-blue-400">{rankingData.length} Grupos</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          {/* Allocation Hub */}
+          <AllocationCharts
+            ativos={ativos}
+            caixaFixa={valorFixaDisponivel}
+            caixaVariavel={valorVariavelDisponivel}
+          />
+
+          {/* Seção Minha Carteira */}
+          <div className="flex justify-between items-center mb-6 animate-fade-in delay-300">
+            <h2 className="text-2xl font-bold text-slate-800">Minha Carteira</h2>
+            <button
+              onClick={() => openModal(setShowWizard)}
+              className="text-blue-600 font-bold text-sm hover:underline"
+            >
+              Nova Operação
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 pb-12">
+            {ativos.map((ativo, index) => (
+              <motion.div
+                key={ativo.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                whileHover={{ scale: 1.02, y: -5 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <MG3AtivoCard
+                  ativo={ativo}
+                  onSell={handleSellAtivo}
+                  cor={getCorAtivo(ativo.id)}
+                  onInformarDividendo={
+                    (ativo.tipo === 'rendaVariavel' && ativo.subtipo === 'fii')
+                      ? () => handleVerificarDividendos(ativo)
+                      : undefined
+                  }
+                />
+              </motion.div>
+            ))}
+          </div>
+        </>
+        ) : (
+        <div className="text-center bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded-xl">Nenhum ativo cadastrado. Adicione seu primeiro ativo para começar.</div>
           )}
-        </div> {/* This closing div was missing in the original code, it closes the "flex-1 flex flex-col p-4 md:p-10 overflow-y-auto custom-scrollbar" div */}
+      </div> {/* This closing div was missing in the original code, it closes the "flex-1 flex flex-col p-4 md:p-10 overflow-y-auto custom-scrollbar" div */}
 
-        {showWizard && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
-            <AddAtivoWizard
-              onClose={() => setShowWizard(false)}
-              onAddAtivo={handleAddAtivo}
-              valorFixaDisponivel={valorFixaDisponivel}
-              valorVariavelDisponivel={valorVariavelDisponivel}
-              quantidadeAtivos={ativos.length}
-              isMG3={true}
-            />
-          </div>
-        )}
+      {showWizard && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+          <AddAtivoWizard
+            onClose={() => setShowWizard(false)}
+            onAddAtivo={handleAddAtivo}
+            valorFixaDisponivel={valorFixaDisponivel}
+            valorVariavelDisponivel={valorVariavelDisponivel}
+            quantidadeAtivos={ativos.length}
+            isMG3={true}
+          />
+        </div>
+      )}
 
-        {showVendaModal && ativoSelecionado && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
-            <VendaAtivoModal
-              ativo={ativoSelecionado}
-              onClose={() => setShowVendaModal(false)}
-              onConfirm={confirmarVenda}
-              isSubmitting={isSubmitting}
-            />
-          </div>
-        )}
+      {showVendaModal && ativoSelecionado && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+          <VendaAtivoModal
+            ativo={ativoSelecionado}
+            onClose={() => setShowVendaModal(false)}
+            onConfirm={confirmarVenda}
+            isSubmitting={isSubmitting}
+          />
+        </div>
+      )}
 
-        {showDepositar && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
-            <DepositarModal
-              onClose={() => setShowDepositar(false)}
-              onConfirm={handleDeposito}
-              saldoFixa={valorFixaDisponivel}
-              saldoVariavel={valorVariavelDisponivel}
-            />
-          </div>
-        )}
+      {showDepositar && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+          <DepositarModal
+            onClose={() => setShowDepositar(false)}
+            onConfirm={handleDeposito}
+            saldoFixa={valorFixaDisponivel}
+            saldoVariavel={valorVariavelDisponivel}
+          />
+        </div>
+      )}
 
-        {mostrarModalIR && resumosIR && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
-            <DeduzirIRModal
-              resumosIR={resumosIR}
-              saldoVariavel={valorVariavelDisponivel}
-              onClose={() => setMostrarModalIR(false)}
-              onConfirm={async (senhaDigitada) => {
-                if (senhaDigitada !== senhaSalva) {
-                  alert('Senha incorreta!');
-                  return false;
+      {mostrarModalIR && resumosIR && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+          <DeduzirIRModal
+            resumosIR={resumosIR}
+            saldoVariavel={valorVariavelDisponivel}
+            onClose={() => setMostrarModalIR(false)}
+            onConfirm={async (senhaDigitada) => {
+              if (senhaDigitada !== senhaSalva) {
+                alert('Senha incorreta!');
+                return false;
+              }
+
+              for (const resumo of resumosIR) {
+                if (resumo.imposto > 0 && mesEncerrado(resumo.mes)) {
+                  const registroIR: RegistroHistorico = {
+                    tipo: 'ir',
+                    valor: resumo.imposto,
+                    categoria: 'rendaVariavel',
+                    subtipo: resumo.subtipo as 'acao' | 'fii' | 'criptomoeda',
+                    data: new Date().toISOString(),
+                    mesApuracao: resumo.mes
+                  };
+
+                  setValorVariavelDisponivel(prev => prev - resumo.imposto);
+                  setHistorico(prev => [...prev, registroIR]);
+
+                  const docRef = doc(db, 'usuarios_mg3', login);
+                  await updateDoc(docRef, {
+                    historico: arrayUnion(registroIR),
+                  });
                 }
+              }
 
-                for (const resumo of resumosIR) {
-                  if (resumo.imposto > 0 && mesEncerrado(resumo.mes)) {
-                    const registroIR: RegistroHistorico = {
-                      tipo: 'ir',
-                      valor: resumo.imposto,
-                      categoria: 'rendaVariavel',
-                      subtipo: resumo.subtipo as 'acao' | 'fii' | 'criptomoeda',
-                      data: new Date().toISOString(),
-                      mesApuracao: resumo.mes
-                    };
+              setMostrarModalIR(false);
+              alert('Dedução de Imposto de Renda confirmada e salva com sucesso!');
+              return true;
+            }}
+          />
+        </div>
+      )}
 
-                    setValorVariavelDisponivel(prev => prev - resumo.imposto);
-                    setHistorico(prev => [...prev, registroIR]);
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
+          <ExcluirGrupoModal
+            nomeGrupo={nomeGrupo}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={async (senhaDigitada) => {
+              if (senhaDigitada !== senhaSalva) {
+                alert('Senha incorreta!');
+                return;
+              }
 
-                    const docRef = doc(db, 'usuarios_mg3', login);
-                    await updateDoc(docRef, {
-                      historico: arrayUnion(registroIR),
-                    });
-                  }
+              setLoading(true);
+              try {
+                // 1. Apaga o documento do Firestore
+                await deleteDoc(doc(db, "usuarios_mg3", login));
+                if (fotoGrupo) {
+                  const fotoRef = ref(storage, fotoGrupo);
+                  await deleteObject(fotoRef).catch((error) => {
+                    if (error.code !== 'storage/object-not-found') throw error;
+                  });
                 }
+                alert('Grupo excluído com sucesso. Você será desconectado.');
+                window.location.reload();
+              } catch (error) {
+                console.error("Erro ao excluir grupo:", error);
+                alert("Ocorreu um erro ao tentar excluir o grupo.");
+                setLoading(false);
+              }
+            }}
+          />
+        </div>
+      )}
 
-                setMostrarModalIR(false);
-                alert('Dedução de Imposto de Renda confirmada e salva com sucesso!');
-                return true;
-              }}
-            />
-          </div>
-        )}
+      {showTransferencia && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+          <TransferenciaModal
+            saldoFixa={valorFixaDisponivel}
+            saldoVariavel={valorVariavelDisponivel}
+            onClose={() => setShowTransferencia(false)}
+            onConfirm={async (valor, direcao, senhaDigitada) => {
+              if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
+              if (valor <= 0) { alert('Digite um valor válido.'); return; }
 
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-hidden flex flex-col">
-            <ExcluirGrupoModal
-              nomeGrupo={nomeGrupo}
-              onClose={() => setShowDeleteModal(false)}
-              onConfirm={async (senhaDigitada) => {
-                if (senhaDigitada !== senhaSalva) {
-                  alert('Senha incorreta!');
-                  return;
-                }
+              if (direcao === 'fixa-variavel' && valor > valorFixaDisponivel) { alert('Saldo insuficiente em Renda Fixa.'); return; }
+              if (direcao === 'variavel-fixa' && valor > valorVariavelDisponivel) { alert('Saldo insuficiente em Renda Variável.'); return; }
 
-                setLoading(true);
-                try {
-                  // 1. Apaga o documento do Firestore
-                  await deleteDoc(doc(db, "usuarios_mg3", login));
-                  if (fotoGrupo) {
-                    const fotoRef = ref(storage, fotoGrupo);
-                    await deleteObject(fotoRef).catch((error) => {
-                      if (error.code !== 'storage/object-not-found') throw error;
-                    });
-                  }
-                  alert('Grupo excluído com sucesso. Você será desconectado.');
-                  window.location.reload();
-                } catch (error) {
-                  console.error("Erro ao excluir grupo:", error);
-                  alert("Ocorreu um erro ao tentar excluir o grupo.");
-                  setLoading(false);
-                }
-              }}
-            />
-          </div>
-        )}
+              const novoRegistro: RegistroHistorico = {
+                tipo: 'transferencia', valor, data: new Date().toISOString(), destino: direcao === 'fixa-variavel' ? 'variavel' : 'fixa'
+              };
+              await updateDoc(doc(db, 'usuarios_mg3', login), { historico: arrayUnion(novoRegistro) });
+              setHistorico(prev => [...prev, novoRegistro]);
+              setShowTransferencia(false);
+            }}
+          />
+        </div>
+      )}
 
-        {showTransferencia && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
-            <TransferenciaModal
-              saldoFixa={valorFixaDisponivel}
-              saldoVariavel={valorVariavelDisponivel}
-              onClose={() => setShowTransferencia(false)}
-              onConfirm={async (valor, direcao, senhaDigitada) => {
-                if (senhaDigitada !== senhaSalva) { alert('Senha incorreta!'); return; }
-                if (valor <= 0) { alert('Digite um valor válido.'); return; }
+      {showHistorico && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+          <HistoricoModal
+            historico={historico}
+            onClose={() => setShowHistorico(false)}
+            nomeGrupo={nomeGrupo}
+          />
+        </div>
+      )}
 
-                if (direcao === 'fixa-variavel' && valor > valorFixaDisponivel) { alert('Saldo insuficiente em Renda Fixa.'); return; }
-                if (direcao === 'variavel-fixa' && valor > valorVariavelDisponivel) { alert('Saldo insuficiente em Renda Variável.'); return; }
+      {showDividendosPendentesModal && ativoDividendo && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+          <InformarDividendosPendentesModal
+            nomeFII={ativoDividendo.nome}
+            tickerFII={ativoDividendo.tickerFormatado}
+            pendencias={pendenciasDividendo}
+            onClose={() => setShowDividendosPendentesModal(false)}
+            onConfirm={handleConfirmarDividendos}
+          />
+        </div>
+      )}
 
-                const novoRegistro: RegistroHistorico = {
-                  tipo: 'transferencia', valor, data: new Date().toISOString(), destino: direcao === 'fixa-variavel' ? 'variavel' : 'fixa'
-                };
-                await updateDoc(doc(db, 'usuarios_mg3', login), { historico: arrayUnion(novoRegistro) });
-                setHistorico(prev => [...prev, novoRegistro]);
-                setShowTransferencia(false);
-              }}
-            />
-          </div>
-        )}
-
-        {showHistorico && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
-            <HistoricoModal
-              historico={historico}
-              onClose={() => setShowHistorico(false)}
-              nomeGrupo={nomeGrupo}
-            />
-          </div>
-        )}
-
-        {showDividendosPendentesModal && ativoDividendo && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
-            <InformarDividendosPendentesModal
-              nomeFII={ativoDividendo.nome}
-              tickerFII={ativoDividendo.tickerFormatado}
-              pendencias={pendenciasDividendo}
-              onClose={() => setShowDividendosPendentesModal(false)}
-              onConfirm={handleConfirmarDividendos}
-            />
-          </div>
-        )}
-
-        {showAtualizarModal && (
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
-            <AtualizarInvestimentosModal
-              onClose={() => setShowAtualizarModal(false)}
-              onConfirm={async (senha) => {
-                if (senha !== senhaSalva) {
-                  alert('Senha incorreta!');
-                  return;
-                }
-                const hoje = new Date().toISOString().split('T')[0];
-                const atualizados = await atualizarAtivosMG3(ativos, hoje);
-                setAtivos(atualizados);
-                await updateDoc(doc(db, 'usuarios_mg3', login), {
-                  ativos: atualizados,
-                  ultimaAtualizacao: hoje,
-                });
-                await salvarUltimaAtualizacaoManual(login);
-                setBloqueado(true);
-                setTimeout(() => setBloqueado(false), 1 * 60 * 1000);
-                setShowAtualizarModal(false);
-              }}
-            />
-          </div>
-        )}
-      </div>
+      {showAtualizarModal && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 overflow-y-auto custom-scrollbar">
+          <AtualizarInvestimentosModal
+            onClose={() => setShowAtualizarModal(false)}
+            onConfirm={async (senha) => {
+              if (senha !== senhaSalva) {
+                alert('Senha incorreta!');
+                return;
+              }
+              const hoje = new Date().toISOString().split('T')[0];
+              const atualizados = await atualizarAtivosMG3(ativos, hoje);
+              setAtivos(atualizados);
+              await updateDoc(doc(db, 'usuarios_mg3', login), {
+                ativos: atualizados,
+                ultimaAtualizacao: hoje,
+              });
+              await salvarUltimaAtualizacaoManual(login);
+              setBloqueado(true);
+              setTimeout(() => setBloqueado(false), 1 * 60 * 1000);
+              setShowAtualizarModal(false);
+            }}
+          />
+        </div>
+      )}
     </div>
+    </div >
   );
 }
