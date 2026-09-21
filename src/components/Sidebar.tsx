@@ -12,7 +12,8 @@ import {
   LogOut,
   Trash2,
   TrendingUp,
-  RefreshCw
+  RefreshCw,
+  Briefcase
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import FotoGrupoUploader from './FotoGrupoUploader';
@@ -33,6 +34,7 @@ interface SidebarProps {
   onVerificarIR?: () => void;
   bloqueadoAtualizar?: boolean;
   activeModal?: 'wizard' | 'depositar' | 'transferir' | 'historico' | 'ir' | 'atualizar' | 'delete' | null;
+  logoOverride?: string;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -49,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onVerificarIR,
   bloqueadoAtualizar = false,
   activeModal = null,
+  logoOverride,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -75,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Logo Area */}
       <div className={`flex p-6 flex-col items-center overflow-hidden shrink-0 ${collapsed ? 'px-2' : 'px-2 md:px-6'}`}>
         <img
-          src="/logo.png"
+          src={logoOverride || "/logo.png"}
           alt="SimulAção"
           className={`object-contain transition-all duration-300 ${collapsed ? 'w-10' : 'w-10 md:w-48'}`}
         />
@@ -104,6 +107,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<TrendingUp size={20} />}
             label="Novidades"
             active={isActive('/novidades')}
+            collapsed={collapsed}
+          />
+          <NavItem
+            to="/mg3"
+            icon={<Briefcase size={20} />}
+            label="Mostra MG3"
+            active={isActive('/mg3')}
             collapsed={collapsed}
           />
         </Section>

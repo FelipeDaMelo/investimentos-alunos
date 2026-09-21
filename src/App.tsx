@@ -8,6 +8,8 @@ import Login from './Login';
 import MainPage from './MainPage';
 import RankingPage from './components/Ranking/RankingPage';
 import AdminPage from './components/Admin/AdminPage'; // ✅ Importe a nova página
+import MG3Page from './components/MG3/MG3Page';
+import AdminMG3Page from './components/AdminMG3/AdminMG3Page';
 import NovidadesMercado from './components/Novidades/NovidadesMercado';
 import { db, storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -185,6 +187,37 @@ const App = () => {
                       fotoGrupo={fotoGrupo}
                       onLogout={handleLogout}
                       onUploadConfirmado={handleUploadConfirmado}
+                    />
+                  )
+                } 
+              />
+              <Route 
+                path="/mg3" 
+                element={
+                  !login ? (
+                    <Login onLogin={handleLogin} />
+                  ) : (
+                    <MG3Page 
+                      login={login}
+                      fotoGrupo={fotoGrupo}
+                      onLogout={handleLogout}
+                      onUploadConfirmado={handleUploadConfirmado}
+                    />
+                  )
+                } 
+              />
+              <Route 
+                path="/admin-mg3" 
+                element={
+                  !login ? (
+                    <Login onLogin={handleLogin} />
+                  ) : (
+                    <AdminMG3Page 
+                      login={login}
+                      fotoGrupo={fotoGrupo}
+                      onLogout={handleLogout}
+                      onUploadConfirmado={handleUploadConfirmado}
+                      onImpersonate={handleImpersonate}
                     />
                   )
                 } 

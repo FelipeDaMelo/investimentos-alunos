@@ -12,9 +12,10 @@ interface RendaVariavelStepProps {
   onBack: () => void;
   onSubmit: (ativo: RendaVariavelAtivo, comentario: string) => void;
   saldoDisponivel: number;
+  isMG3?: boolean;
 }
 
-export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }: RendaVariavelStepProps) {
+export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel, isMG3 }: RendaVariavelStepProps) {
   const [senha, setSenha] = useState('');
   const [comentario, setComentario] = useState('');
   const [dividendoFII, setDividendoFII] = useState<number | null>(null);
@@ -51,16 +52,34 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel }:
     try {
       setForm(prev => ({ ...prev, loadingPreco: true, errorPreco: '' }));
       setDividendoFII(null);
-      const tickerFormatado = formatarTicker(form.nome, form.subtipo);
-      const { valor: precoString, logo } = await fetchValorAtual(tickerFormatado, form.subtipo === 'criptomoeda' ? 'crypto' : 'stock');
-      if (precoString === 'Erro ao carregar') throw new Error('Não foi possível obter o preço');
-      const preco = parseFloat(precoString);
+
+      let preco = 0;
+      let logo = '';
+
+      if (isMG3) {
+        const { getDocs, collection, query, where } = require('firebase/firestore');
+        const { db } = require('../../firebaseConfig');
+        const tickerBuscado = form.nome.toUpperCase().trim();
+        const q = query(collection(db, 'mg3_mercado'), where('ticker', '==', tickerBuscado));
+        const snap = await getDocs(q);
+        if (snap.empty) throw new Error('Ativo não encontrado no mercado MG3');
+        const dados = snap.docs[0].data();
+        preco = dados.precoAtual;
+        logo = dados.logo || '';
+      } else {
+        const tickerFormatado = formatarTicker(form.nome, form.subtipo);
+        const result = await fetchValorAtual(tickerFormatado, form.subtipo === 'criptomoeda' ? 'crypto' : 'stock');
+        if (result.valor === 'Erro ao carregar') throw new Error('Não foi possível obter o preço');
+        preco = parseFloat(result.valor);
+        logo = result.logo || '';
+      }
+
       setForm(prev => ({
         ...prev,
         precoAtual: preco,
         logo: logo,
         loadingPreco: false,
-        nome: formatarTickerParaExibicao(prev.nome, prev.subtipo),
+        nome: isMG3 ? prev.nome.toUpperCase() : formatarTickerParaExibicao(prev.nome, prev.subtipo),
       }));
     } catch (error) {
       setForm(prev => ({ ...prev, loadingPreco: false, errorPreco: error instanceof Error ? error.message : 'Erro' }));

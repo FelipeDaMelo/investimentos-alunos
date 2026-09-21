@@ -1,0 +1,507 @@
+import React, { useState, useEffect } from 'react';
+import { db } from '../../firebaseConfig';
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock } from 'lucide-react';
+
+interface AdminMG3PageProps {
+  login: string;
+  fotoGrupo: string | null;
+  onLogout: () => void;
+  onUploadConfirmado: (file: File, senhaDigitada: string) => Promise<void>;
+  onImpersonate?: (userId: string, fotoGrupo: string | null) => void;
+}
+
+const DEFAULT_SETORES = [
+  'Bancário',
+  'Saúde',
+  'Energia',
+  'Matéria prima: pedras preciosas',
+  'Turismo',
+  'Educação',
+  'Alimentos',
+  'Varejo',
+  'Tecnologia'
+];
+
+export default function AdminMG3Page({ login }: AdminMG3PageProps) {
+  const [senha, setSenha] = useState('');
+  const [autenticado, setAutenticado] = useState(false);
+  const [ativos, setAtivos] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios'>('empresas');
+  const [setores, setSetores] = useState<string[]>(DEFAULT_SETORES);
+
+  // Estado para Cenários
+  const DEFAULT_NOTICIAS = Array.from({ length: 9 }, (_, i) => `NOTICIA${i + 1}`);
+  const [cenariosKeys, setCenariosKeys] = useState<string[]>(DEFAULT_NOTICIAS);
+  const [cenarios, setCenarios] = useState<Record<string, Record<string, number>>>(
+    Object.fromEntries(DEFAULT_NOTICIAS.map(n => [n, Object.fromEntries(DEFAULT_SETORES.map(s => [s, 0]))]))
+  );
+  const [isSavingCenarios, setIsSavingCenarios] = useState(false);
+  const [novoSetor, setNovoSetor] = useState('');
+
+  const [novoAtivo, setNovoAtivo] = useState({
+    nome: '',
+    ticker: '',
+    tipo: 'acao',
+    setor: setores[0] || '',
+    precoAtual: '',
+    taxaRendimentoDiaria: '',
+    logo: ''
+  });
+
+  // Senha mockada para proteger a página (pode ser substituída por uma env var ou auth)
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const adminPassword = import.meta.env.VITE_ADMIN_MG3_PASSWORD;
+    if (adminPassword && senha === adminPassword) {
+      setAutenticado(true);
+      carregarAtivos();
+    } else {
+      alert('Senha incorreta!');
+    }
+  };
+
+  const carregarAtivos = async () => {
+    const snap = await getDocs(collection(db, 'mg3_mercado'));
+    const dados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    setAtivos(dados);
+
+    // Carregar cenários
+    const snapCenarios = await getDocs(collection(db, 'mg3_cenarios'));
+    if (!snapCenarios.empty) {
+      const docCenario = snapCenarios.docs[0];
+      const data = docCenario.data().cenarios;
+      if (docCenario.data().setores) {
+        setSetores(docCenario.data().setores);
+      }
+      if (data) {
+        setCenarios(data);
+        const keys = Object.keys(data).sort((a, b) => {
+          const numA = parseInt(a.replace('NOTICIA', '')) || 0;
+          const numB = parseInt(b.replace('NOTICIA', '')) || 0;
+          return numA - numB;
+        });
+        if (keys.length > 0) {
+          setCenariosKeys(keys);
+        }
+      }
+    }
+  };
+
+  const handleSalvarAtivo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload: any = {
+        nome: novoAtivo.nome,
+        ticker: novoAtivo.ticker.toUpperCase(),
+        tipo: novoAtivo.tipo,
+        setor: novoAtivo.tipo === 'rendaFixa' ? 'Bancário' : novoAtivo.setor,
+        logo: novoAtivo.logo || 'https://via.placeholder.com/150?text=' + novoAtivo.ticker,
+        oferta: 0,
+        demanda: 0,
+      };
+
+      if (novoAtivo.tipo === 'rendaFixa') {
+        payload.taxaRendimentoDiaria = parseFloat(novoAtivo.taxaRendimentoDiaria) / 100;
+        payload.precoAtual = 1; // Valor base de 1 para RF
+      } else {
+        payload.precoAtual = parseFloat(novoAtivo.precoAtual);
+      }
+
+      await addDoc(collection(db, 'mg3_mercado'), payload);
+      alert('Ativo MG3 cadastrado com sucesso!');
+      carregarAtivos();
+      setNovoAtivo({ ...novoAtivo, nome: '', ticker: '', precoAtual: '', taxaRendimentoDiaria: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar ativo.');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if(confirm('Tem certeza que deseja excluir este ativo do mercado MG3?')) {
+      await deleteDoc(doc(db, 'mg3_mercado', id));
+      carregarAtivos();
+    }
+  };
+
+  const handleCenarioChange = (hora: string, setor: string, value: string) => {
+    const num = parseFloat(value) || 0;
+    setCenarios(prev => ({
+      ...prev,
+      [hora]: {
+        ...prev[hora],
+        [setor]: num
+      }
+    }));
+  };
+
+  const getBalancoSetor = (setor: string) => {
+    return cenariosKeys.reduce((acc, key) => acc + (cenarios[key]?.[setor] || 0), 0);
+  };
+
+  const todosZerados = setores.every(setor => getBalancoSetor(setor) === 0);
+
+  const adicionarNoticia = () => {
+    const nextKey = `NOTICIA${cenariosKeys.length + 1}`;
+    setCenariosKeys(prev => [...prev, nextKey]);
+    setCenarios(prev => ({
+      ...prev,
+      [nextKey]: Object.fromEntries(setores.map(s => [s, 0]))
+    }));
+  };
+
+  const handleAddSetor = () => {
+    if (!novoSetor || setores.includes(novoSetor)) return;
+    setSetores(prev => [...prev, novoSetor]);
+    setCenarios(prev => {
+      const newCenarios = { ...prev };
+      Object.keys(newCenarios).forEach(key => {
+        newCenarios[key] = { ...newCenarios[key], [novoSetor]: 0 };
+      });
+      return newCenarios;
+    });
+    setNovoSetor('');
+  };
+
+  const handleRemoveSetor = (setorToRemove: string) => {
+    if(!confirm(`Tem certeza que deseja remover o setor ${setorToRemove}?`)) return;
+    setSetores(prev => prev.filter(s => s !== setorToRemove));
+    setCenarios(prev => {
+      const newCenarios = { ...prev };
+      Object.keys(newCenarios).forEach(key => {
+        const copy = { ...newCenarios[key] };
+        delete copy[setorToRemove];
+        newCenarios[key] = copy;
+      });
+      return newCenarios;
+    });
+  };
+
+  const handleSalvarCenarios = async () => {
+    if (!todosZerados) {
+      alert("Erro: O balanço de todos os setores deve ser exatamente 0% para salvar.");
+      return;
+    }
+    setIsSavingCenarios(true);
+    try {
+      await setDoc(doc(db, 'mg3_cenarios', 'config_principal'), { cenarios, setores });
+      alert("Cenários salvos com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar cenários.");
+    } finally {
+      setIsSavingCenarios(false);
+    }
+  };
+
+  if (!autenticado) {
+    return (
+      <div className="flex h-screen bg-slate-900 items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md">
+          <div className="flex justify-center mb-6">
+            <Briefcase className="text-blue-500 w-16 h-16" />
+          </div>
+          <h1 className="text-2xl font-bold text-white text-center mb-6">Admin MG3</h1>
+          <input
+            type="password"
+            placeholder="Senha de Acesso"
+            className="w-full p-4 mb-4 bg-slate-700 text-white rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+          />
+          <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all">
+            Entrar no Painel MG3
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        <header className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 p-3 rounded-2xl">
+              <Briefcase className="text-blue-600 w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Painel de Administração MG3</h1>
+              <p className="text-slate-500">Mostra Cultural - Gestão do Mercado Paralelo</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+            <button
+              onClick={() => setActiveTab('empresas')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
+                activeTab === 'empresas' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <LayoutDashboard size={18} /> Empresas
+            </button>
+            <button
+              onClick={() => setActiveTab('cenarios')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
+                activeTab === 'cenarios' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Clock size={18} /> Cenários
+            </button>
+          </div>
+        </header>
+
+        {activeTab === 'empresas' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <Building2 className="text-slate-400" /> Cadastrar Empresa
+            </h2>
+            
+            <form onSubmit={handleSalvarAtivo} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Ativo</label>
+                <select 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={novoAtivo.tipo}
+                  onChange={e => setNovoAtivo({...novoAtivo, tipo: e.target.value})}
+                >
+                  <option value="acao">Ação (Renda Variável)</option>
+                  <option value="criptomoeda">Criptomoeda</option>
+                  <option value="rendaFixa">Banco (Renda Fixa)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Empresa / Banco</label>
+                <input 
+                  required
+                  type="text" 
+                  placeholder="Ex: GLoriaTech"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={novoAtivo.nome}
+                  onChange={e => setNovoAtivo({...novoAtivo, nome: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Código (Ticker)</label>
+                <input 
+                  required
+                  type="text" 
+                  placeholder="Ex: GLTE3"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={novoAtivo.ticker}
+                  onChange={e => setNovoAtivo({...novoAtivo, ticker: e.target.value.toUpperCase()})}
+                />
+              </div>
+
+              {novoAtivo.tipo !== 'rendaFixa' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Setor</label>
+                    <select 
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={novoAtivo.setor}
+                      onChange={e => setNovoAtivo({...novoAtivo, setor: e.target.value})}
+                    >
+                      {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Preço Inicial (GLoriaCoins)</label>
+                    <input 
+                      required
+                      type="number" 
+                      step="0.01"
+                      placeholder="Ex: 15.50"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={novoAtivo.precoAtual}
+                      onChange={e => setNovoAtivo({...novoAtivo, precoAtual: e.target.value})}
+                    />
+                  </div>
+                </>
+              )}
+
+              {novoAtivo.tipo === 'rendaFixa' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Taxa Diária de Rendimento (%)</label>
+                  <input 
+                    required
+                    type="number" 
+                    step="0.001"
+                    placeholder="Ex: 5 para 5% ao dia"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={novoAtivo.taxaRendimentoDiaria}
+                    onChange={e => setNovoAtivo({...novoAtivo, taxaRendimentoDiaria: e.target.value})}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">URL da Logo (Opcional)</label>
+                <input 
+                  type="text" 
+                  placeholder="https://..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={novoAtivo.logo}
+                  onChange={e => setNovoAtivo({...novoAtivo, logo: e.target.value})}
+                />
+              </div>
+
+              <button type="submit" className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 mt-4">
+                <TrendingUp size={20} /> Cadastrar Ativo MG3
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+               Mercado Ativo ({ativos.length})
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ativos.map(ativo => (
+                <div key={ativo.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+                  <img src={ativo.logo} alt={ativo.ticker} className="w-12 h-12 rounded-full object-cover bg-slate-100" />
+                  <div className="flex-1">
+                    <h3 className="font-bold text-slate-800">{ativo.ticker}</h3>
+                    <p className="text-xs text-slate-500">{ativo.nome} • {ativo.tipo}</p>
+                    {ativo.tipo === 'rendaFixa' ? (
+                      <p className="text-sm font-medium text-green-600 mt-1">
+                        +{(ativo.taxaRendimentoDiaria * 100).toFixed(2)}% ao dia
+                      </p>
+                    ) : (
+                      <p className="text-sm font-medium text-blue-600 mt-1">
+                        $ {ativo.precoAtual?.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  <button onClick={() => handleDelete(ativo.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              ))}
+              
+              {ativos.length === 0 && (
+                <div className="col-span-2 text-center p-10 bg-white rounded-3xl border border-dashed border-slate-300">
+                  <p className="text-slate-500">Nenhuma empresa cadastrada no MG3 ainda.</p>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+        ) : (
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-8">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800">Configuração de Cenários (Notícias)</h2>
+                <p className="text-slate-500 mt-2 max-w-3xl">
+                  Defina a variação percentual que impactará todo um <b>Setor</b> de uma só vez a cada "Momento" da mostra.
+                  Para garantir justiça no simulador, a regra de <b>Variação Líquida Zero</b> exige que o somatório de cada setor no final do dia seja exatos 0%.
+                </p>
+              </div>
+              <button 
+                onClick={adicionarNoticia}
+                className="px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-2"
+              >
+                + Adicionar Notícia
+              </button>
+            </div>
+
+            {/* Gerenciamento de Setores */}
+            <div className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <input 
+                type="text" 
+                placeholder="Nome do novo setor..." 
+                className="flex-1 p-3 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500"
+                value={novoSetor}
+                onChange={e => setNovoSetor(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddSetor()}
+              />
+              <button 
+                onClick={handleAddSetor}
+                className="px-6 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition-colors whitespace-nowrap"
+              >
+                Adicionar Setor
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-100 text-slate-500 text-sm">
+                    <th className="p-4 font-black tracking-wider uppercase">Setor</th>
+                    {cenariosKeys.map((key, index) => (
+                      <th key={key} className={`p-4 font-black tracking-wider uppercase text-center bg-blue-50/50 ${index === 0 ? 'rounded-tl-xl' : ''} ${index === cenariosKeys.length - 1 ? 'rounded-tr-xl' : ''}`}>
+                        {key} (%)
+                      </th>
+                    ))}
+                    <th className="p-4 font-black tracking-wider uppercase text-right">Balanço do Dia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {setores.map(setor => {
+                    const balanco = getBalancoSetor(setor);
+                    const isZerado = balanco === 0;
+
+                    return (
+                      <tr key={setor} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                        <td className="p-4 font-bold text-slate-700 flex justify-between items-center min-w-[200px]">
+                          {setor}
+                          <button onClick={() => handleRemoveSetor(setor)} className="p-1 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                        {cenariosKeys.map(key => (
+                          <td key={key} className="p-4 text-center">
+                            <input 
+                              type="number"
+                              value={cenarios[key]?.[setor] || 0}
+                              onChange={e => handleCenarioChange(key, setor, e.target.value)}
+                              className="w-20 p-2 text-center bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500"
+                            />
+                          </td>
+                        ))}
+                        <td className="p-4 text-right">
+                          <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full font-black text-sm ${isZerado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {balanco > 0 ? '+' : ''}{balanco.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-between items-center bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              <div>
+                {!todosZerados ? (
+                  <p className="text-red-500 font-bold flex items-center gap-2">
+                    O balanço de todos os setores deve ser zero para salvar.
+                  </p>
+                ) : (
+                  <p className="text-green-600 font-bold flex items-center gap-2">
+                    Todos os setores equilibrados! Pronto para salvar.
+                  </p>
+                )}
+              </div>
+              <button 
+                onClick={handleSalvarCenarios}
+                disabled={!todosZerados || isSavingCenarios}
+                className="px-8 py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isSavingCenarios ? 'Salvando...' : 'Salvar Cenários MG3'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

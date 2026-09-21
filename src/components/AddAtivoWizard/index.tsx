@@ -12,6 +12,7 @@ interface AddAtivoWizardProps {
   valorFixaDisponivel: number;
   valorVariavelDisponivel: number;
   quantidadeAtivos: number;
+  isMG3?: boolean;
 }
 
 type DadosFormFixa = Omit<RendaFixaAtivo, 'id' | 'tipo' | 'valorAtual' | 'patrimonioPorDia'> & { senha?: string };
@@ -23,6 +24,7 @@ export default function AddAtivoWizard({
   onAddAtivo,
   valorFixaDisponivel,
   valorVariavelDisponivel,
+  isMG3,
 }: AddAtivoWizardProps) {
   const [step, setStep] = useState<'tipo' | 'fixa' | 'variavel'>('tipo');
 
@@ -167,6 +169,7 @@ export default function AddAtivoWizard({
                 if (sucesso) onClose();
               }}
               saldoDisponivel={valorVariavelDisponivel}
+              isMG3={isMG3}
             />
           </motion.div>
         )}
