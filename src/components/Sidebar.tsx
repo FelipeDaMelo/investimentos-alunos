@@ -35,6 +35,7 @@ interface SidebarProps {
   bloqueadoAtualizar?: boolean;
   activeModal?: 'wizard' | 'depositar' | 'transferir' | 'historico' | 'ir' | 'atualizar' | 'delete' | null;
   logoOverride?: string;
+  isMG3?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -52,6 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   bloqueadoAtualizar = false,
   activeModal = null,
   logoOverride,
+  isMG3,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -88,34 +90,39 @@ const Sidebar: React.FC<SidebarProps> = ({
       <nav className="flex-1 flex flex-col items-center md:items-stretch py-4 md:px-4 space-y-1 h-full overflow-y-auto overflow-x-hidden custom-scrollbar-none">
         
         <Section title="Navegação" collapsed={collapsed}>
-          <NavItem
-            to="/"
-            icon={<LayoutDashboard size={20} />}
-            label="Dashboard"
-            active={isActive('/') && !activeModal}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/ranking"
-            icon={<Trophy size={20} />}
-            label="Rankings"
-            active={isActive('/ranking')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/novidades"
-            icon={<TrendingUp size={20} />}
-            label="Novidades"
-            active={isActive('/novidades')}
-            collapsed={collapsed}
-          />
-          <NavItem
-            to="/mg3"
-            icon={<Briefcase size={20} />}
-            label="Mostra MG3"
-            active={isActive('/mg3')}
-            collapsed={collapsed}
-          />
+          {isMG3 ? (
+            <NavItem
+              to="/mg3"
+              icon={<Briefcase size={20} />}
+              label="Painel MG3"
+              active={isActive('/mg3')}
+              collapsed={collapsed}
+            />
+          ) : (
+            <>
+              <NavItem
+                to="/"
+                icon={<LayoutDashboard size={20} />}
+                label="Dashboard"
+                active={isActive('/') && !activeModal}
+                collapsed={collapsed}
+              />
+              <NavItem
+                to="/ranking"
+                icon={<Trophy size={20} />}
+                label="Rankings"
+                active={isActive('/ranking')}
+                collapsed={collapsed}
+              />
+              <NavItem
+                to="/novidades"
+                icon={<TrendingUp size={20} />}
+                label="Novidades"
+                active={isActive('/novidades')}
+                collapsed={collapsed}
+              />
+            </>
+          )}
         </Section>
 
         <Section title="Operações" collapsed={collapsed}>
@@ -126,20 +133,24 @@ const Sidebar: React.FC<SidebarProps> = ({
             active={activeModal === 'wizard'}
             collapsed={collapsed}
           />
-          <ActionButton
-            onClick={() => handleAction('depositar', onShowDepositar)}
-            icon={<CircleArrowUp size={20} />}
-            label="Depósito"
-            active={activeModal === 'depositar'}
-            collapsed={collapsed}
-          />
-          <ActionButton
-            onClick={() => handleAction('transferir', onShowTransferencia)}
-            icon={<ArrowRightLeft size={20} />}
-            label="Transferir"
-            active={activeModal === 'transferir'}
-            collapsed={collapsed}
-          />
+          {!isMG3 && (
+            <>
+              <ActionButton
+                onClick={() => handleAction('depositar', onShowDepositar)}
+                icon={<CircleArrowUp size={20} />}
+                label="Depósito"
+                active={activeModal === 'depositar'}
+                collapsed={collapsed}
+              />
+              <ActionButton
+                onClick={() => handleAction('transferir', onShowTransferencia)}
+                icon={<ArrowRightLeft size={20} />}
+                label="Transferir"
+                active={activeModal === 'transferir'}
+                collapsed={collapsed}
+              />
+            </>
+          )}
           <ActionButton
             onClick={() => handleAction('historico', onShowHistorico)}
             icon={<ReceiptText size={20} />}

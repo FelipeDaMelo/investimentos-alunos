@@ -3,6 +3,8 @@ import { RefreshCw, ArrowLeft, Plus, Calendar, Wallet, Lock, MessageSquare, Sear
 import { criarAtivoVariavel } from '../../utils/ativoHelpers';
 import { RendaVariavelAtivo } from '../../types/Ativo';
 import fetchValorAtual from '../../fetchValorAtual';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 
 const Spinner = ({ className = "" }: { className?: string }) => (
   <div className={`inline-block animate-spin rounded-full border-2 border-solid border-current border-r-transparent ${className}`} />
@@ -57,15 +59,19 @@ export default function RendaVariavelStep({ onBack, onSubmit, saldoDisponivel, i
       let logo = '';
 
       if (isMG3) {
-        const { getDocs, collection, query, where } = require('firebase/firestore');
-        const { db } = require('../../firebaseConfig');
-        const tickerBuscado = form.nome.toUpperCase().trim();
-        const q = query(collection(db, 'mg3_mercado'), where('ticker', '==', tickerBuscado));
-        const snap = await getDocs(q);
-        if (snap.empty) throw new Error('Ativo não encontrado no mercado MG3');
-        const dados = snap.docs[0].data();
-        preco = dados.precoAtual;
-        logo = dados.logo || '';
+        const queryTerm = form.nome.toUpperCase().trim();
+        const snap = await getDocs(collection(db, 'mg3_mercado'));
+        const ativosMg3 = snap.docs.map(doc => doc.data());
+        
+        const ativoEncontrado = ativosMg3.find(a => 
+          (a.ticker && a.ticker.toUpperCase() === queryTerm) || 
+          (a.nome && a.nome.toUpperCase() === queryTerm)
+        );
+
+        if (!ativoEncontrado) throw new Error('Ativo não encontrado no mercado MG3');
+        
+        preco = ativoEncontrado.precoAtual;
+        logo = ativoEncontrado.logo || '';
       } else {
         const tickerFormatado = formatarTicker(form.nome, form.subtipo);
         const result = await fetchValorAtual(tickerFormatado, form.subtipo === 'criptomoeda' ? 'crypto' : 'stock');

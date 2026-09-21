@@ -15,6 +15,7 @@ type ViewState = 'menu' | 'platform' | 'create' | 'login';
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const { value: valorInvestido, displayValue, handleChange } = useMoneyInput(0);
   const navigate = useNavigate();
+  const isMG3 = window.location.pathname.includes('mg3');
 
   const [view, setView] = useState<ViewState>('menu');
   const [nomeGrupo, setNomeGrupo] = useState('');
@@ -163,11 +164,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       {/* Background Image Container - DYNAMIC SWAP */}
       <div 
         className="absolute inset-0 z-0 bg-[length:100%_100%] bg-center bg-no-repeat transition-all duration-1000 block md:hidden" 
-        style={{ backgroundImage: `url('/login-bg-mobile.png')` }}
+        style={{ backgroundImage: `url('/${isMG3 ? 'login-bg-mobile-mg3.png' : 'login-bg-mobile.png'}')` }}
       />
       <div 
         className="absolute inset-0 z-0 bg-[length:100%_100%] bg-center bg-no-repeat transition-all duration-1000 hidden md:block" 
-        style={{ backgroundImage: `url('/login-bg.png')` }}
+        style={{ backgroundImage: `url('/${isMG3 ? 'login-bg-mg3.png' : 'login-bg.png'}')` }}
       />
       
       {/* ----------------- DESKTOP LAYOUT (HIDDEN ON MOBILE) ----------------- */}

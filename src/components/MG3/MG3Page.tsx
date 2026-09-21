@@ -202,20 +202,53 @@ export default function MG3Page({
             }
           }
         } else {
-          // Initialize MG3 user with 100,000 GLoriaCoins
-          const novoRegistro: RegistroHistorico = {
-            tipo: 'deposito',
-            valor: 100000,
-            destino: 'fixa', // Pode ser fixa como um "caixa"
-            data: new Date().toISOString()
-          };
+          // Initialize MG3 user with config from admin or default
+          let capitalInicial = 100000;
+          let percentualFixa = 40;
+
+          try {
+            const configSnap = await getDoc(doc(db, 'admin', 'mg3_config'));
+            if (configSnap.exists()) {
+              const dataConfig = configSnap.data();
+              capitalInicial = dataConfig.capitalInicial ?? 100000;
+              percentualFixa = dataConfig.percentualFixa ?? 40;
+            }
+          } catch (e) {
+            console.error('Erro ao buscar mg3_config, usando padrões', e);
+          }
+
+          const valorFixa = capitalInicial * (percentualFixa / 100);
+          const valorVariavel = capitalInicial - valorFixa;
+
+          const historicoInicial: RegistroHistorico[] = [];
+
+          if (valorFixa > 0) {
+            historicoInicial.push({
+              tipo: 'deposito',
+              valor: valorFixa,
+              destino: 'fixa',
+              data: new Date().toISOString()
+            });
+          }
+
+          if (valorVariavel > 0) {
+            // Need a slight delay in timestamp so they don't have exactly the same ms if we sort, but standard ISO is fine
+            const dtVar = new Date();
+            dtVar.setMilliseconds(dtVar.getMilliseconds() + 1);
+            historicoInicial.push({
+              tipo: 'deposito',
+              valor: valorVariavel,
+              destino: 'variavel',
+              data: dtVar.toISOString()
+            });
+          }
 
           await setDoc(docRef, {
             ativos: [],
-            historico: [novoRegistro],
-            totalCotas: 100000,
+            historico: historicoInicial,
+            totalCotas: capitalInicial,
             patrimonioPorDia: {
-              [new Date().toISOString().split('T')[0]]: 100000
+              [new Date().toISOString().split('T')[0]]: capitalInicial
             },
             valorCotaPorDia: {
               [new Date().toISOString().split('T')[0]]: 1
@@ -223,8 +256,8 @@ export default function MG3Page({
           });
 
           setAtivos([]);
-          setHistorico([novoRegistro]);
-          setTotalCotas(100000);
+          setHistorico(historicoInicial);
+          setTotalCotas(capitalInicial);
           setValorCotaAtual(1);
           setValorTotalOntem(0);
         }

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { storage } from '../../firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock } from 'lucide-react';
+import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings } from 'lucide-react';
 
 interface AdminMG3PageProps {
   login: string;
@@ -30,8 +30,15 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   const [autenticado, setAutenticado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [ativos, setAtivos] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios'>('empresas');
+  const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios' | 'configuracoes'>('empresas');
   const [setores, setSetores] = useState<string[]>(DEFAULT_SETORES);
+
+  // Estado para Configurações Globais
+  const [mg3Config, setMg3Config] = useState({
+    capitalInicial: 100000,
+    percentualFixa: 40
+  });
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Estado para Cenários
   const DEFAULT_NOTICIAS = Array.from({ length: 9 }, (_, i) => `NOTICIA${i + 1}`);
@@ -59,8 +66,37 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
     if (adminPassword && senha === adminPassword) {
       setAutenticado(true);
       carregarAtivos();
+      carregarConfiguracoes();
     } else {
       alert('Senha incorreta!');
+    }
+  };
+
+  const carregarConfiguracoes = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, 'admin', 'mg3_config'));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setMg3Config({
+          capitalInicial: data.capitalInicial ?? 100000,
+          percentualFixa: data.percentualFixa ?? 40
+        });
+      }
+    } catch (e) {
+      console.error('Erro ao carregar configurações globais:', e);
+    }
+  };
+
+  const salvarConfiguracoes = async () => {
+    setIsSavingConfig(true);
+    try {
+      await setDoc(doc(db, 'admin', 'mg3_config'), mg3Config);
+      alert('Configurações salvas com sucesso!');
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao salvar configurações.');
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -268,10 +304,66 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
             >
               <Clock size={18} /> Cenários
             </button>
+            <button
+              onClick={() => setActiveTab('configuracoes')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${activeTab === 'configuracoes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              <Settings size={18} /> Configurações
+            </button>
           </div>
         </header>
 
-        {activeTab === 'empresas' ? (
+        {activeTab === 'configuracoes' && (
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 mb-10 animate-fade-in">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <Settings className="text-blue-600" />
+              Configurações Globais (Novos Grupos)
+            </h2>
+            <p className="text-slate-500 mb-8">Defina o valor inicial e a proporção de saldo para grupos que criarem conta no MG3.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Capital Inicial (GLoriaCoins)</label>
+                <input
+                  type="number"
+                  value={mg3Config.capitalInicial}
+                  onChange={e => setMg3Config({ ...mg3Config, capitalInicial: Number(e.target.value) })}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Porcentagem em Renda Fixa (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={mg3Config.percentualFixa}
+                  onChange={e => {
+                    let val = Number(e.target.value);
+                    if (val > 100) val = 100;
+                    if (val < 0) val = 0;
+                    setMg3Config({ ...mg3Config, percentualFixa: val });
+                  }}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs font-bold text-slate-500 mt-2">
+                  Vai para Renda Variável: <span className="text-blue-500">{100 - mg3Config.percentualFixa}%</span>
+                </p>
+              </div>
+            </div>
+            <div className="mt-8">
+              <button
+                onClick={salvarConfiguracoes}
+                disabled={isSavingConfig}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {isSavingConfig ? 'Salvando...' : 'Salvar Configurações'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'empresas' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
             <div className="lg:col-span-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-fit">
@@ -421,7 +513,8 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
 
             </div>
           </div>
-        ) : (
+        )}
+        {activeTab === 'cenarios' && (
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-8">
             <div className="flex justify-between items-start">
               <div>
