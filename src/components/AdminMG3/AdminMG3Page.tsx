@@ -36,7 +36,8 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   // Estado para Configurações Globais
   const [mg3Config, setMg3Config] = useState({
     capitalInicial: 100000,
-    percentualFixa: 40
+    percentualFixa: 40,
+    sensibilidade: 100000
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
@@ -79,7 +80,8 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
         const data = docSnap.data();
         setMg3Config({
           capitalInicial: data.capitalInicial ?? 100000,
-          percentualFixa: data.percentualFixa ?? 40
+          percentualFixa: data.percentualFixa ?? 40,
+          sensibilidade: data.sensibilidade ?? 100000
         });
       }
     } catch (e) {
@@ -348,6 +350,18 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                 />
                 <p className="text-xs font-bold text-slate-500 mt-2">
                   Vai para Renda Variável: <span className="text-blue-500">{100 - mg3Config.percentualFixa}%</span>
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Sensibilidade de Mercado (Volume para 100% de variação)</label>
+                <input
+                  type="number"
+                  value={mg3Config.sensibilidade}
+                  onChange={e => setMg3Config({ ...mg3Config, sensibilidade: Number(e.target.value) })}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs font-bold text-slate-500 mt-2">
+                  Quanto <span className="text-blue-500">menor</span> o valor, mais o preço oscila com cada compra/venda.
                 </p>
               </div>
             </div>
