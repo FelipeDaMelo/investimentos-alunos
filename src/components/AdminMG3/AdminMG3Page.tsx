@@ -259,22 +259,60 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
 
   if (!autenticado) {
     return (
-      <div className="flex h-screen bg-slate-900 items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex justify-center mb-6">
-            <Briefcase className="text-blue-500 w-16 h-16" />
+      <div className="relative flex h-screen w-full items-center justify-center bg-slate-950 overflow-hidden font-sans">
+        {/* Dynamic Background Gradients */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/30 blur-[120px] mix-blend-screen animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[120px] mix-blend-screen" style={{ animation: 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />
+        
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+
+        <form onSubmit={handleLogin} className="relative z-10 w-full max-w-md mx-4 group">
+          {/* Glowing Border Effect around modal */}
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-[2rem] opacity-30 group-hover:opacity-60 transition duration-1000 blur-md" />
+          
+          <div className="relative bg-slate-900/80 backdrop-blur-2xl p-10 rounded-[2rem] shadow-2xl border border-white/10 flex flex-col items-center">
+            
+            {/* Logo Container */}
+            <div className="relative mb-8">
+              <div className="absolute inset-0 bg-blue-500 blur-xl opacity-50 rounded-full" />
+              <div className="relative bg-gradient-to-tr from-blue-600 to-indigo-500 p-4 rounded-2xl shadow-lg border border-white/20">
+                <Briefcase className="text-white w-10 h-10" />
+              </div>
+            </div>
+
+            <div className="text-center mb-10">
+              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-2 tracking-tight">
+                Portal MG3
+              </h1>
+              <p className="text-slate-400 font-medium text-sm">
+                Acesso restrito para administradores
+              </p>
+            </div>
+
+            <div className="w-full space-y-6">
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  className="w-full px-6 py-4 bg-slate-950/50 text-white placeholder-slate-500 rounded-xl border border-white/5 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none font-medium text-center tracking-[0.3em]"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                />
+              </div>
+
+              <button className="w-full py-4 bg-white text-slate-900 hover:bg-slate-100 font-black rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] active:scale-95 flex justify-center items-center gap-2">
+                Autenticar
+              </button>
+            </div>
+
+            <div className="mt-8 flex items-center justify-center gap-2 opacity-40">
+              <ShieldAlert size={14} className="text-white" />
+              <span className="text-white text-xs font-semibold uppercase tracking-widest">
+                Conexão Segura
+              </span>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white text-center mb-6">Admin MG3</h1>
-          <input
-            type="password"
-            placeholder="Senha de Acesso"
-            className="w-full p-4 mb-4 bg-slate-700 text-white rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
-          <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all">
-            Entrar no Painel MG3
-          </button>
         </form>
       </div>
     );
@@ -327,7 +365,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
             <p className="text-slate-500 mb-8">Defina o valor inicial e a proporção de saldo para grupos que criarem conta no MG3.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Capital Inicial (GLoriaCoins)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Capital Inicial (GloriaCoins)</label>
                 <input
                   type="number"
                   value={mg3Config.capitalInicial}
@@ -426,7 +464,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Preço Inicial (GLoriaCoins)</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Preço Inicial (GloriaCoins)</label>
                       <input
                         required
                         type="number"
