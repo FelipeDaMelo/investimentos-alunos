@@ -570,20 +570,19 @@ export default function MG3Page({
           historico: arrayUnion(novoRegistro)
         });
 
-        // Atualiza preco no mercado MG3 (Sensibilidade)
+        // Atualiza preco no mercado MG3 (Estoque Finito)
         if (mg3Doc && ativoSemSenha.tipo === 'rendaVariavel') {
-          const configDoc = await transaction.get(doc(db, 'admin', 'mg3_config'));
-          const sensibilidade = configDoc.exists() && configDoc.data().sensibilidade ? configDoc.data().sensibilidade : 100000;
-
           const mercadoRef = doc(db, 'mg3_mercado', mg3Doc.id);
           const mercadoData = await transaction.get(mercadoRef);
           if (mercadoData.exists()) {
             const precoAtual = mercadoData.data().precoAtual || 0;
-            const variacao = ativoSemSenha.valorInvestido / sensibilidade;
+            const totalAcoes = mercadoData.data().totalAcoes || 100000;
+            const quantidadeComprada = (ativoSemSenha as RendaVariavelAtivo).quantidade;
+            const variacao = quantidadeComprada / totalAcoes;
             const novoPreco = precoAtual * (1 + variacao);
 
             transaction.update(mercadoRef, {
-              demanda: (mercadoData.data().demanda || 0) + (ativoSemSenha as RendaVariavelAtivo).quantidade,
+              demanda: (mercadoData.data().demanda || 0) + quantidadeComprada,
               precoAtual: novoPreco
             });
           }
@@ -698,18 +697,14 @@ export default function MG3Page({
           historico: arrayUnion(registroVenda)
         });
 
-        // Atualiza preco no mercado MG3 (Sensibilidade)
+        // Atualiza preco no mercado MG3 (Estoque Finito)
         if (mg3Doc && ativoSelecionado.tipo === 'rendaVariavel') {
-          const configDoc = await transaction.get(doc(db, 'admin', 'mg3_config'));
-          const sensibilidade = configDoc.exists() && configDoc.data().sensibilidade ? configDoc.data().sensibilidade : 100000;
-
           const mercadoRef = doc(db, 'mg3_mercado', mg3Doc.id);
           const mercadoData = await transaction.get(mercadoRef);
           if (mercadoData.exists()) {
             const precoAtual = mercadoData.data().precoAtual || 0;
-            const ativoRV = ativoNoBanco as RendaVariavelAtivo;
-            const valorVenda = quantidadeVendida * ativoRV.valorAtual;
-            const variacao = valorVenda / sensibilidade;
+            const totalAcoes = mercadoData.data().totalAcoes || 100000;
+            const variacao = quantidadeVendida / totalAcoes;
             const novoPreco = Math.max(precoAtual * (1 - variacao), 0.01);
 
             transaction.update(mercadoRef, {

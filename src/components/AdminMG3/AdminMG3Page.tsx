@@ -57,6 +57,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
     setor: setores[0] || '',
     precoAtual: '',
     taxaRendimentoDiaria: '',
+    totalAcoes: '',
     logo: ''
   });
 
@@ -166,12 +167,13 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
         payload.precoAtual = 1; // Valor base de 1 para RF
       } else {
         payload.precoAtual = parseFloat(novoAtivo.precoAtual);
+        payload.totalAcoes = parseFloat(novoAtivo.totalAcoes);
       }
 
       await addDoc(collection(db, 'mg3_mercado'), payload);
       alert('Ativo MG3 cadastrado com sucesso!');
       carregarAtivos();
-      setNovoAtivo({ ...novoAtivo, nome: '', ticker: '', precoAtual: '', taxaRendimentoDiaria: '' });
+      setNovoAtivo({ ...novoAtivo, nome: '', ticker: '', precoAtual: '', taxaRendimentoDiaria: '', totalAcoes: '' });
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar ativo.');
@@ -352,18 +354,6 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                   Vai para Renda Variável: <span className="text-blue-500">{100 - mg3Config.percentualFixa}%</span>
                 </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Sensibilidade de Mercado (Volume para 100% de variação)</label>
-                <input
-                  type="number"
-                  value={mg3Config.sensibilidade}
-                  onChange={e => setMg3Config({ ...mg3Config, sensibilidade: Number(e.target.value) })}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs font-bold text-slate-500 mt-2">
-                  Quanto <span className="text-blue-500">menor</span> o valor, mais o preço oscila com cada compra/venda.
-                </p>
-              </div>
             </div>
             <div className="mt-8">
               <button
@@ -445,6 +435,17 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={novoAtivo.precoAtual}
                         onChange={e => setNovoAtivo({ ...novoAtivo, precoAtual: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Total de Ações Emitidas</label>
+                      <input
+                        required
+                        type="number"
+                        placeholder="Ex: 100000"
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={novoAtivo.totalAcoes}
+                        onChange={e => setNovoAtivo({ ...novoAtivo, totalAcoes: e.target.value })}
                       />
                     </div>
                   </>
