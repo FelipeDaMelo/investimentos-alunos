@@ -122,7 +122,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleAdminAccess = () => {
     onLogin(0, 0, 0, 'ADMINISTRATOR_SYSTEM_OVERRIDE', '', null);
-    navigate('/admin');
+    navigate(isMG3 ? '/admin-mg3' : '/admin');
   };
 
   const handleDemoAccess = async () => {
