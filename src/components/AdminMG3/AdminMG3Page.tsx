@@ -3,7 +3,7 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { storage } from '../../firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings } from 'lucide-react';
+import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings, ShieldAlert } from 'lucide-react';
 
 interface AdminMG3PageProps {
   login: string;
