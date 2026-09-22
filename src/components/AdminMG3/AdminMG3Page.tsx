@@ -4,6 +4,8 @@ import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc, getDoc 
 import { storage } from '../../firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings, ShieldAlert } from 'lucide-react';
+import AdminPasswordModal from '../Ranking/AdminPasswordModal';
+import { useNavigate } from 'react-router-dom';
 
 interface AdminMG3PageProps {
   login: string;
@@ -26,12 +28,12 @@ const DEFAULT_SETORES = [
 ];
 
 export default function AdminMG3Page({ login }: AdminMG3PageProps) {
-  const [senha, setSenha] = useState('');
   const [autenticado, setAutenticado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [ativos, setAtivos] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios' | 'configuracoes'>('empresas');
   const [setores, setSetores] = useState<string[]>(DEFAULT_SETORES);
+  const navigate = useNavigate();
 
   // Estado para Configurações Globais
   const [mg3Config, setMg3Config] = useState({
@@ -60,19 +62,6 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
     totalAcoes: '',
     logo: ''
   });
-
-  // Senha mockada para proteger a página (pode ser substituída por uma env var ou auth)
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const adminPassword = import.meta.env.VITE_ADMIN_MG3_PASSWORD;
-    if (adminPassword && senha === adminPassword) {
-      setAutenticado(true);
-      carregarAtivos();
-      carregarConfiguracoes();
-    } else {
-      alert('Senha incorreta!');
-    }
-  };
 
   const carregarConfiguracoes = async () => {
     try {
@@ -259,61 +248,22 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
 
   if (!autenticado) {
     return (
-      <div className="relative flex h-screen w-full items-center justify-center bg-slate-950 overflow-hidden font-sans">
-        {/* Dynamic Background Gradients */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/30 blur-[120px] mix-blend-screen animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[120px] mix-blend-screen" style={{ animation: 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />
-        
-        {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
-
-        <form onSubmit={handleLogin} className="relative z-10 w-full max-w-md mx-4 group">
-          {/* Glowing Border Effect around modal */}
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-[2rem] opacity-30 group-hover:opacity-60 transition duration-1000 blur-md" />
-          
-          <div className="relative bg-slate-900/80 backdrop-blur-2xl p-10 rounded-[2rem] shadow-2xl border border-white/10 flex flex-col items-center">
-            
-            {/* Logo Container */}
-            <div className="relative mb-8">
-              <div className="absolute inset-0 bg-blue-500 blur-xl opacity-50 rounded-full" />
-              <div className="relative bg-gradient-to-tr from-blue-600 to-indigo-500 p-4 rounded-2xl shadow-lg border border-white/20">
-                <Briefcase className="text-white w-10 h-10" />
-              </div>
-            </div>
-
-            <div className="text-center mb-10">
-              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-2 tracking-tight">
-                Portal MG3
-              </h1>
-              <p className="text-slate-400 font-medium text-sm">
-                Acesso restrito para administradores
-              </p>
-            </div>
-
-            <div className="w-full space-y-6">
-              <div className="relative">
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-6 py-4 bg-slate-950/50 text-white placeholder-slate-500 rounded-xl border border-white/5 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none font-medium text-center tracking-[0.3em]"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                />
-              </div>
-
-              <button className="w-full py-4 bg-white text-slate-900 hover:bg-slate-100 font-black rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] active:scale-95 flex justify-center items-center gap-2">
-                Autenticar
-              </button>
-            </div>
-
-            <div className="mt-8 flex items-center justify-center gap-2 opacity-40">
-              <ShieldAlert size={14} className="text-white" />
-              <span className="text-white text-xs font-semibold uppercase tracking-widest">
-                Conexão Segura
-              </span>
-            </div>
-          </div>
-        </form>
+      <div className="flex h-screen bg-slate-900 overflow-hidden relative">
+        {/* Usamos o mesmo modal da página de Admin */}
+        <AdminPasswordModal 
+          title="Admin MG3"
+          onClose={() => navigate('/')}
+          onConfirm={(senhaInformada) => {
+            const adminPassword = import.meta.env.VITE_ADMIN_MG3_PASSWORD;
+            if (adminPassword && senhaInformada === adminPassword) {
+              setAutenticado(true);
+              carregarAtivos();
+              carregarConfiguracoes();
+            } else {
+              alert("Senha incorreta! Acesso negado.");
+            }
+          }}
+        />
       </div>
     );
   }
