@@ -403,10 +403,23 @@ export default function MG3Page({
         const mudou = atualizados.some((novo, i) => novo.valorAtual !== currentAtivos[i]?.valorAtual);
         
         if (mudou) {
-          setAtivos(atualizados);
-          await updateDoc(doc(db, 'usuarios_mg3', login), {
-            ativos: atualizados,
-            ultimaAtualizacao: hoje,
+          await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(doc(db, 'usuarios_mg3', login));
+            if (!userDoc.exists()) return;
+            const ativosNoBanco = (userDoc.data().ativos || []) as Ativo[];
+            const mergeFinal = ativosNoBanco.map(ativoBanco => {
+              const atualizado = atualizados.find(a => a.id === ativoBanco.id);
+              if (atualizado) {
+                return {
+                  ...ativoBanco,
+                  valorAtual: atualizado.valorAtual,
+                  patrimonioPorDia: { ...ativoBanco.patrimonioPorDia, [hoje]: atualizado.patrimonioPorDia[hoje] }
+                };
+              }
+              return ativoBanco;
+            });
+            transaction.update(doc(db, 'usuarios_mg3', login), { ativos: mergeFinal, ultimaAtualizacao: hoje });
+            setAtivos(mergeFinal);
           });
         }
       } catch (error) {
@@ -1314,10 +1327,23 @@ export default function MG3Page({
               }
               const hoje = new Date().toISOString().split('T')[0];
               const atualizados = await atualizarAtivosMG3(ativos, hoje);
-              setAtivos(atualizados);
-              await updateDoc(doc(db, 'usuarios_mg3', login), {
-                ativos: atualizados,
-                ultimaAtualizacao: hoje,
+              await runTransaction(db, async (transaction) => {
+                const userDoc = await transaction.get(doc(db, 'usuarios_mg3', login));
+                if (!userDoc.exists()) return;
+                const ativosNoBanco = (userDoc.data().ativos || []) as Ativo[];
+                const mergeFinal = ativosNoBanco.map(ativoBanco => {
+                  const atualizado = atualizados.find(a => a.id === ativoBanco.id);
+                  if (atualizado) {
+                    return {
+                      ...ativoBanco,
+                      valorAtual: atualizado.valorAtual,
+                      patrimonioPorDia: { ...ativoBanco.patrimonioPorDia, [hoje]: atualizado.patrimonioPorDia[hoje] }
+                    };
+                  }
+                  return ativoBanco;
+                });
+                transaction.update(doc(db, 'usuarios_mg3', login), { ativos: mergeFinal, ultimaAtualizacao: hoje });
+                setAtivos(mergeFinal);
               });
               await salvarUltimaAtualizacaoManual(login);
               setBloqueado(true);

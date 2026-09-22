@@ -170,6 +170,49 @@ export default function MainPage({
     };
   }, [isAnyModalOpen]);
 
+  // Script isolado para correção manual da ZEC (só roda se a URL tiver ?fix=zec)
+  useEffect(() => {
+    if (window.location.search.includes('fix=zec') && login && historico && ativos && historico.length > 0) {
+      const zecCompras = historico.filter(h => h.nome === 'ZEC' && h.tipo === 'compra');
+      const zecNaCarteira = ativos.some(a => a.nome === 'ZEC');
+      
+      if (!zecNaCarteira && zecCompras.length > 0) {
+        const quantidadeTotal = zecCompras.reduce((total, compra) => total + (compra.quantidade || 1.5), 0);
+        const valorInvestidoTotal = zecCompras.reduce((total, compra) => total + compra.valor, 0);
+        const precoMedio = valorInvestidoTotal / quantidadeTotal;
+        const arrayCompras = zecCompras.map(c => ({ data: c.data, valor: c.valor }));
+        const dataHoje = new Date().toISOString().split('T')[0];
+
+        const novosAtivos = [...ativos];
+        const zecAtivo = {
+          id: new Date(zecCompras[0].data).getTime().toString(),
+          nome: 'ZEC',
+          tipo: 'rendaVariavel',
+          subtipo: 'criptomoeda',
+          tickerFormatado: 'ZEC-USD',
+          quantidade: quantidadeTotal,
+          valorInvestido: valorInvestidoTotal,
+          precoMedio: precoMedio,
+          valorAtual: zecCompras[0].valor / (zecCompras[0].quantidade || 1.5),
+          patrimonioPorDia: {
+            [dataHoje]: valorInvestidoTotal
+          },
+          compras: arrayCompras
+        };
+        novosAtivos.push(zecAtivo as any);
+
+        updateDoc(doc(db, 'usuarios', login), { 
+          ativos: novosAtivos
+        })
+          .then(() => {
+            console.log('ZEC consolidada na carteira com sucesso!');
+            setAtivos(novosAtivos);
+            alert("Correção da ZEC aplicada com sucesso! Pode remover o '?fix=zec' da URL.");
+          });
+      }
+    }
+  }, [historico, ativos, login]);
+
   useEffect(() => {
     const carregarDadosIniciais = async () => {
       setLoading(true);
@@ -1162,10 +1205,23 @@ export default function MainPage({
                 }
                 const hoje = new Date().toISOString().split('T')[0];
                 const atualizados = await atualizarAtivos(ativos, hoje);
-                setAtivos(atualizados);
-                await updateDoc(doc(db, 'usuarios', login), {
-                  ativos: atualizados,
-                  ultimaAtualizacao: hoje,
+                await runTransaction(db, async (transaction) => {
+                  const userDoc = await transaction.get(doc(db, 'usuarios', login));
+                  if (!userDoc.exists()) return;
+                  const ativosNoBanco = (userDoc.data().ativos || []) as Ativo[];
+                  const mergeFinal = ativosNoBanco.map(ativoBanco => {
+                    const atualizado = atualizados.find(a => a.id === ativoBanco.id);
+                    if (atualizado) {
+                      return {
+                        ...ativoBanco,
+                        valorAtual: atualizado.valorAtual,
+                        patrimonioPorDia: { ...ativoBanco.patrimonioPorDia, [hoje]: atualizado.patrimonioPorDia[hoje] }
+                      };
+                    }
+                    return ativoBanco;
+                  });
+                  transaction.update(doc(db, 'usuarios', login), { ativos: mergeFinal, ultimaAtualizacao: hoje });
+                  setAtivos(mergeFinal);
                 });
                 await salvarUltimaAtualizacaoManual(login);
                 setBloqueado(true);
