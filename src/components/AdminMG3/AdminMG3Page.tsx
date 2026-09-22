@@ -58,7 +58,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
     tipo: 'acao',
     setor: setores[0] || '',
     precoAtual: '',
-    taxaRendimentoDiaria: '',
+    taxaRendimentoHora: '',
     totalAcoes: '',
     logo: ''
   });
@@ -152,7 +152,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
       };
 
       if (novoAtivo.tipo === 'rendaFixa') {
-        payload.taxaRendimentoDiaria = parseFloat(novoAtivo.taxaRendimentoDiaria) / 100;
+        payload.taxaRendimentoHora = parseFloat(novoAtivo.taxaRendimentoHora) / 100;
         payload.precoAtual = 1; // Valor base de 1 para RF
       } else {
         payload.precoAtual = parseFloat(novoAtivo.precoAtual);
@@ -162,7 +162,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
       await addDoc(collection(db, 'mg3_mercado'), payload);
       alert('Ativo MG3 cadastrado com sucesso!');
       carregarAtivos();
-      setNovoAtivo({ ...novoAtivo, nome: '', ticker: '', precoAtual: '', taxaRendimentoDiaria: '', totalAcoes: '' });
+      setNovoAtivo({ ...novoAtivo, nome: '', ticker: '', precoAtual: '', taxaRendimentoHora: '', totalAcoes: '' });
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar ativo.');
@@ -440,16 +440,16 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                 )}
 
                 {novoAtivo.tipo === 'rendaFixa' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Taxa Diária de Rendimento (%)</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase">Taxa de Rendimento (% a hora)</label>
                     <input
-                      required
                       type="number"
-                      step="0.001"
-                      placeholder="Ex: 5 para 5% ao dia"
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={novoAtivo.taxaRendimentoDiaria}
-                      onChange={e => setNovoAtivo({ ...novoAtivo, taxaRendimentoDiaria: e.target.value })}
+                      className="w-full p-4 bg-slate-100 rounded-xl focus:bg-white border-2 border-transparent focus:border-blue-500 transition-all font-bold"
+                      placeholder="Ex: 0.5"
+                      step="0.01"
+                      value={novoAtivo.taxaRendimentoHora}
+                      onChange={e => setNovoAtivo({ ...novoAtivo, taxaRendimentoHora: e.target.value })}
+                      required
                     />
                   </div>
                 )}
@@ -493,7 +493,7 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                       <p className="text-xs text-slate-500">{ativo.nome} • {ativo.tipo}</p>
                       {ativo.tipo === 'rendaFixa' ? (
                         <p className="text-sm font-medium text-green-600 mt-1">
-                          +{(ativo.taxaRendimentoDiaria * 100).toFixed(2)}% ao dia
+                          +{(ativo.taxaRendimentoHora * 100).toFixed(2)}% a hora
                         </p>
                       ) : (
                         <p className="text-sm font-medium text-blue-600 mt-1">

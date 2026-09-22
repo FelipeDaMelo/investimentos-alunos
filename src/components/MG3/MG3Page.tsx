@@ -382,6 +382,41 @@ export default function MG3Page({
     setAtivos(ativosAtualizados);
   }, login);
 
+  // Efeito para atualizar ativos do MG3 automaticamente a cada 1 minuto
+  const ativosRef = useRef(ativos);
+  useEffect(() => {
+    ativosRef.current = ativos;
+  }, [ativos]);
+
+  useEffect(() => {
+    if (!login) return;
+
+    const interval = setInterval(async () => {
+      const currentAtivos = ativosRef.current;
+      if (currentAtivos.length === 0) return;
+
+      try {
+        const hoje = new Date().toISOString().split('T')[0];
+        const atualizados = await atualizarAtivosMG3(currentAtivos, hoje);
+        
+        // Verifica se houve alguma mudana real
+        const mudou = atualizados.some((novo, i) => novo.valorAtual !== currentAtivos[i]?.valorAtual);
+        
+        if (mudou) {
+          setAtivos(atualizados);
+          await updateDoc(doc(db, 'usuarios_mg3', login), {
+            ativos: atualizados,
+            ultimaAtualizacao: hoje,
+          });
+        }
+      } catch (error) {
+        console.error("Erro na atualização automática por minuto:", error);
+      }
+    }, 60000); // 1 minuto
+
+    return () => clearInterval(interval);
+  }, [login]);
+
   useEffect(() => {
     async function verificarBloqueio() {
       const ultima = await obterUltimaAtualizacaoManual(login);
