@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { storage } from '../../firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings, ShieldAlert } from 'lucide-react';
+import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings, ShieldAlert, X, Image as ImageIcon } from 'lucide-react';
 import AdminPasswordModal from '../Ranking/AdminPasswordModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,6 +34,13 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios' | 'configuracoes'>('empresas');
   const [setores, setSetores] = useState<string[]>(DEFAULT_SETORES);
   const navigate = useNavigate();
+
+  // Estados para edição de ativo existente
+  const [ativoEditando, setAtivoEditando] = useState<any | null>(null);
+  const [uploadingEditLogo, setUploadingEditLogo] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Estado para Configurações Globais
   const [mg3Config, setMg3Config] = useState({
@@ -92,22 +99,93 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
     }
   };
 
+  // Upload no Firebase Storage usando a pasta com permissão de escrita
+  const uploadImageFile = async (file: File): Promise<string> => {
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const uniqueName = `logo_mg3_${Date.now()}_${cleanName}`;
+    const storageRef = ref(storage, `fotosGrupos/${uniqueName}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  };
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadingLogo(true);
     try {
-      const uniqueName = `${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, `logos_mg3/${uniqueName}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      setNovoAtivo({ ...novoAtivo, logo: downloadURL });
-    } catch (error) {
+      const downloadURL = await uploadImageFile(file);
+      setNovoAtivo(prev => ({ ...prev, logo: downloadURL }));
+    } catch (error: any) {
       console.error("Erro ao subir logo:", error);
-      alert("Erro ao fazer upload da logo.");
+      alert(`Erro ao fazer upload da logo: ${error?.message || 'Permissão negada ou erro na rede'}`);
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const abrirEdicaoAtivo = (ativo: any) => {
+    setAtivoEditando({
+      ...ativo,
+      taxaRendimentoHora: ativo.tipo === 'rendaFixa' && ativo.taxaRendimentoHora != null
+        ? (Number(ativo.taxaRendimentoHora) * 100).toString()
+        : '',
+      precoAtual: ativo.precoAtual != null ? ativo.precoAtual.toString() : '',
+      totalAcoes: ativo.totalAcoes != null ? ativo.totalAcoes.toString() : '',
+      logo: ativo.logo || ''
+    });
+  };
+
+  const handleEditLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingEditLogo(true);
+    try {
+      const downloadURL = await uploadImageFile(file);
+      setAtivoEditando((prev: any) => prev ? ({ ...prev, logo: downloadURL }) : null);
+    } catch (error: any) {
+      console.error("Erro ao subir logo da edição:", error);
+      alert(`Erro ao fazer upload da logo: ${error?.message || 'Permissão negada ou erro na rede'}`);
+    } finally {
+      setUploadingEditLogo(false);
+    }
+  };
+
+  const handleSalvarEdicao = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ativoEditando) return;
+
+    setIsSavingEdit(true);
+    try {
+      const tickerFormatado = (ativoEditando.ticker || '').toUpperCase();
+      const defaultLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(tickerFormatado)}&background=0284c7&color=fff&bold=true`;
+
+      const payload: any = {
+        nome: ativoEditando.nome,
+        ticker: tickerFormatado,
+        tipo: ativoEditando.tipo,
+        setor: ativoEditando.tipo === 'rendaFixa' ? 'Bancário' : (ativoEditando.setor || setores[0] || 'Geral'),
+        logo: (ativoEditando.logo && ativoEditando.logo.trim()) ? ativoEditando.logo.trim() : defaultLogo,
+      };
+
+      if (ativoEditando.tipo === 'rendaFixa') {
+        payload.taxaRendimentoHora = parseFloat(ativoEditando.taxaRendimentoHora || '0') / 100;
+        payload.precoAtual = 1;
+      } else {
+        payload.precoAtual = parseFloat(ativoEditando.precoAtual || '0');
+        payload.totalAcoes = parseFloat(ativoEditando.totalAcoes || '0');
+      }
+
+      await updateDoc(doc(db, 'mg3_mercado', ativoEditando.id), payload);
+      alert('Ativo atualizado com sucesso!');
+      setAtivoEditando(null);
+      carregarAtivos();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Erro ao atualizar ativo: ${err?.message || 'Erro'}`);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -141,12 +219,15 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   const handleSalvarAtivo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const tickerFormatado = novoAtivo.ticker.toUpperCase();
+      const defaultLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(tickerFormatado)}&background=0284c7&color=fff&bold=true`;
+
       const payload: any = {
         nome: novoAtivo.nome,
-        ticker: novoAtivo.ticker.toUpperCase(),
+        ticker: tickerFormatado,
         tipo: novoAtivo.tipo,
         setor: novoAtivo.tipo === 'rendaFixa' ? 'Bancário' : novoAtivo.setor,
-        logo: novoAtivo.logo || 'https://via.placeholder.com/150?text=' + novoAtivo.ticker,
+        logo: (novoAtivo.logo && novoAtivo.logo.trim()) ? novoAtivo.logo.trim() : defaultLogo,
         oferta: 0,
         demanda: 0,
       };
@@ -162,10 +243,22 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
       await addDoc(collection(db, 'mg3_mercado'), payload);
       alert('Ativo MG3 cadastrado com sucesso!');
       carregarAtivos();
-      setNovoAtivo({ ...novoAtivo, nome: '', ticker: '', precoAtual: '', taxaRendimentoHora: '', totalAcoes: '' });
-    } catch (err) {
+      setNovoAtivo({
+        nome: '',
+        ticker: '',
+        tipo: 'acao',
+        setor: setores[0] || '',
+        precoAtual: '',
+        taxaRendimentoHora: '',
+        totalAcoes: '',
+        logo: ''
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err: any) {
       console.error(err);
-      alert('Erro ao salvar ativo.');
+      alert(`Erro ao salvar ativo: ${err?.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -454,23 +547,61 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Logo do Ativo (Opcional)</label>
-                  <div className="flex items-center gap-4">
-                    {novoAtivo.logo && (
-                      <img src={novoAtivo.logo} alt="Preview" className="w-12 h-12 rounded-full object-cover border" />
-                    )}
-                    <div className="flex-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-1"
-                        onChange={handleLogoUpload}
-                        disabled={uploadingLogo}
+                <div className="space-y-3 pt-1 border-t border-slate-100">
+                  <label className="block text-sm font-medium text-slate-700">Logo da Empresa (Opcional)</label>
+
+                  {novoAtivo.logo && (
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                      <img 
+                        src={novoAtivo.logo} 
+                        alt="Preview" 
+                        className="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200 flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(novoAtivo.ticker || 'EM')}&background=0284c7&color=fff&bold=true`;
+                        }}
                       />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-700 truncate">{novoAtivo.logo}</p>
+                        <span className="text-[10px] text-green-600 font-bold flex items-center gap-1">
+                          Logo pronta para cadastrar
+                        </span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setNovoAtivo(prev => ({ ...prev, logo: '' }));
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors"
+                        title="Remover logo"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-1"
+                      onChange={handleLogoUpload}
+                      disabled={uploadingLogo}
+                    />
+                    {uploadingLogo && <p className="text-xs text-blue-600 animate-pulse font-medium">Fazendo upload da imagem para o Firebase...</p>}
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-xs text-slate-400 font-medium">Ou cole a URL direta da imagem:</span>
+                    </div>
+                    <input
+                      type="url"
+                      placeholder="https://exemplo.com/logo.png"
+                      className="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={novoAtivo.logo}
+                      onChange={e => setNovoAtivo(prev => ({ ...prev, logo: e.target.value }))}
+                    />
                   </div>
-                  {uploadingLogo && <p className="text-sm text-blue-500 mt-1">Enviando imagem...</p>}
                 </div>
 
                 <button type="submit" className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 mt-4">
@@ -487,23 +618,43 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {ativos.map(ativo => (
                   <div key={ativo.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-                    <img src={ativo.logo} alt={ativo.ticker} className="w-12 h-12 rounded-full object-cover bg-slate-100" />
-                    <div className="flex-1">
-                      <h3 className="font-bold text-slate-800">{ativo.ticker}</h3>
-                      <p className="text-xs text-slate-500">{ativo.nome} • {ativo.tipo}</p>
+                    <img 
+                      src={ativo.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(ativo.ticker)}&background=0284c7&color=fff&bold=true`} 
+                      alt={ativo.ticker} 
+                      className="w-12 h-12 rounded-full object-cover bg-slate-100 border border-slate-100 flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ativo.ticker)}&background=0284c7&color=fff&bold=true`;
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-800 truncate">{ativo.ticker}</h3>
+                      <p className="text-xs text-slate-500 truncate">{ativo.nome} • {ativo.tipo}</p>
                       {ativo.tipo === 'rendaFixa' ? (
                         <p className="text-sm font-medium text-green-600 mt-1">
-                          +{(ativo.taxaRendimentoHora * 100).toFixed(2)}% a hora
+                          +{(Number(ativo.taxaRendimentoHora || 0) * 100).toFixed(2)}% a hora
                         </p>
                       ) : (
                         <p className="text-sm font-medium text-blue-600 mt-1">
-                          $ {ativo.precoAtual?.toFixed(2)}
+                          $ {Number(ativo.precoAtual || 0).toFixed(2)}
                         </p>
                       )}
                     </div>
-                    <button onClick={() => handleDelete(ativo.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
-                      <Trash2 size={20} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => abrirEdicaoAtivo(ativo)} 
+                        title="Editar Ativo / Imagem"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(ativo.id)} 
+                        title="Excluir Ativo"
+                        className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -624,6 +775,179 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
           </div>
         )}
       </div>
+
+      {/* Modal de Edição de Empresa / Ativo */}
+      {ativoEditando && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">Editar {ativoEditando.ticker}</h2>
+                  <p className="text-xs text-slate-500">Altere os dados e a imagem da empresa</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAtivoEditando(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSalvarEdicao} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Empresa / Banco</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={ativoEditando.nome}
+                  onChange={e => setAtivoEditando({ ...ativoEditando, nome: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Código (Ticker)</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={ativoEditando.ticker}
+                  onChange={e => setAtivoEditando({ ...ativoEditando, ticker: e.target.value.toUpperCase() })}
+                />
+              </div>
+
+              {ativoEditando.tipo !== 'rendaFixa' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Setor</label>
+                    <select
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={ativoEditando.setor}
+                      onChange={e => setAtivoEditando({ ...ativoEditando, setor: e.target.value })}
+                    >
+                      {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Preço Atual (GloriaCoins)</label>
+                    <input
+                      required
+                      type="number"
+                      step="0.01"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={ativoEditando.precoAtual}
+                      onChange={e => setAtivoEditando({ ...ativoEditando, precoAtual: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Total de Ações Emitidas</label>
+                    <input
+                      required
+                      type="number"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={ativoEditando.totalAcoes}
+                      onChange={e => setAtivoEditando({ ...ativoEditando, totalAcoes: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+
+              {ativoEditando.tipo === 'rendaFixa' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase">Taxa de Rendimento (% a hora)</label>
+                  <input
+                    type="number"
+                    className="w-full p-4 bg-slate-100 rounded-xl focus:bg-white border-2 border-transparent focus:border-blue-500 transition-all font-bold"
+                    placeholder="Ex: 0.5"
+                    step="0.01"
+                    value={ativoEditando.taxaRendimentoHora}
+                    onChange={e => setAtivoEditando({ ...ativoEditando, taxaRendimentoHora: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <label className="block text-sm font-medium text-slate-700">Logo da Empresa</label>
+                
+                {ativoEditando.logo && (
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <img 
+                      src={ativoEditando.logo} 
+                      alt="Preview" 
+                      className="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200 flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ativoEditando.ticker || 'EM')}&background=0284c7&color=fff&bold=true`;
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-600 truncate">{ativoEditando.logo}</p>
+                      <span className="text-[10px] text-green-600 font-bold">Logo configurada</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setAtivoEditando({ ...ativoEditando, logo: '' });
+                        if (editFileInputRef.current) editFileInputRef.current.value = '';
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors"
+                      title="Remover logo"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <input
+                    ref={editFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-1"
+                    onChange={handleEditLogoUpload}
+                    disabled={uploadingEditLogo}
+                  />
+                  {uploadingEditLogo && <p className="text-xs text-blue-600 animate-pulse font-medium">Fazendo upload da imagem para o Firebase...</p>}
+                  
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-slate-400 font-medium">Ou cole a URL direta da imagem:</span>
+                  </div>
+                  <input
+                    type="url"
+                    placeholder="https://exemplo.com/logo.png"
+                    className="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={ativoEditando.logo || ''}
+                    onChange={e => setAtivoEditando({ ...ativoEditando, logo: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setAtivoEditando(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit || uploadingEditLogo}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-md shadow-blue-500/20"
+                >
+                  {isSavingEdit ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
