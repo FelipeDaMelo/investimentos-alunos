@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 // ✅ Modificação: Removido 'useLocation' que não estava em uso.
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Login from './Login';
 import MainPage from './MainPage';
 import RankingPage from './components/Ranking/RankingPage';
@@ -229,6 +229,10 @@ const App = () => {
                     />
                   )
                 } 
+              />
+              <Route 
+                path="/mg3/investir" 
+                element={<Navigate to="/mg3?investir=true" replace />} 
               />
       </Routes>
 

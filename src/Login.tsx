@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import useMoneyInput from './hooks/useMoneyInput';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
-import { Power, UserRoundCheck, Trophy, ArrowRight, ArrowLeft, ShieldAlert, Sparkles, Briefcase, Building2 } from 'lucide-react';
+import { Power, UserRoundCheck, Trophy, ArrowRight, ArrowLeft, ShieldAlert, Sparkles, Briefcase, Building2, QrCode } from 'lucide-react';
 import TutorialModal from './TutorialModal';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -25,6 +25,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [verificando, setVerificando] = useState(false);
   const [senha, setSenha] = useState('');
   const [mostrarTutorial, setMostrarTutorial] = useState(false);
+  const [temIntencaoInvestir, setTemIntencaoInvestir] = useState(false);
+
+  useEffect(() => {
+    if (!isMG3) return;
+    const search = window.location.search;
+    if (search && (search.includes('investir') || search.includes('wizard') || search.includes('action'))) {
+      sessionStorage.setItem('mg3_redirect_intent', search);
+      setTemIntencaoInvestir(true);
+    } else {
+      const intentSalva = sessionStorage.getItem('mg3_redirect_intent');
+      if (intentSalva) {
+        setTemIntencaoInvestir(true);
+      }
+    }
+  }, [isMG3]);
 
   // Configurações globais do MG3 definidas pelo Admin
   const [mg3Config, setMg3Config] = useState({
@@ -375,13 +390,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
 
             <div className="text-center mb-6">
+              {temIntencaoInvestir && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 text-[11px] font-black rounded-full mb-3 shadow-xs">
+                  <QrCode size={13} /> QR Code do Evento detectado
+                </div>
+              )}
               <h2 className="text-2xl font-black text-slate-800">
                 {view === 'platform' && (isMG3 ? 'Bolsa MG3 - Acesso' : 'Opções de Acesso')}
                 {view === 'create' && (isMG3 ? 'Cadastro de Equipe MG3' : 'Criar sua Conta')}
                 {view === 'login' && (isMG3 ? 'Entrar na Equipe MG3' : 'Entrar no Grupo')}
               </h2>
               <p className="text-sm font-medium text-slate-500 mt-1">
-                {view === 'platform' && (isMG3 ? 'Cadastre ou acesse a carteira do seu grupo' : 'Deseja criar ou acessar um grupo?')}
+                {view === 'platform' && (isMG3 ? (temIntencaoInvestir ? 'Identifique sua equipe para abrir os investimentos' : 'Cadastre ou acesse a carteira do seu grupo') : 'Deseja criar ou acessar um grupo?')}
                 {view === 'create' && (isMG3 ? 'Regras e capital definidos pela organização' : 'Defina seu capital e estratégia')}
                 {view === 'login' && (isMG3 ? 'Informe o nome e senha do grupo cadastrado' : 'Informe os dados de simulação')}
               </p>

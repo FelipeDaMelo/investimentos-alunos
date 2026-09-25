@@ -3,7 +3,7 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { storage } from '../../firebaseConfig';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings, ShieldAlert, X, Image as ImageIcon } from 'lucide-react';
+import { Briefcase, Building2, TrendingUp, Trash2, Edit2, LayoutDashboard, Clock, Settings, ShieldAlert, X, Image as ImageIcon, QrCode, Copy, ExternalLink, Printer, Check } from 'lucide-react';
 import AdminPasswordModal from '../Ranking/AdminPasswordModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,7 +31,8 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
   const [autenticado, setAutenticado] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [ativos, setAtivos] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios' | 'configuracoes'>('empresas');
+  const [activeTab, setActiveTab] = useState<'empresas' | 'cenarios' | 'configuracoes' | 'qrcode'>('empresas');
+  const [copiado, setCopiado] = useState(false);
   const [setores, setSetores] = useState<string[]>(DEFAULT_SETORES);
   const navigate = useNavigate();
 
@@ -396,6 +397,13 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
             >
               <Settings size={18} /> Configurações
             </button>
+            <button
+              onClick={() => setActiveTab('qrcode')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${activeTab === 'qrcode' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              <QrCode size={18} /> QR Code do Evento
+            </button>
           </div>
         </header>
 
@@ -444,6 +452,163 @@ export default function AdminMG3Page({ login }: AdminMG3PageProps) {
               >
                 {isSavingConfig ? 'Salvando...' : 'Salvar Configurações'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'qrcode' && (
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 mb-10 animate-fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-black rounded-full mb-2">
+                  <QrCode size={14} /> Mostra Cultural MG3
+                </span>
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                  QR Code Oficial para Adicionar Ativos
+                </h2>
+                <p className="text-sm font-medium text-slate-500 mt-1 max-w-2xl">
+                  Ao escanear este QR Code com o celular, o aluno que <b>não estiver logado</b> será solicitado a identificar sua equipe no MG3. Logo após o login, a plataforma abre <b>imediatamente a tela para decidir entre Renda Fixa ou Renda Variável</b>.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) return;
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Placa QR Code - Bolsa MG3</title>
+                          <style>
+                            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #fff; text-align: center; }
+                            .card { border: 4px solid #2563eb; border-radius: 32px; padding: 48px; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); }
+                            .badge { background: #dbeafe; color: #1e40af; font-weight: 800; font-size: 13px; text-transform: uppercase; padding: 6px 16px; border-radius: 999px; display: inline-block; margin-bottom: 16px; }
+                            h1 { font-size: 28px; font-weight: 900; margin: 0 0 8px; color: #0f172a; }
+                            p { font-size: 14px; color: #64748b; margin: 0 0 24px; line-height: 1.5; font-weight: 500; }
+                            img { width: 280px; height: 280px; border-radius: 20px; border: 2px solid #e2e8f0; margin-bottom: 24px; }
+                            .steps { text-align: left; background: #f8fafc; border-radius: 18px; padding: 16px 20px; font-size: 12px; color: #334155; font-weight: 700; line-height: 1.8; }
+                            .footer { margin-top: 20px; font-size: 11px; font-weight: 800; color: #94a3b8; letter-spacing: 0.05em; text-transform: uppercase; }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="card">
+                            <div class="badge">Mostra Científica & Cultural</div>
+                            <h1>Bolsa MG3</h1>
+                            <p>Aponte a câmera do seu celular para entrar na sua equipe e investir em <b>Renda Fixa</b> ou <b>Renda Variável</b>!</p>
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=15&data=${encodeURIComponent(`${window.location.origin}/mg3/investir`)}" alt="QR Code Bolsa MG3" />
+                            <div class="steps">
+                              1. Aponte a câmera do celular para o código acima<br/>
+                              2. Entre com o nome e a senha de 6 dígitos da sua equipe<br/>
+                              3. Escolha a categoria e aplique suas GloriaCoins!
+                            </div>
+                            <div class="footer">Simulador de Investimentos MG3</div>
+                          </div>
+                          <script>
+                            window.onload = function() { window.print(); }
+                          </script>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }}
+                  className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-2 shadow-sm transition-all text-sm"
+                >
+                  <Printer size={16} /> Imprimir Placa A4
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-5 flex flex-col items-center">
+                <div className="bg-gradient-to-b from-blue-50 to-slate-50 border-2 border-blue-200 p-6 rounded-3xl shadow-xl flex flex-col items-center max-w-sm w-full text-center">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-3 shadow-md shadow-blue-500/30">
+                    <QrCode size={22} />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800">Bolsa MG3 - Investir</h3>
+                  <p className="text-xs text-slate-500 font-medium mb-4">Escolha entre Renda Fixa e Renda Variável</p>
+
+                  <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-4">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(`${window.location.origin}/mg3/investir`)}`}
+                      alt="QR Code MG3"
+                      className="w-56 h-56 rounded-xl object-contain"
+                    />
+                  </div>
+
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                    Escaneie para testar no celular
+                  </p>
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 space-y-6">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
+                    Link Direto do QR Code
+                  </label>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 pl-4">
+                    <span className="text-xs md:text-sm font-mono font-bold text-slate-700 truncate flex-1">
+                      {window.location.origin}/mg3/investir
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/mg3/investir`);
+                        setCopiado(true);
+                        setTimeout(() => setCopiado(false), 2000);
+                      }}
+                      className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0"
+                    >
+                      {copiado ? (
+                        <>
+                          <Check size={14} className="text-green-600" />
+                          <span className="text-green-600">Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} className="text-slate-500" />
+                          <span>Copiar Link</span>
+                        </>
+                      )}
+                    </button>
+                    <a
+                      href="/mg3/investir"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+                    >
+                      <ExternalLink size={14} />
+                      <span>Testar Acesso</span>
+                    </a>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <ShieldAlert size={16} className="text-blue-600" /> Como funciona o fluxo do aluno
+                  </h4>
+                  <ul className="text-xs text-slate-600 space-y-2 font-medium">
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0 text-[10px]">1</span>
+                      <span><b>Aluno escaneia o QR Code</b> em qualquer lugar do evento através da câmera do celular.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0 text-[10px]">2</span>
+                      <span><b>Se ainda não estiver logado:</b> cai na tela de acesso da Bolsa MG3 com aviso de QR Code e digita o nome e senha da sua equipe.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0 text-[10px]">3</span>
+                      <span><b>Redirecionamento automático:</b> assim que autentica, o painel abre instantaneamente a tela de decisão entre <b>Renda Fixa</b> e <b>Renda Variável</b>.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0 text-[10px]">4</span>
+                      <span><b>Se já estiver logado:</b> vai direto para a tela de escolha sem pedir login novamente!</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -37,7 +37,7 @@ import { atualizarAtivosMG3 } from '../../utils/atualizarAtivosMG3';
 import { obterUltimaAtualizacaoManual, salvarUltimaAtualizacaoManual } from '../../hooks/useAtualizarAtivos';
 import FotoGrupoUploader from '../../components/FotoGrupoUploader';
 import { CircleArrowUp, CircleArrowDown, Wallet, Receipt, ArrowRightLeft, ReceiptText, Calculator, SquarePlus, RefreshCw, Download, LogOut, Trophy, TrendingUp, TrendingDown, ChevronRight, Users } from 'lucide-react';
-import { Link } from 'react-router-dom'; // ✅ 1. Importe o Link
+import { Link, useLocation } from 'react-router-dom';
 import { verificarImpostoMensal } from '../../hooks/verificarImpostoMensal';
 import { ResumoIR } from '../../components/ResumoIR';
 import DeduzirIRModal from '../../components/DeduzirIRModal';
@@ -105,6 +105,28 @@ export default function MG3Page({
   const [valorVariavelDisponivel, setValorVariavelDisponivel] = useState(0);
   const [error, setError] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const intent = sessionStorage.getItem('mg3_redirect_intent');
+    const intentParams = intent ? new URLSearchParams(intent) : null;
+
+    const deveAbrirWizard =
+      params.get('investir') === 'true' ||
+      params.get('action') === 'wizard' ||
+      params.get('action') === 'investir' ||
+      intentParams?.get('investir') === 'true' ||
+      intentParams?.get('action') === 'wizard' ||
+      intentParams?.get('action') === 'investir';
+
+    if (deveAbrirWizard) {
+      setShowWizard(true);
+      sessionStorage.removeItem('mg3_redirect_intent');
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search]);
+
   const [ativoSelecionado, setAtivoSelecionado] = useState<Ativo | null>(null);
   const [showVendaModal, setShowVendaModal] = useState(false);
   const [showDepositar, setShowDepositar] = useState(false);
