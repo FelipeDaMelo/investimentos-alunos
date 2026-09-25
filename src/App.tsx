@@ -68,8 +68,9 @@ const App = () => {
   );
 
   // A função de logout agora usa o 'navigate' para garantir
-  // que o usuário seja sempre redirecionado para a página de login.
+  // que o usuário seja sempre redirecionado para a página de login apropriada.
   const handleLogout = useCallback(() => {
+    const isMG3Path = window.location.pathname.includes('mg3');
     setLogin(null);
     setValorInvestido(0);
     setFixo(0);
@@ -80,7 +81,7 @@ const App = () => {
     
     sessionStorage.clear();
     
-    navigate('/'); 
+    navigate(isMG3Path ? '/mg3' : '/'); 
     window.scrollTo(0, 0); 
   }, [navigate]);
 
@@ -103,10 +104,12 @@ const App = () => {
       throw new Error("Senha incorreta");
     }
     try {
+      const isMG3Path = window.location.pathname.includes('mg3');
       const storageRef = ref(storage, `fotosGrupos/${login}-${new Date().getTime()}.jpg`);
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
-      await updateDoc(doc(db, 'usuarios', login), { fotoGrupo: url });
+      const collectionTarget = isMG3Path ? 'usuarios_mg3' : 'usuarios';
+      await updateDoc(doc(db, collectionTarget, login), { fotoGrupo: url });
       setFotoGrupo(url);
       sessionStorage.setItem('fotoGrupo', url);
     } catch (error) {

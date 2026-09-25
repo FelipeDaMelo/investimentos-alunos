@@ -133,6 +133,7 @@ export default function AddAtivoWizard({
                 if (sucesso) onClose();
               }}
               saldoDisponivel={valorFixaDisponivel}
+              isMG3={isMG3}
             />
           </motion.div>
         )}

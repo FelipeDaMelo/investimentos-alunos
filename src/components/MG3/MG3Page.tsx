@@ -908,6 +908,7 @@ export default function MG3Page({
         }}
         bloqueadoAtualizar={bloqueado}
         activeModal={getActiveModal()}
+        isMG3={true}
       />
 
       <div className="flex-1 flex flex-col w-full bg-gray-50/50 transition-all duration-500 relative">

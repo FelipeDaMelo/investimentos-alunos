@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regras de Usuários
+    match /usuarios/{login} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Regras de Rankings
+    match /rankings/{rankingId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // Monitoramento do Painel de Admin (desaninhado da coleção rankings)
+    match /adminMonitoramentos/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // ===================================
+    // REGRAS DO ECOSSISTEMA MG3
+    // ===================================
+    
+    // Empresas e Mercado MG3 (leitura aberta, escrita autenticada)
+    match /mg3_mercado/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Cenários / Notícias MG3
+    match /mg3_cenarios/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Usuários e Grupos do MG3
+    match /usuarios_mg3/{login} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Rankings do MG3
+    match /rankings_mg3/{rankingId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Configurações do Admin MG3 (capital inicial, sensibilidade, etc.)
+    match /admin/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

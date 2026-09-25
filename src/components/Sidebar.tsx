@@ -60,10 +60,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
 
   const isHome = location.pathname === '/';
+  const isMG3Path = isMG3 || location.pathname.includes('mg3');
 
   const handleAction = (action: string, callback?: () => void) => {
-    if (isHome && callback) {
+    if (callback) {
       callback();
+    } else if (isMG3Path) {
+      navigate(`/mg3?action=${action}`);
     } else {
       navigate(`/?action=${action}`);
     }

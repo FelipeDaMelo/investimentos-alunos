@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ArrowLeft, Plus, ExternalLink, Calendar, Wallet, Lock, MessageSquare, TrendingUp, Tag, Percent, Info } from 'lucide-react';
+import { RefreshCw, ArrowLeft, Plus, ExternalLink, Calendar, Wallet, Lock, MessageSquare, TrendingUp, Tag, Percent, Info, Building2, Landmark } from 'lucide-react';
 import { criarAtivoFixa } from '../../utils/ativoHelpers';
 import { RendaFixaAtivo } from '../../types/Ativo';
 import useMoneyInput from '../../hooks/useMoneyInput';
 import fetchValorAtual from '../../fetchValorAtual';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 
 interface RendaFixaStepProps {
   onBack: () => void;
   onSubmit: (ativo: RendaFixaAtivo, comentario: string) => void;
   saldoDisponivel: number;
+  isMG3?: boolean;
 }
 
-export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: RendaFixaStepProps) {
+export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel, isMG3 }: RendaFixaStepProps) {
   const {
     value: valorInvestido,
     displayValue,
@@ -44,6 +47,36 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   const [indicePosFixado, setIndicePosFixado] = useState<'CDI' | 'SELIC'>('CDI');
   const [comentario, setComentario] = useState('');
 
+  // Estados dedicados ao MG3
+  const [bancosMG3, setBancosMG3] = useState<any[]>([]);
+  const [carregandoBancos, setCarregandoBancos] = useState(isMG3);
+  const [bancoSelecionado, setBancoSelecionado] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!isMG3) return;
+
+    const carregarBancosMG3 = async () => {
+      try {
+        setCarregandoBancos(true);
+        const snap = await getDocs(collection(db, 'mg3_mercado'));
+        const dados = snap.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as any) }))
+          .filter(a => a.tipo === 'rendaFixa');
+        setBancosMG3(dados);
+        if (dados.length > 0) {
+          setBancoSelecionado(dados[0]);
+          setForm(prev => ({ ...prev, nome: dados[0].nome }));
+        }
+      } catch (err) {
+        console.error('Erro ao carregar bancos do MG3:', err);
+      } finally {
+        setCarregandoBancos(false);
+      }
+    };
+
+    carregarBancosMG3();
+  }, [isMG3]);
+
   const carregarTaxas = async () => {
     try {
       setCarregandoTaxas(true);
@@ -51,7 +84,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       const { valor: cdi } = await fetchValorAtual('CDI');
       const { valor: selic } = await fetchValorAtual('SELIC');
       const { valor: ipca } = await fetchValorAtual('IPCA');
-      
+
       if (cdi === 'Erro ao carregar' || selic === 'Erro ao carregar' || ipca === 'Erro ao carregar') {
         throw new Error('Falha na sincronização com os indicadores');
       }
@@ -70,15 +103,49 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
   };
 
   useEffect(() => {
-    if (form.categoriaFixa === 'posFixada' || form.categoriaFixa === 'hibrida') {
+    if (!isMG3 && (form.categoriaFixa === 'posFixada' || form.categoriaFixa === 'hibrida')) {
       carregarTaxas();
     }
-  }, [form.categoriaFixa]);
+  }, [form.categoriaFixa, isMG3]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (valorInvestido > saldoDisponivel) {
       alert(`Valor excede o saldo disponível (${saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`);
+      return;
+    }
+    if (senha.length !== 6) {
+      alert('A senha deve conter 6 dígitos.');
+      return;
+    }
+
+    if (isMG3) {
+      const hoje = new Date().toISOString().split('T')[0];
+      const nomeBanco = bancoSelecionado?.nome || form.nome || 'Banco MG3';
+      const ativoMG3: RendaFixaAtivo & { senha: string } = {
+        id: Date.now().toString(),
+        nome: nomeBanco,
+        tipo: 'rendaFixa',
+        dataInvestimento: hoje,
+        valorInvestido,
+        valorAtual: valorInvestido,
+        patrimonioPorDia: {
+          [hoje]: valorInvestido
+        },
+        categoriaFixa: 'prefixada',
+        parametrosFixa: {
+          taxaPrefixada: (bancoSelecionado?.taxaRendimentoHora || 0) * 100,
+          percentualCDI: 0,
+          percentualSELIC: 0,
+          ipca: 0,
+          cdiUsado: 0,
+          selicUsado: 0,
+          ipcaUsado: 0
+        },
+        senha,
+        logo: bancoSelecionado?.logo || ''
+      };
+      onSubmit(ativoMG3 as any, comentario);
       return;
     }
 
@@ -125,6 +192,179 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
       }
     }));
   };
+
+  if (isMG3) {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold text-slate-800">Bolsa MG3 - Renda Fixa</h2>
+          <p className="text-slate-500 text-sm font-medium">Invista em instituições bancárias com rentabilidade contínua por hora</p>
+        </div>
+
+        <div className="space-y-3 bg-slate-50/80 p-5 rounded-3xl border border-slate-200">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <Building2 size={14} /> Bancos Disponíveis no MG3 ({bancosMG3.length})
+            </span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              Taxa horária
+            </span>
+          </div>
+
+          {carregandoBancos ? (
+            <p className="text-xs text-blue-600 font-semibold animate-pulse">Carregando instituições bancárias do MG3...</p>
+          ) : bancosMG3.length === 0 ? (
+            <p className="text-xs text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200">
+              Nenhum banco de Renda Fixa cadastrado no MG3 ainda. Peça ao administrador para cadastrar bancos em /admin-mg3.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {bancosMG3.map(banco => {
+                const isSelected = (bancoSelecionado?.id === banco.id) || (form.nome === banco.nome);
+                const taxaHora = (Number(banco.taxaRendimentoHora || 0) * 100).toFixed(2);
+                return (
+                  <button
+                    key={banco.id}
+                    type="button"
+                    onClick={() => {
+                      setBancoSelecionado(banco);
+                      setForm(prev => ({ ...prev, nome: banco.nome }));
+                    }}
+                    className={`flex items-center gap-3 p-4 rounded-2xl text-left transition-all border ${isSelected
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 scale-[1.01]'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50'
+                      }`}
+                  >
+                    <img
+                      src={banco.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(banco.ticker || 'BC')}&background=0284c7&color=fff&bold=true`}
+                      alt={banco.nome}
+                      className="w-10 h-10 rounded-xl object-cover bg-white flex-shrink-0 border border-slate-100"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(banco.ticker || 'BC')}&background=0284c7&color=fff&bold=true`;
+                      }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-black truncate ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                        {banco.nome}
+                      </p>
+                      <p className={`text-xs font-bold ${isSelected ? 'text-green-300' : 'text-green-600'}`}>
+                        +{taxaHora}% a hora
+                      </p>
+                      <p className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                        Capitalizado a cada 10 min
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Valor a Investir (GloriaCoins)</label>
+            <div className="flex border-2 border-slate-100 rounded-2xl overflow-hidden group focus-within:border-blue-500 transition-all bg-slate-50">
+              <div className="w-14 shrink-0 flex items-center justify-center bg-slate-100 border-r-2 border-slate-100 text-slate-500 font-black text-sm group-focus-within:bg-blue-50 group-focus-within:text-blue-600 transition-colors">GC</div>
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={displayValue}
+                  onChange={handleChange}
+                  className="w-full bg-transparent px-5 py-4 text-slate-700 font-bold focus:bg-white transition-all outline-none"
+                  placeholder="0,00"
+                  required
+                />
+                <div className="absolute right-5 top-1/2 -translate-y-1/2">
+                  <Wallet className="text-slate-300 group-focus-within:text-blue-400 transition-colors" size={18} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Data da Aplicação</label>
+            <div className="flex border-2 border-slate-100 rounded-2xl overflow-hidden group focus-within:border-blue-500 transition-all bg-slate-50">
+              <div className="w-14 shrink-0 flex items-center justify-center bg-slate-100/50 border-r-2 border-slate-100 text-slate-400 group-focus-within:bg-blue-50 group-focus-within:text-blue-500 transition-colors">
+                <Calendar size={18} />
+              </div>
+              <input
+                type="date"
+                value={form.dataInvestimento}
+                onChange={(e) => setForm({ ...form, dataInvestimento: e.target.value })}
+                className="flex-1 bg-transparent px-5 py-4 text-slate-700 font-bold focus:bg-white transition-all outline-none"
+                max={new Date().toISOString().split('T')[0]}
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Saldo info */}
+        <div className="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo de Renda Fixa disponível</span>
+          <span className={`text-sm font-bold ${saldoDisponivel - valorInvestido < 0 ? 'text-red-500' : 'text-green-500'}`}>
+            {(saldoDisponivel - valorInvestido).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Motivação (Opcional)</label>
+            <div className="flex border-2 border-slate-100 rounded-2xl overflow-hidden group focus-within:border-blue-500 transition-all bg-slate-50">
+              <div className="w-14 shrink-0 flex items-center justify-center bg-slate-100/50 border-r-2 border-slate-100 text-slate-400 group-focus-within:bg-blue-50 group-focus-within:text-blue-500 transition-colors">
+                <MessageSquare size={18} />
+              </div>
+              <textarea
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
+                className="flex-1 bg-transparent px-5 py-3 text-slate-700 font-bold focus:bg-white transition-all outline-none resize-none"
+                placeholder="Por que este banco?"
+                rows={1}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Senha (6 dígitos)</label>
+            <div className="relative group">
+              <div className="flex border-2 border-slate-100 rounded-2xl overflow-hidden group focus-within:border-blue-500 transition-all bg-slate-50">
+                <div className="w-14 shrink-0 flex items-center justify-center bg-slate-100/50 border-r-2 border-slate-100 text-slate-400 group-focus-within:bg-blue-50 group-focus-within:text-blue-500 transition-colors">
+                  <Lock size={18} />
+                </div>
+                <input
+                  type="password"
+                  value={senha}
+                  maxLength={6}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="flex-1 bg-transparent px-5 py-3 text-slate-700 font-bold focus:bg-white transition-all outline-none text-center tracking-[0.5em]"
+                  placeholder="••••••"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-4 pt-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex-1 px-6 py-4 border-2 border-slate-100 rounded-2xl text-slate-500 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+          >
+            <ArrowLeft size={18} /> Voltar
+          </button>
+          <button
+            type="submit"
+            className="flex-[2] px-6 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+            disabled={!form.nome.trim() || valorInvestido <= 0}
+          >
+            <Plus size={18} /> Confirmar Aplicação MG3
+          </button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -240,7 +480,7 @@ export default function RendaFixaStep({ onBack, onSubmit, saldoDisponivel }: Ren
                   </div>
                 ))}
               </div>
-              
+
               <div className="h-4 w-px bg-slate-200" />
 
               <button
